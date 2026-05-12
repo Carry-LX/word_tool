@@ -12,12 +12,20 @@ from typing import Any
 
 import pandas as pd
 
+import agent_runtime
+
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
+RUNTIME_PROFILE = agent_runtime.load_runtime_profile()
+SUBJECT_REQUEST = agent_runtime.load_subject_request(RUNTIME_PROFILE)
 DATA_DIR = PROJECT_DIR / "data"
 PROCESSED_DIR = PROJECT_DIR / "processed"
 CONFIG_DIR = PROJECT_DIR / "configs"
-OUTPUT_DIR = PROJECT_DIR / "outputs" / "subject_agent_runs"
+OUTPUT_DIR = agent_runtime.profile_path(
+    RUNTIME_PROFILE,
+    "paths.subject_agent_runs_dir",
+    PROJECT_DIR / "outputs" / "subject_agent_runs",
+)
 LOG_DIR = PROJECT_DIR / "logs"
 EXTERNAL_DATA_DIR = PROJECT_DIR / "external_data"
 EXTERNAL_GAP_STATUS_JSON = EXTERNAL_DATA_DIR / "reports" / "external_gap_resolution_status.json"
@@ -36,30 +44,56 @@ LOGICAL_SLOT_MAPPING_CSV = CONFIG_DIR / "template_slot_inventory" / "logical_slo
 CURRENT_REQUEST_JSON = CONFIG_DIR / "runtime" / "current_subject_request.json"
 THE_WEIGHT_AREA_CROSSWALK_JSON = CONFIG_DIR / "runtime" / "the_weight_area_crosswalk.json"
 README_PATH = PROJECT_DIR / "README.md"
-RECOMMENDED_PYTHON = Path(r"E:\conda_envs\graph-rag\python.exe")
+RECOMMENDED_PYTHON = agent_runtime.resolve_project_path(
+    RUNTIME_PROFILE.get("recommended_python"),
+    Path(r"E:\conda_envs\graph-rag\python.exe"),
+)
 
-# 这个脚本是“换学科 agent”的单一入口。
-# 用户不需要命令行传参；换学科时只改这里的显式变量即可。
-TARGET_UNIVERSITY = "同济大学"
-TARGET_SUBJECT = "计算机科学与技术"
-TARGET_SUBJECT_CODE = "0812"
-REPORT_YEAR = 2026
+# 这个脚本仍然不使用命令行传参；换学科优先改 configs/runtime/current_subject_request.json。
+# 下面保留显式变量兜底，方便用户直接阅读和局部调试。
+TARGET_UNIVERSITY = agent_runtime.request_value(SUBJECT_REQUEST, "target_university", "同济大学")
+TARGET_SUBJECT = agent_runtime.request_value(SUBJECT_REQUEST, "target_subject", "计算机科学与技术")
+TARGET_SUBJECT_CODE = agent_runtime.request_value(SUBJECT_REQUEST, "target_subject_code", "0812")
+REPORT_YEAR = int(agent_runtime.request_value(SUBJECT_REQUEST, "report_year", 2026))
 
 # True 表示当目标仍是数学时，额外调用当前已验证的数学 artifact 生成流水线。
 # 换成其他学科时，本脚本会先生成可用性计划和缺口报告，不会误跑仍未完全参数化的旧脚本。
-RUN_VERIFIED_MATH_ARTIFACT_PIPELINE = False
-BUILD_PARAMETERIZED_READY_ARTIFACTS = True
-AUDIT_PARAMETERIZED_ARTIFACTS = True
+RUN_VERIFIED_MATH_ARTIFACT_PIPELINE = agent_runtime.profile_bool(
+    RUNTIME_PROFILE,
+    "execution.run_verified_math_artifact_pipeline",
+    False,
+)
+BUILD_PARAMETERIZED_READY_ARTIFACTS = agent_runtime.profile_bool(
+    RUNTIME_PROFILE,
+    "execution.build_parameterized_ready_artifacts",
+    True,
+)
+AUDIT_PARAMETERIZED_ARTIFACTS = agent_runtime.profile_bool(
+    RUNTIME_PROFILE,
+    "execution.audit_parameterized_artifacts",
+    True,
+)
 
 # 默认不写入 tracked 的 configs/runtime/current_subject_request.json，避免每次运行只改时间戳就污染 Git。
 # 每个 run 目录都会写一份 current_subject_request.json；确实需要给旧脚本共享全局请求时再改成 True。
-WRITE_GLOBAL_CURRENT_REQUEST = False
+WRITE_GLOBAL_CURRENT_REQUEST = agent_runtime.profile_bool(
+    RUNTIME_PROFILE,
+    "execution.write_global_current_request",
+    False,
+)
 
 # README 是交接文档，不应被每次运行自动重写；需要更新文档时人工修改。
-UPDATE_README_ON_RUN = False
+UPDATE_README_ON_RUN = agent_runtime.profile_bool(
+    RUNTIME_PROFILE,
+    "execution.update_readme_on_run",
+    False,
+)
 
-RANKING_SOURCES = ["软科", "QS", "US News", "THE"]
-TOP_RANK_MIDPOINT = 200
+RANKING_SOURCES = SUBJECT_REQUEST.get(
+    "ranking_sources",
+    agent_runtime.deep_get(RUNTIME_PROFILE, "execution.ranking_sources", ["软科", "QS", "US News", "THE"]),
+)
+TOP_RANK_MIDPOINT = agent_runtime.profile_int(RUNTIME_PROFILE, "execution.top_rank_midpoint", 200)
 
 
 def now_text() -> str:
@@ -113,6 +147,8 @@ def runtime_context() -> dict[str, Any]:
         "python_version": sys.version.split()[0],
         "platform": platform.platform(),
         "recommended_python": str(RECOMMENDED_PYTHON),
+        "runtime_profile": RUNTIME_PROFILE.get("_profile_path", ""),
+        "subject_request": SUBJECT_REQUEST.get("_request_path", ""),
         "using_recommended_python": Path(sys.executable).resolve() == RECOMMENDED_PYTHON.resolve()
         if RECOMMENDED_PYTHON.exists()
         else False,
@@ -128,6 +164,14 @@ def validate_required_inputs() -> list[dict[str, str]]:
         "fact_ranking_indicator": FACT_INDICATOR_CSV,
     }
     issues = []
+    for issue in agent_runtime.validate_subject_request(SUBJECT_REQUEST):
+        issues.append(
+            {
+                "label": f"subject request {issue['field']}",
+                "path": SUBJECT_REQUEST.get("_request_path", ""),
+                "status": issue["message"],
+            }
+        )
     for label, path in required.items():
         if not path.exists():
             issues.append({"label": label, "path": str(path), "status": "missing"})
@@ -512,8 +556,17 @@ def build_request_payload(subject: dict[str, Any]) -> dict[str, Any]:
         "agent_contract": {
             "single_entrypoint": "scripts/run_subject_agent.py",
             "no_cli_args": True,
-            "change_subject_by_editing_top_level_variables": True,
+            "change_subject_by_editing": [
+                "configs/runtime/current_subject_request.json",
+                "configs/runtime/agent_runtime_profile.json",
+            ],
+            "change_subject_by_editing_top_level_variables": False,
             "runtime_request_is_run_scoped": not WRITE_GLOBAL_CURRENT_REQUEST,
+            "path_output_policy": agent_runtime.deep_get(
+                RUNTIME_PROFILE,
+                "governance.path_output_policy",
+                "plain_text_windows_paths",
+            ),
         },
     }
     return payload

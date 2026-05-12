@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import audit_word_report
+import agent_runtime
 import build_narrative_generation_bundle as narrative_bundle
 import build_word_assembly_manifest as assembly_manifest
 import build_word_replacement_trial as word_trial
@@ -14,17 +15,27 @@ import run_subject_agent as subject_agent
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-OUTPUT_ROOT = PROJECT_DIR / "outputs" / "full_word_reports"
+RUNTIME_PROFILE = agent_runtime.load_runtime_profile()
+OUTPUT_ROOT = agent_runtime.profile_path(
+    RUNTIME_PROFILE,
+    "paths.full_word_reports_dir",
+    PROJECT_DIR / "outputs" / "full_word_reports",
+)
 NARRATIVE_DEMO_RESULT_JSON = PROJECT_DIR / "configs" / "template_slot_inventory" / "narrative_generated_demo_20260511.json"
 
-# 显式变量，避免命令行参数成为唯一入口。
-RUN_SUBJECT_AGENT_FIRST = True
-SUBJECT_RUN_DIR: Path | None = None
-BUILD_NARRATIVE_BUNDLE = True
-USE_DEMO_NARRATIVE_RESULT = False
-RUN_WORD_QA = True
-RUN_RENDER_QA = True
-TABLE_REPLACEMENT_MODE = "native"
+# 显式变量仍然保留，但默认值来自 configs/runtime/agent_runtime_profile.json。
+RUN_SUBJECT_AGENT_FIRST = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.run_subject_agent_first", True)
+configured_subject_run_dir = agent_runtime.deep_get(RUNTIME_PROFILE, "word_pipeline.subject_run_dir", "")
+SUBJECT_RUN_DIR: Path | None = (
+    agent_runtime.resolve_project_path(configured_subject_run_dir)
+    if str(configured_subject_run_dir).strip()
+    else None
+)
+BUILD_NARRATIVE_BUNDLE = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.build_narrative_bundle", True)
+USE_DEMO_NARRATIVE_RESULT = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.use_demo_narrative_result", False)
+RUN_WORD_QA = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.run_word_qa", True)
+RUN_RENDER_QA = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.run_render_qa", False)
+TABLE_REPLACEMENT_MODE = agent_runtime.profile_str(RUNTIME_PROFILE, "word_pipeline.table_replacement_mode", "native")
 
 
 def now_text() -> str:

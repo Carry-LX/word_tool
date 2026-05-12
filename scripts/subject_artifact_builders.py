@@ -818,17 +818,6 @@ def build_weight_tree_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def render_weight_tree(tree_df: pd.DataFrame, title: str, out_path: Path) -> None:
-    image = Image.new("RGB", (1600, 960), "#FFFFFF")
-    draw = ImageDraw.Draw(image)
-    font_title = load_font(36, True)
-    font_sub = load_font(19)
-    font_root = load_font(24, True)
-    font_parent = load_font(17, True)
-    font_leaf = load_font(14)
-    font_pct = load_font(15, True)
-    draw.text((70, 42), title, font=font_title, fill="#16202A")
-    draw.text((70, 88), "按一级维度向二级指标展开，线宽表示权重大小", font=font_sub, fill="#5A6573")
-
     work = tree_df.copy()
     work["parent_weight_percent"] = pd.to_numeric(work["parent_weight_percent"], errors="coerce").fillna(0.0)
     work["weight_percent"] = pd.to_numeric(work["weight_percent"], errors="coerce").fillna(0.0)
@@ -840,56 +829,66 @@ def render_weight_tree(tree_df: pd.DataFrame, title: str, out_path: Path) -> Non
     )
     parent_order = parent_order[:6]
     work = work[work["parent_indicator"].isin(parent_order)].copy()
-    root_box = (74, 410, 286, 538)
+
+    leaf_count = sum(min(8, len(work[work["parent_indicator"] == parent])) for parent in parent_order)
+    row_h = 48
+    group_gap = 30
+    top = 164
+    bottom = 64
+    height = max(980, top + leaf_count * row_h + max(0, len(parent_order) - 1) * group_gap + bottom)
+    image = Image.new("RGB", (1680, height), "#FFFFFF")
+    draw = ImageDraw.Draw(image)
+    font_title = load_font(40, True)
+    font_sub = load_font(22)
+    font_root = load_font(26, True)
+    font_parent = load_font(23, True)
+    font_leaf = load_font(23)
+    font_pct = load_font(22, True)
+    font_note = load_font(17)
+    draw.text((54, 36), title, font=font_title, fill="#16202A")
+    draw.text((54, 88), "按一级维度展开到二级指标；左侧为一级权重，右侧为具体指标权重", font=font_sub, fill="#5A6573")
+
+    root_box = (54, top + 44, 256, top + 156)
     root_total = work.groupby("parent_indicator")["parent_weight_percent"].max().sum()
     if root_total <= 0:
         root_total = work["weight_percent"].sum()
-    draw.rounded_rectangle(root_box, radius=18, fill="#F8FAFC", outline="#16202A", width=3)
-    draw_text_box(draw, (root_box[0] + 10, root_box[1] + 16, root_box[2] - 10, root_box[3] - 34), "指标体系", font_root, "#16202A", max_lines=2)
-    draw_center(draw, (root_box[0], root_box[3] - 40, root_box[2], root_box[3] - 10), f"{root_total:.1f}%", font_pct, "#52606D")
+    draw.rounded_rectangle(root_box, radius=14, fill="#F8FAFC", outline="#16202A", width=3)
+    draw_text_box(draw, (root_box[0] + 8, root_box[1] + 12, root_box[2] - 8, root_box[3] - 42), "指标体系", font_root, "#16202A", max_lines=2)
+    draw_center(draw, (root_box[0], root_box[3] - 44, root_box[2], root_box[3] - 8), f"{root_total:.1f}%", font_pct, "#52606D")
 
     palette = ["#315D9C", "#C64B46", "#3C8D5A", "#7B5CA8", "#D68A35", "#6B7280"]
-    if len(parent_order) <= 1:
-        parent_tops = [410]
-    else:
-        parent_tops = [150 + idx * (700 / max(1, len(parent_order) - 1)) for idx in range(len(parent_order))]
+    current_y = top
     parent_boxes: dict[str, tuple[float, float, float, float]] = {}
     for idx, parent in enumerate(parent_order):
+        parent_rows = work[work["parent_indicator"] == parent].sort_values("weight_percent", ascending=False).head(8)
         weight = float(work[work["parent_indicator"] == parent]["parent_weight_percent"].max())
-        top = parent_tops[idx]
-        box = (430, top, 690, top + 70)
+        block_h = max(72, len(parent_rows) * row_h)
+        box = (316, current_y + max(0, (block_h - 78) / 2), 650, current_y + max(0, (block_h - 78) / 2) + 78)
         color = palette[idx % len(palette)]
         parent_boxes[parent] = box
         width = max(2, min(12, int(weight / max(root_total, 1) * 22)))
         draw.line((root_box[2], (root_box[1] + root_box[3]) / 2, box[0], (box[1] + box[3]) / 2), fill=color, width=width)
         draw.rounded_rectangle(box, radius=12, fill="#FFFFFF", outline=color, width=3)
-        draw_text_box(draw, (box[0] + 12, box[1] + 8, box[2] - 68, box[3] - 8), parent, font_parent, color, "left", max_lines=2)
-        draw_center(draw, (box[2] - 66, box[1], box[2] - 8, box[3]), f"{weight:.1f}%", font_pct, color)
+        draw_text_box(draw, (box[0] + 12, box[1] + 8, box[2] - 92, box[3] - 8), parent, font_parent, color, "left", max_lines=2)
+        draw_center(draw, (box[2] - 88, box[1], box[2] - 8, box[3]), f"{weight:.1f}%", font_pct, color)
 
-    leaf_x0 = 910
-    leaf_x1 = 1458
-    next_leaf_top = 130.0
-    for idx, parent in enumerate(parent_order):
+        leaf_x0 = 742
+        leaf_x1 = 1530
         parent_rows = work[work["parent_indicator"] == parent].sort_values("weight_percent", ascending=False).head(8)
-        if parent_rows.empty:
-            continue
-        parent_box = parent_boxes[parent]
-        color = palette[idx % len(palette)]
-        row_h = 26
-        block_h = len(parent_rows) * row_h
-        ideal_top = (parent_box[1] + parent_box[3]) / 2 - block_h / 2
-        block_top = max(ideal_top, next_leaf_top)
-        block_top = min(block_top, 890 - block_h)
-        next_leaf_top = block_top + block_h + 18
+        block_top = current_y
         for leaf_idx, (_, leaf) in enumerate(parent_rows.iterrows()):
             y = block_top + leaf_idx * row_h
             weight = float(leaf["weight_percent"])
             line_w = max(1, min(8, int(weight / max(root_total, 1) * 22)))
-            draw.line((parent_box[2], (parent_box[1] + parent_box[3]) / 2, leaf_x0 - 18, y + 11), fill=color, width=line_w)
-            draw.ellipse((leaf_x0 - 24, y + 5, leaf_x0 - 12, y + 17), fill=color)
+            draw.line((box[2], (box[1] + box[3]) / 2, leaf_x0 - 22, y + row_h / 2), fill=color, width=line_w)
+            draw.rounded_rectangle((leaf_x0 - 24, y + 11, leaf_x1, y + 39), radius=10, fill="#FFFFFF", outline="#E1E7EF", width=1)
+            draw.ellipse((leaf_x0 - 32, y + 18, leaf_x0 - 18, y + 32), fill=color)
             label = clean_text(leaf["indicator_name"])
-            draw_text_box(draw, (leaf_x0, y - 3, leaf_x1 - 76, y + 25), label, font_leaf, "#1F2933", "left", max_lines=1)
-            draw.text((leaf_x1 - 64, y), f"{weight:.1f}%", font=font_leaf, fill="#52606D")
+            draw_text_box(draw, (leaf_x0 - 4, y + 4, leaf_x1 - 110, y + 46), label, font_leaf, "#1F2933", "left", max_lines=2)
+            draw_text_right(draw, leaf_x1 - 14, y + 10, f"{weight:.1f}%", font_pct, "#52606D")
+        current_y += block_h + group_gap
+    if len(work) > leaf_count:
+        draw.text((54, height - 38), "注：图中展示主要一级维度下权重较高的二级指标，完整权重明细保留在数据文件中。", font=font_note, fill="#697586")
     save_png(image, out_path)
 
 
@@ -1270,6 +1269,66 @@ def render_peer_indicator_line_chart(plot_df: pd.DataFrame, title: str, out_path
     save_png(image, out_path)
 
 
+def render_peer_indicator_summary_chart(chart_df: pd.DataFrame, title: str, out_path: Path) -> None:
+    work = chart_df.copy()
+    rank_col = "tongji_relative_rank_with_peer_reference"
+    if rank_col not in work.columns:
+        rank_col = "tongji_relative_rank_in_peer_scope"
+    size_col = "comparison_scope_size" if "comparison_scope_size" in work.columns else "peer_scope_size"
+    work[rank_col] = pd.to_numeric(work[rank_col], errors="coerce")
+    work[size_col] = pd.to_numeric(work[size_col], errors="coerce")
+    work = work.dropna(subset=[rank_col, size_col]).copy()
+    if work.empty:
+        return
+    work = work.sort_values([rank_col, "display_indicator_name" if "display_indicator_name" in work.columns else "indicator_name"])
+
+    width = 1760
+    row_h = 72
+    top = 166
+    bottom = 86
+    height = max(860, top + len(work) * row_h + bottom)
+    image = Image.new("RGB", (width, height), "#FFFFFF")
+    draw = ImageDraw.Draw(image)
+    font_title = load_font(38, True)
+    font_sub = load_font(21)
+    font_label = load_font(22, True)
+    font_small = load_font(19)
+    font_value = load_font(20, True)
+    draw.text((58, 34), title, font=font_title, fill="#16202A")
+    draw.text((58, 86), "每条标尺表示一个分项指标的对标范围；红点越靠左，说明同济大学相对位次越靠前。", font=font_sub, fill="#5A6573")
+
+    label_left = 70
+    label_right = 520
+    track_left = 590
+    track_right = 1450
+    value_left = 1490
+    for idx, (_, row) in enumerate(work.iterrows()):
+        y = top + idx * row_h
+        indicator = clean_text(row.get("display_indicator_name", "")) or clean_text(row.get("indicator_short_name", "")) or clean_text(row.get("indicator_name", ""))
+        rank = max(1.0, float(row[rank_col]))
+        size = max(rank, float(row[size_col]))
+        percentile = max(0.0, min(1.0, (size - rank) / max(size - 1, 1)))
+        marker_x = track_left + (rank - 1) / max(size - 1, 1) * (track_right - track_left)
+        color = "#C64B46" if percentile < 0.5 else "#D68A35" if percentile < 0.75 else "#315D9C"
+
+        if idx % 2 == 0:
+            draw.rounded_rectangle((48, y - 12, width - 60, y + 48), radius=8, fill="#F7F9FC")
+        draw_text_box(draw, (label_left, y - 10, label_right, y + 50), indicator, font_label, "#1F2933", "left", max_lines=2)
+        draw.line((track_left, y + 18, track_right, y + 18), fill="#D7DEE8", width=10)
+        draw.line((track_left, y + 18, marker_x, y + 18), fill=color, width=10)
+        for frac, text in [(0, "靠前"), (0.5, "中位"), (1, "靠后")]:
+            x = track_left + frac * (track_right - track_left)
+            draw.line((x, y + 4, x, y + 32), fill="#AAB4C3", width=2)
+            if idx == 0:
+                draw_center(draw, (x - 38, y - 48, x + 38, y - 18), text, font_small, "#697586")
+        draw.ellipse((marker_x - 13, y + 5, marker_x + 13, y + 31), fill="#C64B46", outline="#FFFFFF", width=3)
+        draw.text((value_left, y + 2), f"第{int(rank)} / {int(size)}位", font=font_value, fill="#C64B46")
+        draw.text((value_left, y + 30), f"前{percentile * 100:.1f}%", font=font_small, fill="#52606D")
+
+    draw.text((58, height - 44), "注：相对位次按同一排名口径下的内地对标高校范围计算；不同榜单分项指标含义不同，不宜跨榜单直接等同。", font=font_small, fill="#697586")
+    save_png(image, out_path)
+
+
 def relative_rank(values: pd.Series, tongji_value: float, higher_better: bool) -> int:
     numeric = pd.to_numeric(values, errors="coerce").dropna().tolist()
     numeric.append(tongji_value)
@@ -1531,7 +1590,7 @@ def build_peer_indicator_figure(
     plot_df.to_csv(out / "chart_plot_data.csv", index=False, encoding="utf-8-sig")
     comparison.to_csv(out / "peer_indicator_long.csv", index=False, encoding="utf-8-sig")
     comparison.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
-    render_peer_indicator_template_chart(plot_df, title, out / "chart.png")
+    render_peer_indicator_summary_chart(chart_df, title, out / "chart.png")
     write_common_outputs(
         out,
         artifact_id,
@@ -2101,48 +2160,64 @@ def rank_for_metric(df: pd.DataFrame, metric: str, higher_better: bool = True) -
 
 
 def render_paper_bar_chart(df: pd.DataFrame, title: str, metrics: list[tuple[str, str]], out_path: Path, note: str) -> None:
-    image = Image.new("RGB", (1700, 980), "#FFFFFF")
+    image = Image.new("RGB", (1780, 1040), "#FFFFFF")
     draw = ImageDraw.Draw(image)
-    font_title = load_font(34, True)
-    font_sub = load_font(19)
-    font_label = load_font(15)
-    font_small = load_font(13)
+    font_title = load_font(38, True)
+    font_sub = load_font(21)
+    font_label = load_font(20)
+    font_small = load_font(18)
     draw.text((70, 40), title, font=font_title, fill="#16202A")
-    draw.text((70, 84), note, font=font_sub, fill="#5A6573")
+    draw_text_box(draw, (62, 84, 1700, 132), note, font_sub, "#5A6573", "left", max_lines=2)
     panels = len(metrics)
-    panel_w = int((1560 - (panels - 1) * 50) / max(1, panels))
-    panel_h = 700
-    top = 160
+    panel_w = int((1600 - (panels - 1) * 54) / max(1, panels))
+    panel_h = 760
+    top = 182
     for idx, (metric, label) in enumerate(metrics):
         panel_left = 70 + idx * (panel_w + 50)
         panel_right = panel_left + panel_w
         values = pd.to_numeric(df[metric], errors="coerce").fillna(0)
-        top_df = df.assign(_value=values).sort_values("_value", ascending=False).head(15).copy()
+        top_df = df.assign(_value=values).sort_values("_value", ascending=False).head(14).copy()
+        tongji_rows = df[df.apply(lambda row: is_tongji_name(short_university_name(row)) or is_tongji_name(row.get("University", "")), axis=1)].assign(_value=values)
+        if not tongji_rows.empty and not top_df.index.isin(tongji_rows.index).any():
+            top_df = pd.concat([top_df.iloc[:13], tongji_rows.head(1)]).copy()
         max_v = max(1.0, float(top_df["_value"].max()))
-        draw.text((panel_left, top - 34), label, font=load_font(20, True), fill="#1F2933")
-        bar_h = min(34, int(panel_h / max(1, len(top_df)) - 8))
+        draw.text((panel_left, top - 42), label, font=load_font(24, True), fill="#1F2933")
+        bar_h = min(38, int(panel_h / max(1, len(top_df)) - 10))
         for ridx, (_, row) in enumerate(top_df.iterrows()):
-            y = top + ridx * (bar_h + 12)
+            y = top + ridx * (bar_h + 14)
             name = short_university_name(row)
             value = float(row["_value"])
-            bar_w = (panel_w - 230) * value / max_v
+            bar_w = (panel_w - 260) * value / max_v
             color = "#C64B46" if is_tongji_name(name) or is_tongji_name(row.get("University", "")) else "#315D9C"
-            draw.text((panel_left, y + 5), name[:12], font=font_label, fill="#374151")
-            draw.rounded_rectangle((panel_left + 150, y, panel_left + 150 + bar_w, y + bar_h), radius=5, fill=color)
-            draw.text((panel_right - 72, y + 5), f"{value:.1f}", font=font_small, fill="#374151")
+            label_fill = "#C64B46" if color == "#C64B46" else "#374151"
+            draw.text((panel_left, y + 6), name[:13], font=font_label, fill=label_fill)
+            draw.rounded_rectangle((panel_left + 172, y, panel_left + 172 + bar_w, y + bar_h), radius=6, fill=color)
+            draw.text((panel_right - 88, y + 6), f"{value:.1f}", font=font_small, fill=label_fill)
     save_png(image, out_path)
 
 
+def metric_display_label(metric: str) -> str:
+    labels = {
+        "citation_impact": "篇均被引",
+        "CNCI": "CNCI",
+        "MCS": "篇均被引 MCS",
+        "MNCS": "归一化影响 MNCS",
+    }
+    return labels.get(metric, metric)
+
+
 def render_paper_scatter(df: pd.DataFrame, title: str, x_metric: str, y_metric: str, out_path: Path, note: str) -> None:
-    image = Image.new("RGB", (1600, 940), "#FFFFFF")
+    image = Image.new("RGB", (1760, 1040), "#FFFFFF")
     draw = ImageDraw.Draw(image)
-    font_title = load_font(34, True)
-    font_sub = load_font(19)
-    font_axis = load_font(16)
+    font_title = load_font(38, True)
+    font_sub = load_font(21)
+    font_axis = load_font(20, True)
+    font_tick = load_font(17)
+    font_label = load_font(18, True)
     draw.text((70, 40), title, font=font_title, fill="#16202A")
-    draw.text((70, 84), note, font=font_sub, fill="#5A6573")
+    draw_text_box(draw, (62, 84, 1680, 132), note, font_sub, "#5A6573", "left", max_lines=2)
     plot = df.dropna(subset=[x_metric, y_metric]).copy()
-    left, top, right, bottom = 150, 150, 1380, 780
+    left, top, right, bottom = 180, 172, 1510, 835
     x_vals = pd.to_numeric(plot[x_metric], errors="coerce")
     y_vals = pd.to_numeric(plot[y_metric], errors="coerce")
     x_min, x_max = float(x_vals.min()), float(x_vals.max())
@@ -2151,25 +2226,52 @@ def render_paper_scatter(df: pd.DataFrame, title: str, x_metric: str, y_metric: 
         x_max += 1
     if y_min == y_max:
         y_max += 1
+    pad_x = (x_max - x_min) * 0.06
+    pad_y = (y_max - y_min) * 0.08
+    x_min, x_max = max(0.0, x_min - pad_x), x_max + pad_x
+    y_min, y_max = max(0.0, y_min - pad_y), y_max + pad_y
     draw.rectangle((left, top, right, bottom), outline="#CBD2D9", width=2)
+    x_med = float(x_vals.median())
+    y_med = float(y_vals.median())
     for i in range(6):
         x = left + i / 5 * (right - left)
         y = top + i / 5 * (bottom - top)
         draw.line((x, top, x, bottom), fill="#EEF2F7")
         draw.line((left, y, right, y), fill="#EEF2F7")
-    for _, row in plot.iterrows():
+        xv = x_min + i / 5 * (x_max - x_min)
+        yv = y_max - i / 5 * (y_max - y_min)
+        draw_text_right(draw, x, bottom + 14, f"{xv:.1f}", font_tick, "#697586")
+        draw_text_right(draw, left - 12, y - 9, f"{yv:.1f}", font_tick, "#697586")
+
+    def xpos(value: float) -> float:
+        return left + (value - x_min) / (x_max - x_min) * (right - left)
+
+    def ypos(value: float) -> float:
+        return bottom - (value - y_min) / (y_max - y_min) * (bottom - top)
+
+    draw.line((xpos(x_med), top, xpos(x_med), bottom), fill="#B8C2D0", width=2)
+    draw.line((left, ypos(y_med), right, ypos(y_med)), fill="#B8C2D0", width=2)
+    draw.text((xpos(x_med) + 8, top + 8), "中位线", font=font_tick, fill="#697586")
+
+    plot["_xv"] = pd.to_numeric(plot[x_metric], errors="coerce")
+    plot["_yv"] = pd.to_numeric(plot[y_metric], errors="coerce")
+    label_candidates = plot.sort_values("_yv", ascending=False).head(4)
+    tongji_candidates = plot[plot.apply(lambda row: is_tongji_name(short_university_name(row)) or is_tongji_name(row.get("University", "")), axis=1)]
+    label_indices = set(label_candidates.index.tolist() + tongji_candidates.index.tolist())
+    for row_index, row in plot.iterrows():
         xv = to_float(row[x_metric])
         yv = to_float(row[y_metric])
-        x = left + (xv - x_min) / (x_max - x_min) * (right - left)
-        y = bottom - (yv - y_min) / (y_max - y_min) * (bottom - top)
+        x = xpos(xv)
+        y = ypos(yv)
         name = short_university_name(row)
         color = "#C64B46" if is_tongji_name(name) or is_tongji_name(row.get("University", "")) else "#315D9C"
-        radius = 8 if color == "#C64B46" else 5
+        radius = 11 if color == "#C64B46" else 6
         draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=color, outline="#FFFFFF", width=1)
-        if color == "#C64B46":
-            draw.text((x + 10, y - 12), "同济大学", font=load_font(15, True), fill=color)
-    draw.text((left, bottom + 28), x_metric, font=font_axis, fill="#52606D")
-    draw.text((62, top - 8), y_metric, font=font_axis, fill="#52606D")
+        if row_index in label_indices:
+            label_fill = "#C64B46" if color == "#C64B46" else "#374151"
+            draw.text((min(x + 12, right - 120), max(top + 4, y - 12)), name[:10], font=font_label, fill=label_fill)
+    draw_center(draw, (left, bottom + 48, right, bottom + 84), metric_display_label(x_metric), font_axis, "#52606D")
+    draw.text((62, top - 18), metric_display_label(y_metric), font=font_axis, fill="#52606D")
     save_png(image, out_path)
 
 

@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "purpose": "Mark old single-subject scripts that are kept for traceability but should not be used as the default cross-discipline report-agent entrypoints.",
+  "default_replacement": "scripts/subject_artifact_builders.py",
+  "scripts": {
+    "scripts/build_artifact_figure_01.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified chart prototype."
+    },
+    "scripts/build_artifact_figure_07.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified chart prototype."
+    },
+    "scripts/build_artifact_figure_09.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified chart prototype."
+    },
+    "scripts/build_artifact_figure_11.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified chart prototype."
+    },
+    "scripts/build_artifact_figure_12.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified chart prototype."
+    },
+    "scripts/build_artifact_table_04.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified table prototype."
+    },
+    "scripts/build_artifact_table_05.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified table prototype."
+    },
+    "scripts/build_artifact_table_06.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified table prototype."
+    },
+    "scripts/build_artifact_table_07.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified table prototype."
+    },
+    "scripts/build_artifact_table_08.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Retained as an early verified table prototype."
+    },
+    "scripts/build_ready_artifacts.py": {
+      "status": "legacy_math_only",
+      "replacement": "scripts/subject_artifact_builders.py",
+      "note": "Only run when RUN_VERIFIED_MATH_ARTIFACT_PIPELINE is explicitly enabled."
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "profile_name": "default_local_report_agent",
+  "active_subject_request_path": "configs/runtime/current_subject_request.json",
+  "recommended_python": "E:/conda_envs/graph-rag/python.exe",
+  "execution": {
+    "ranking_sources": [
+      "软科",
+      "QS",
+      "US News",
+      "THE"
+    ],
+    "top_rank_midpoint": 200,
+    "run_verified_math_artifact_pipeline": false,
+    "build_parameterized_ready_artifacts": true,
+    "audit_parameterized_artifacts": true,
+    "write_global_current_request": false,
+    "update_readme_on_run": false
+  },
+  "word_pipeline": {
+    "run_subject_agent_first": true,
+    "subject_run_dir": "",
+    "build_narrative_bundle": true,
+    "use_demo_narrative_result": false,
+    "run_word_qa": true,
+    "run_render_qa": false,
+    "table_replacement_mode": "native"
+  },
+  "paths": {
+    "subject_agent_runs_dir": "outputs/subject_agent_runs",
+    "full_word_reports_dir": "outputs/full_word_reports",
+    "agent_system_audit_dir": "outputs/agent_system_audit"
+  },
+  "governance": {
+    "path_output_policy": "plain_text_windows_paths",
+    "proxy_policy": "allow_with_disclosure",
+    "require_source_trace": true,
+    "require_mapping_confidence": true,
+    "prefer_config_over_script_constants": true
+  }
+}

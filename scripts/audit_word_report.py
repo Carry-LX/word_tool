@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -63,12 +64,40 @@ def inspect_docx_structure(docx_path: Path) -> dict[str, Any]:
     result["section_count"] = len(document.sections)
     result["inline_shape_count"] = len(document.inline_shapes)
     empty_table_count = 0
+    texts = [paragraph.text.strip() for paragraph in document.paragraphs if paragraph.text.strip()]
     for table in document.tables:
         if not table.rows or not table.columns:
             empty_table_count += 1
+        for row in table.rows:
+            for cell in row.cells:
+                value = cell.text.strip()
+                if value:
+                    texts.append(value)
     result["empty_table_count"] = empty_table_count
     if empty_table_count:
         result["warnings"].append("empty_tables_present")
+    bad_patterns = {
+        "debug_narrative_placeholder": "自动说明占位",
+        "debug_slot_marker": "slot=",
+        "debug_artifact_marker": "artifact=",
+        "unresolved_xx_subject": r"(?i)xx\s*学",
+        "unresolved_update_marker": "待更新",
+        "subject_typo": "计算机科学于技术",
+    }
+    pattern_hits: dict[str, list[str]] = {}
+    for name, pattern in bad_patterns.items():
+        hits = []
+        for text in texts:
+            matched = re.search(pattern, text) if pattern.startswith("(?i)") else pattern in text
+            if matched:
+                hits.append(text[:240])
+        if hits:
+            pattern_hits[name] = hits[:8]
+    result["bad_text_pattern_counts"] = {name: len(items) for name, items in pattern_hits.items()}
+    result["bad_text_pattern_samples"] = pattern_hits
+    if pattern_hits:
+        result["status"] = "fail"
+        result["warnings"].append("unresolved_template_or_debug_text_present")
     return result
 
 
