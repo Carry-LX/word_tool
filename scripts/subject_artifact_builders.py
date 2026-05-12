@@ -4,15 +4,17 @@ import csv
 import json
 import math
 import re
+import time
+import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = PROJECT_DIR / "processed"
 CONFIG_DIR = PROJECT_DIR / "configs"
 EXTERNAL_DATA_DIR = PROJECT_DIR / "external_data"
@@ -573,6 +575,26 @@ def write_common_outputs(out: Path, artifact_id: str, artifact_type: str, data_r
         encoding="utf-8",
         newline="\n",
     )
+
+
+def append_builder_result(results: list[dict[str, Any]], artifact_id: str, builder: Callable[[], dict[str, Any]]) -> None:
+    started = time.perf_counter()
+    try:
+        result = builder()
+        if not isinstance(result, dict):
+            result = {"artifact_id": artifact_id, "status": "error", "reason": f"builder returned {type(result).__name__}"}
+        result.setdefault("artifact_id", artifact_id)
+        result.setdefault("status", "generated")
+    except Exception as exc:
+        result = {
+            "artifact_id": artifact_id,
+            "status": "error",
+            "error_type": type(exc).__name__,
+            "reason": str(exc),
+            "traceback": traceback.format_exc(),
+        }
+    result["elapsed_seconds"] = round(time.perf_counter() - started, 3)
+    results.append(result)
 
 
 def render_cards(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
@@ -2434,23 +2456,39 @@ def build_subject_run_artifacts(
     results: list[dict[str, Any]] = []
 
     if "figure_01_tongji_subject_ranking_overview" in ready_ids:
-        results.append(build_figure_01(run_dir, subject, records))
+        append_builder_result(results, "figure_01_tongji_subject_ranking_overview", lambda: build_figure_01(run_dir, subject, records))
     if "figure_02_ranking_indicator_commonality" in ready_ids:
-        results.append(build_figure_02(run_dir, subject))
+        append_builder_result(results, "figure_02_ranking_indicator_commonality", lambda: build_figure_02(run_dir, subject))
     if "figure_03_arwu_indicator_weight" in ready_ids:
-        results.append(build_weight_artifact(run_dir, subject, "软科", "figure_03_arwu_indicator_weight", "软科"))
+        append_builder_result(
+            results,
+            "figure_03_arwu_indicator_weight",
+            lambda: build_weight_artifact(run_dir, subject, "软科", "figure_03_arwu_indicator_weight", "软科"),
+        )
     if "figure_04_qs_indicator_weight" in ready_ids:
-        results.append(build_weight_artifact(run_dir, subject, "QS", "figure_04_qs_indicator_weight", "QS"))
+        append_builder_result(
+            results,
+            "figure_04_qs_indicator_weight",
+            lambda: build_weight_artifact(run_dir, subject, "QS", "figure_04_qs_indicator_weight", "QS"),
+        )
     if "figure_05_usnews_indicator_weight" in ready_ids:
-        results.append(build_weight_artifact(run_dir, subject, "US News", "figure_05_usnews_indicator_weight", "US News"))
+        append_builder_result(
+            results,
+            "figure_05_usnews_indicator_weight",
+            lambda: build_weight_artifact(run_dir, subject, "US News", "figure_05_usnews_indicator_weight", "US News"),
+        )
     elif USNEWS_WEIGHT_CANDIDATE_CSV.exists():
-        results.append(build_usnews_candidate_weight(run_dir, subject))
+        append_builder_result(results, "figure_05_usnews_indicator_weight_candidate", lambda: build_usnews_candidate_weight(run_dir, subject))
     if "figure_06_the_indicator_weight" in ready_ids:
-        results.append(build_weight_artifact(run_dir, subject, "THE", "figure_06_the_indicator_weight", "THE"))
+        append_builder_result(
+            results,
+            "figure_06_the_indicator_weight",
+            lambda: build_weight_artifact(run_dir, subject, "THE", "figure_06_the_indicator_weight", "THE"),
+        )
     if "figure_07_all_rankings_history" in ready_ids:
-        results.append(build_figure_07(run_dir, subject, records))
+        append_builder_result(results, "figure_07_all_rankings_history", lambda: build_figure_07(run_dir, subject, records))
     if "table_04_mainland_rank_band_distribution" in ready_ids:
-        results.append(build_table_04(run_dir, subject, records))
+        append_builder_result(results, "table_04_mainland_rank_band_distribution", lambda: build_table_04(run_dir, subject, records))
 
     peer_specs = [
         ("软科", "table_05_arwu_mainland_peer_ranking"),
@@ -2460,15 +2498,17 @@ def build_subject_run_artifacts(
     ]
     for source, artifact_id in peer_specs:
         if artifact_id in ready_ids:
-            results.append(build_peer_table(run_dir, subject, records, source, artifact_id))
+            append_builder_result(results, artifact_id, lambda source=source, artifact_id=artifact_id: build_peer_table(run_dir, subject, records, source, artifact_id))
 
     if "table_03_the_tongji_indicator_history" in ready_ids:
-        results.append(build_the_indicator_history(run_dir, subject))
+        append_builder_result(results, "table_03_the_tongji_indicator_history", lambda: build_the_indicator_history(run_dir, subject))
     if ARWU_PUBLIC_TONGJI_LONG_CSV.exists():
-        results.append(build_arwu_public_indicator_history_table(run_dir, subject))
+        append_builder_result(results, "table_01_arwu_tongji_indicator_history", lambda: build_arwu_public_indicator_history_table(run_dir, subject))
     elif ARWU_HISTORY_CSV.exists():
-        results.append(
-            build_external_indicator_history_table(
+        append_builder_result(
+            results,
+            "table_01_arwu_tongji_indicator_history",
+            lambda: build_external_indicator_history_table(
                 run_dir,
                 subject,
                 "table_01_arwu_tongji_indicator_history",
@@ -2478,8 +2518,10 @@ def build_subject_run_artifacts(
             )
         )
     if USNEWS_HISTORY_CSV.exists():
-        results.append(
-            build_external_indicator_history_table(
+        append_builder_result(
+            results,
+            "table_02_usnews_tongji_indicator_history",
+            lambda: build_external_indicator_history_table(
                 run_dir,
                 subject,
                 "table_02_usnews_tongji_indicator_history",
@@ -2487,9 +2529,9 @@ def build_subject_run_artifacts(
                 USNEWS_HISTORY_CSV,
             )
         )
-        results.append(build_usnews_indicator_history_trend(run_dir, subject))
+        append_builder_result(results, "figure_10_usnews_indicator_history_trend", lambda: build_usnews_indicator_history_trend(run_dir, subject))
     if "table_09_peer_full_ranking_history_appendix" in ready_ids:
-        results.append(build_appendix(run_dir, subject, records))
+        append_builder_result(results, "table_09_peer_full_ranking_history_appendix", lambda: build_appendix(run_dir, subject, records))
 
     peer_indicator_specs = [
         (
@@ -2516,7 +2558,19 @@ def build_subject_run_artifacts(
     ]
     for source, peer_artifact_id, artifact_id, title, rank_mode in peer_indicator_specs:
         if artifact_id in ready_ids:
-            results.append(build_peer_indicator_figure(run_dir, subject, source, peer_artifact_id, artifact_id, title, rank_mode))
+            append_builder_result(
+                results,
+                artifact_id,
+                lambda source=source, peer_artifact_id=peer_artifact_id, artifact_id=artifact_id, title=title, rank_mode=rank_mode: build_peer_indicator_figure(
+                    run_dir,
+                    subject,
+                    source,
+                    peer_artifact_id,
+                    artifact_id,
+                    title,
+                    rank_mode,
+                ),
+            )
 
     if WOS_SUBJECT_PAPER_CSV.exists() or CWTS_CHINA_ALL_FIELDS_CSV.exists() or CWTS_MATH_PEER_CSV.exists():
         for paper_artifact_id in [
@@ -2525,15 +2579,21 @@ def build_subject_run_artifacts(
             "figure_15_paper_highly_cited_relative_rank",
             "figure_16_paper_international_collab_relative_rank",
         ]:
-            results.append(build_subject_paper_artifact(run_dir, subject, paper_artifact_id))
+            append_builder_result(
+                results,
+                paper_artifact_id,
+                lambda paper_artifact_id=paper_artifact_id: build_subject_paper_artifact(run_dir, subject, paper_artifact_id),
+            )
 
     generated = [row for row in results if row["status"] == "generated"]
-    skipped = [row for row in results if row["status"] != "generated"]
+    skipped = [row for row in results if row["status"] not in {"generated", "error"}]
+    errors = [row for row in results if row["status"] == "error"]
     summary = {
         "generated_at": now_text(),
         "attempted_count": len(results),
         "generated_count": len(generated),
         "skipped_count": len(skipped),
+        "error_count": len(errors),
         "results": results,
     }
     artifacts_dir = run_dir / "artifacts"
@@ -2543,4 +2603,10 @@ def build_subject_run_artifacts(
         encoding="utf-8",
         newline="\n",
     )
+    if errors:
+        (artifacts_dir / "artifact_generation_errors.json").write_text(
+            json.dumps(errors, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
     return summary

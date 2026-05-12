@@ -15,4 +15,5 @@ __pycache__/
 *.tmp
 *.bak
 *.log
-
+scripts/_test_charts.py
+scripts/test_*.png

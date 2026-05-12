@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import csv
 import json
+import platform
 import re
 import sqlite3
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -11,7 +13,7 @@ from typing import Any
 import pandas as pd
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_DIR / "data"
 PROCESSED_DIR = PROJECT_DIR / "processed"
 CONFIG_DIR = PROJECT_DIR / "configs"
@@ -34,6 +36,7 @@ LOGICAL_SLOT_MAPPING_CSV = CONFIG_DIR / "template_slot_inventory" / "logical_slo
 CURRENT_REQUEST_JSON = CONFIG_DIR / "runtime" / "current_subject_request.json"
 THE_WEIGHT_AREA_CROSSWALK_JSON = CONFIG_DIR / "runtime" / "the_weight_area_crosswalk.json"
 README_PATH = PROJECT_DIR / "README.md"
+RECOMMENDED_PYTHON = Path(r"E:\conda_envs\graph-rag\python.exe")
 
 # 这个脚本是“换学科 agent”的单一入口。
 # 用户不需要命令行传参；换学科时只改这里的显式变量即可。
@@ -47,6 +50,13 @@ REPORT_YEAR = 2026
 RUN_VERIFIED_MATH_ARTIFACT_PIPELINE = False
 BUILD_PARAMETERIZED_READY_ARTIFACTS = True
 AUDIT_PARAMETERIZED_ARTIFACTS = True
+
+# 默认不写入 tracked 的 configs/runtime/current_subject_request.json，避免每次运行只改时间戳就污染 Git。
+# 每个 run 目录都会写一份 current_subject_request.json；确实需要给旧脚本共享全局请求时再改成 True。
+WRITE_GLOBAL_CURRENT_REQUEST = False
+
+# README 是交接文档，不应被每次运行自动重写；需要更新文档时人工修改。
+UPDATE_README_ON_RUN = False
 
 RANKING_SOURCES = ["软科", "QS", "US News", "THE"]
 TOP_RANK_MIDPOINT = 200
@@ -90,6 +100,38 @@ def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> 
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
+
+
+def write_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+
+
+def runtime_context() -> dict[str, Any]:
+    return {
+        "python_executable": sys.executable,
+        "python_version": sys.version.split()[0],
+        "platform": platform.platform(),
+        "recommended_python": str(RECOMMENDED_PYTHON),
+        "using_recommended_python": Path(sys.executable).resolve() == RECOMMENDED_PYTHON.resolve()
+        if RECOMMENDED_PYTHON.exists()
+        else False,
+    }
+
+
+def validate_required_inputs() -> list[dict[str, str]]:
+    required = {
+        "ranking sqlite": SQLITE_PATH,
+        "dim_subject": DIM_SUBJECT_CSV,
+        "dim_subject_alias": DIM_ALIAS_CSV,
+        "fact_indicator_weight": FACT_WEIGHT_CSV,
+        "fact_ranking_indicator": FACT_INDICATOR_CSV,
+    }
+    issues = []
+    for label, path in required.items():
+        if not path.exists():
+            issues.append({"label": label, "path": str(path), "status": "missing"})
+    return issues
 
 
 def resolve_subject() -> dict[str, Any]:
@@ -457,8 +499,7 @@ def build_artifact_readiness(
     return readiness_rows, gaps
 
 
-def write_current_request(subject: dict[str, Any]) -> None:
-    CURRENT_REQUEST_JSON.parent.mkdir(parents=True, exist_ok=True)
+def build_request_payload(subject: dict[str, Any]) -> dict[str, Any]:
     payload = {
         "generated_at": now_text(),
         "request": {
@@ -472,9 +513,21 @@ def write_current_request(subject: dict[str, Any]) -> None:
             "single_entrypoint": "scripts/run_subject_agent.py",
             "no_cli_args": True,
             "change_subject_by_editing_top_level_variables": True,
+            "runtime_request_is_run_scoped": not WRITE_GLOBAL_CURRENT_REQUEST,
         },
     }
-    CURRENT_REQUEST_JSON.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    return payload
+
+
+def write_current_request(run_dir: Path, subject: dict[str, Any]) -> dict[str, Any]:
+    payload = build_request_payload(subject)
+    run_request_path = run_dir / "current_subject_request.json"
+    write_json(run_request_path, payload)
+    written_paths = [str(run_request_path)]
+    if WRITE_GLOBAL_CURRENT_REQUEST:
+        write_json(CURRENT_REQUEST_JSON, payload)
+        written_paths.append(str(CURRENT_REQUEST_JSON))
+    return {"payload": payload, "written_paths": written_paths}
 
 
 def write_markdown_report(
@@ -554,7 +607,7 @@ def update_readme_agent_section() -> None:
         "现在换学科不应该再让人手动记多步脚本。新的控制入口是：",
         "",
         "```powershell",
-        "$py='C:\\Users\\李鑫\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe'",
+        "$py='E:\\conda_envs\\graph-rag\\python.exe'",
         "& $py scripts\\run_subject_agent.py",
         "```",
         "",
@@ -595,6 +648,46 @@ def append_run_log(run_dir: Path, ready_count: int, total_count: int, gap_count:
         )
 
 
+def write_run_manifest(
+    run_dir: Path,
+    subject: dict[str, Any],
+    request_info: dict[str, Any],
+    input_issues: list[dict[str, str]],
+    ranking_rows: list[dict[str, Any]],
+    weight_rows: list[dict[str, Any]],
+    indicator_rows: list[dict[str, Any]],
+    readiness_rows: list[dict[str, Any]],
+    gaps: list[dict[str, Any]],
+) -> dict[str, Any]:
+    manifest = {
+        "generated_at": now_text(),
+        "project_dir": str(PROJECT_DIR),
+        "runtime": runtime_context(),
+        "request_paths": request_info.get("written_paths", []),
+        "input_issues": input_issues,
+        "subject": subject,
+        "counts": {
+            "ranking_sources": len(ranking_rows),
+            "weight_sources": len(weight_rows),
+            "indicator_sources": len(indicator_rows),
+            "ready_artifacts": sum(1 for row in readiness_rows if row["readiness_status"] == "ready"),
+            "artifact_count": len(readiness_rows),
+            "gap_count": len(gaps),
+        },
+        "run_files": {
+            "agent_run_report": str(run_dir / "agent_run_report.md"),
+            "ranking_availability": str(run_dir / "ranking_availability.csv"),
+            "weight_availability": str(run_dir / "weight_availability.csv"),
+            "indicator_availability": str(run_dir / "indicator_availability.csv"),
+            "artifact_readiness": str(run_dir / "artifact_readiness.csv"),
+            "data_gap_report": str(run_dir / "data_gap_report.csv"),
+            "artifacts_dir": str(run_dir / "artifacts"),
+        },
+    }
+    write_json(run_dir / "run_manifest.json", manifest)
+    return manifest
+
+
 def maybe_run_math_pipeline() -> dict[str, Any]:
     if not RUN_VERIFIED_MATH_ARTIFACT_PIPELINE:
         return {"pipeline_ran": False, "reason": "RUN_VERIFIED_MATH_ARTIFACT_PIPELINE is False"}
@@ -607,18 +700,22 @@ def maybe_run_math_pipeline() -> dict[str, Any]:
 
 
 def run_subject_agent() -> dict[str, Any]:
+    input_issues = validate_required_inputs()
+    if input_issues:
+        raise FileNotFoundError(json.dumps(input_issues, ensure_ascii=False, indent=2))
+
     subject = resolve_subject()
-    write_current_request(subject)
+    run_slug = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{TARGET_SUBJECT_CODE}_{slug_text(TARGET_SUBJECT)}"
+    run_dir = OUTPUT_DIR / run_slug
+    run_dir.mkdir(parents=True, exist_ok=True)
+    request_info = write_current_request(run_dir, subject)
+
     records = query_ranking_records(subject["subject_id"])
     ranking_rows, ranking_summary = build_ranking_availability(records)
     weight_rows = build_weight_availability(subject)
     indicator_rows = build_indicator_availability(subject)
     paper_metric_sources = detect_paper_metric_sources()
     readiness_rows, gaps = build_artifact_readiness(ranking_rows, weight_rows, indicator_rows, paper_metric_sources)
-
-    run_slug = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{TARGET_SUBJECT_CODE}_{slug_text(TARGET_SUBJECT)}"
-    run_dir = OUTPUT_DIR / run_slug
-    run_dir.mkdir(parents=True, exist_ok=True)
 
     write_csv(run_dir / "ranking_availability.csv", ranking_rows, list(ranking_rows[0].keys()))
     write_csv(run_dir / "weight_availability.csv", weight_rows, list(weight_rows[0].keys()))
@@ -631,6 +728,17 @@ def run_subject_agent() -> dict[str, Any]:
         write_csv(run_dir / "data_gap_report.csv", [], ["artifact_id", "label", "gap_type", "reason"])
 
     write_markdown_report(run_dir, subject, ranking_rows, weight_rows, indicator_rows, readiness_rows, gaps)
+    run_manifest = write_run_manifest(
+        run_dir,
+        subject,
+        request_info,
+        input_issues,
+        ranking_rows,
+        weight_rows,
+        indicator_rows,
+        readiness_rows,
+        gaps,
+    )
     parameterized_artifacts = {"generated_count": 0, "attempted_count": 0, "skipped_count": 0, "results": []}
     if BUILD_PARAMETERIZED_READY_ARTIFACTS:
         from subject_artifact_builders import build_subject_run_artifacts
@@ -655,12 +763,15 @@ def run_subject_agent() -> dict[str, Any]:
         "paper_metric_sources": paper_metric_sources,
         "parameterized_artifacts": parameterized_artifacts,
         "math_pipeline": maybe_run_math_pipeline(),
+        "runtime": runtime_context(),
+        "request_paths": request_info["written_paths"],
         "outputs": {
             "agent_run_report": str(run_dir / "agent_run_report.md"),
+            "run_manifest": str(run_dir / "run_manifest.json"),
             "artifact_readiness": str(run_dir / "artifact_readiness.csv"),
             "data_gap_report": str(run_dir / "data_gap_report.csv"),
             "generated_artifacts": str(run_dir / "artifacts"),
-            "current_request": str(CURRENT_REQUEST_JSON),
+            "current_request": request_info["written_paths"][0],
         },
     }
     (run_dir / "agent_run_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
@@ -677,7 +788,8 @@ def run_subject_agent() -> dict[str, Any]:
         }
         (run_dir / "agent_run_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     append_run_log(run_dir, ready_count, len(readiness_rows), len(gaps))
-    update_readme_agent_section()
+    if UPDATE_README_ON_RUN:
+        update_readme_agent_section()
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return summary
 
