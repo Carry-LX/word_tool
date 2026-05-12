@@ -82,6 +82,11 @@ def inspect_docx_structure(docx_path: Path) -> dict[str, Any]:
         "debug_artifact_marker": "artifact=",
         "unresolved_xx_subject": r"(?i)xx\s*学",
         "unresolved_update_marker": "待更新",
+        "draft_followup_placeholder": "后续正式正文",
+        "draft_followup_reading": "后续解读",
+        "draft_followup_generic": "后续可",
+        "stale_qs_section_the_text": "THE排名在2023年更新指标体系后",
+        "stale_the_peer_text_in_qs": "2025年发布的THE世界排名中中国内地高校",
         "subject_typo": "计算机科学于技术",
     }
     pattern_hits: dict[str, list[str]] = {}

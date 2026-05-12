@@ -142,6 +142,13 @@ def read_csv_matrix(path: Path) -> list[list[str]]:
     return [row for row in rows if any(cell for cell in row)]
 
 
+def clean_text(value: Any) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return "" if text.lower() == "nan" else text
+
+
 def parse_slot_index(reference_object: str, prefix: str) -> int | None:
     for part in reference_object.split("+"):
         part = part.strip()
@@ -551,23 +558,290 @@ def cleaned_reference_caption(row: dict[str, str]) -> str:
     )
 
 
+def read_artifact_rows(artifact_id: str, filename: str) -> list[dict[str, str]]:
+    path = SUBJECT_RUN_DIR / "artifacts" / artifact_id / filename
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return [
+            {str(key): clean_text(value) for key, value in row.items()}
+            for row in csv.DictReader(handle)
+        ]
+
+
+def first_present(row: dict[str, str], keys: list[str]) -> str:
+    for key in keys:
+        value = clean_text(row.get(key, ""))
+        if value:
+            return value
+    return ""
+
+
+def to_number(value: Any) -> float | None:
+    text = clean_text(value).replace(",", "")
+    if not text or text in {"-", "未上榜", "未发布"}:
+        return None
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def format_number(value: Any, digits: int = 1) -> str:
+    number = to_number(value)
+    if number is None:
+        return clean_text(value)
+    if abs(number - round(number)) < 1e-8:
+        return str(int(round(number)))
+    return f"{number:.{digits}f}"
+
+
+def tongji_data_row(rows: list[dict[str, str]]) -> dict[str, str]:
+    for row in rows:
+        if clean_text(row.get("is_tongji", "")).lower() in {"1", "true"}:
+            return row
+        if "同济" in clean_text(row.get("university_name_cn", "")):
+            return row
+    return {}
+
+
+def rank_text(row: dict[str, str]) -> str:
+    raw = first_present(row, ["rank_raw", "world_rank_raw"])
+    return raw or format_number(row.get("rank_midpoint", ""))
+
+
+def summarize_overview(artifact_id: str) -> str:
+    rows = read_artifact_rows(artifact_id, "chart_data.csv")
+    if not rows:
+        return ""
+    parts = []
+    for row in rows:
+        source = clean_text(row.get("ranking_source", ""))
+        subject = clean_text(row.get("ranking_subject_raw", ""))
+        year = first_present(row, ["ranking_year", "release_year"])
+        rank = rank_text(row)
+        if source and rank:
+            subject_part = f"{subject}" if subject else "对应学科"
+            parts.append(f"{source}{year}年{subject_part}第{rank}")
+    if not parts:
+        return ""
+    return (
+        f"同济大学{read_target_subject_name()}学科在四类国际学科排名中均有最新记录："
+        + "，".join(parts)
+        + "。其中 U.S.News 位次最靠前，QS 与 THE 反映的是更宽或不同口径的学科领域，解读时需要同时说明榜单口径差异。"
+    )
+
+
+def summarize_weight(artifact_id: str) -> str:
+    rows = read_artifact_rows(artifact_id, "chart_data.csv")
+    if not rows:
+        return ""
+    source = clean_text(rows[0].get("ranking_source", ""))
+    subject = clean_text(rows[0].get("ranking_subject_or_area", ""))
+    primary_rows = [
+        row
+        for row in rows
+        if clean_text(row.get("indicator_level", "")) == "一级指标"
+        and clean_text(row.get("indicator_name", "")) not in {"合计", "总计"}
+        and clean_text(row.get("indicator_group", "")) not in {"合计", "总计"}
+    ]
+    if primary_rows:
+        rows = primary_rows
+    group_totals: dict[str, float] = {}
+    for row in rows:
+        group = clean_text(row.get("indicator_name", "")) if primary_rows else first_present(row, ["indicator_group", "parent_indicator", "raw_group"]) or clean_text(row.get("indicator_name", ""))
+        if group in {"合计", "总计"}:
+            continue
+        weight = to_number(row.get("weight_percent", ""))
+        if group and weight is not None:
+            group_totals[group] = group_totals.get(group, 0.0) + weight
+    top_groups = sorted(group_totals.items(), key=lambda item: item[1], reverse=True)[:3]
+    if not top_groups:
+        return ""
+    group_text = "、".join(f"{name}{value:.1f}%" for name, value in top_groups)
+    if artifact_id == "figure_06_the_indicator_weight":
+        return f"{source}在{subject or read_target_subject_name()}口径下权重最高的是{group_text}。"
+    return f"{source}在{subject or read_target_subject_name()}口径下的权重主要集中在{group_text}。这些维度决定了该榜单更看重科研产出、声誉评价还是国际合作等方面，应与同济大学对应分项表现联动解读。"
+
+
+def summarize_history(artifact_id: str) -> str:
+    rows = read_artifact_rows(artifact_id, "chart_data.csv")
+    if not rows:
+        return ""
+    by_source: dict[str, list[dict[str, str]]] = {}
+    for row in rows:
+        source = clean_text(row.get("ranking_source", ""))
+        if source:
+            by_source.setdefault(source, []).append(row)
+    parts = []
+    for source, source_rows in by_source.items():
+        source_rows = sorted(source_rows, key=lambda row: to_number(row.get("ranking_year", "")) or 0)
+        first = source_rows[0]
+        last = source_rows[-1]
+        first_mid = to_number(first.get("rank_midpoint", ""))
+        last_mid = to_number(last.get("rank_midpoint", ""))
+        if first_mid is not None and last_mid is not None:
+            direction = "提升" if last_mid < first_mid else "回落" if last_mid > first_mid else "保持稳定"
+            parts.append(f"{source}由{rank_text(first)}变为{rank_text(last)}，整体{direction}")
+        else:
+            parts.append(f"{source}最新位次为{rank_text(last)}")
+    if not parts:
+        return ""
+    return f"从历史序列看，{read_target_subject_name()}学科在不同榜单中的变化并不同步：" + "；".join(parts) + "。因此本节更适合观察长期区间和榜单口径，而不是只比较单一年份。"
+
+
+def summarize_usnews_indicator_trend(artifact_id: str) -> str:
+    rows = read_artifact_rows(artifact_id, "chart_data.csv")
+    if not rows:
+        return ""
+    latest_year = max((to_number(row.get("ranking_year", "")) or 0 for row in rows), default=0)
+    latest_rows = [row for row in rows if to_number(row.get("ranking_year", "")) == latest_year]
+    rank_rows = [row for row in latest_rows if "排名" in clean_text(row.get("indicator_name", ""))]
+    ranked = []
+    for row in rank_rows:
+        value = to_number(row.get("indicator_value_num", ""))
+        if value is not None:
+            ranked.append((value, clean_text(row.get("indicator_name", ""))))
+    ranked.sort(key=lambda item: item[0])
+    strong = "、".join(name for _, name in ranked[:2])
+    weak = "、".join(name for _, name in ranked[-2:])
+    year_text = str(int(latest_year)) if latest_year else "最新年份"
+    return f"U.S.News分项趋势显示，{year_text}年相对靠前的指标主要是{strong or '部分产出规模指标'}，相对靠后的指标主要是{weak or '部分质量和合作指标'}。这说明综合位次改善之外，还需要继续跟踪论文质量、国际合作和高被引占比等细分项。"
+
+
+def summarize_peer_indicator(artifact_id: str) -> str:
+    rows = read_artifact_rows(artifact_id, "chart_data.csv")
+    if not rows:
+        return ""
+    ranked = []
+    for row in rows:
+        rel = to_number(row.get("tongji_relative_rank_with_peer_reference", ""))
+        if rel is not None:
+            name = first_present(row, ["display_indicator_name", "indicator_short_name", "indicator_name"])
+            ranked.append((rel, name, row))
+    if not ranked:
+        return ""
+    ranked.sort(key=lambda item: item[0])
+    strong = "、".join(name for _, name, _ in ranked[:2] if name)
+    weak = "、".join(name for _, name, _ in ranked[-2:] if name)
+    peer_size = first_present(ranked[0][2], ["peer_scope_size", "comparison_scope_size"])
+    source = "软科" if "figure_09" in artifact_id else "U.S.News" if "figure_11" in artifact_id else "THE"
+    return f"{source}分项对标共覆盖{peer_size or '若干'}所内地高校。同济大学相对靠前的指标主要是{strong or '部分优势项'}，相对靠后的指标主要是{weak or '部分短板项'}，建设工作应优先把这些短板与榜单权重结合判断。"
+
+
+def summarize_peer_table(artifact_id: str) -> str:
+    rows = read_artifact_rows(artifact_id, "table_matrix.csv")
+    if not rows:
+        return ""
+    source = "软科" if "table_05" in artifact_id else "U.S.News" if "table_06" in artifact_id else "QS" if "table_07" in artifact_id else "THE" if "table_08" in artifact_id else ""
+    tongji = next((row for row in rows if "同济" in "".join(row.values())), {})
+    if tongji:
+        values = [value for key, value in tongji.items() if key not in {"序号", "学校名称", "省份"} and value]
+        return f"{source}对标表共列出{len(rows)}所内地高校。同济大学在该榜单中的记录为{'、'.join(values[:4])}，可据此判断其在内地同类高校中的相对位置。"
+    return f"{source}对标表共列出{len(rows)}所内地高校，主要用于观察同一榜单口径下前列高校的分布和位次梯队。"
+
+
+def summarize_distribution(artifact_id: str) -> str:
+    rows = read_artifact_rows(artifact_id, "table_data.csv")
+    if not rows:
+        return ""
+    totals = [row for row in rows if clean_text(row.get("位次区间", "")) == "1-200合计"]
+    if totals:
+        total_text = "，".join(f"{row.get('榜单')} {row.get('高校数量')}所" for row in totals)
+        return f"四类榜单中进入前200位的内地高校数量差异明显：{total_text}。样本数量越大，越适合做细分梯队比较；样本较少的榜单则更适合观察头部高校。"
+    return ""
+
+
+def summarize_indicator_history_table(artifact_id: str) -> str:
+    rows = read_artifact_rows(artifact_id, "table_matrix.csv")
+    if not rows:
+        return ""
+    columns = list(rows[0].keys())
+    year_cols = [col for col in columns if re.search(r"\d{4}", col)]
+    indicator_col = next((col for col in columns if "指标" in col or "名称" in col), columns[0])
+    indicators = [clean_text(row.get(indicator_col, "")) for row in rows[:4] if clean_text(row.get(indicator_col, ""))]
+    source = "软科" if "table_01" in artifact_id else "U.S.News" if "table_02" in artifact_id else "THE"
+    year_text = f"{year_cols[0]}至{year_cols[-1]}" if len(year_cols) >= 2 else "最新年份"
+    indicator_text = "、".join(indicators[:3]) if indicators else "主要分项指标"
+    return f"{source}分项历史表覆盖{year_text}，共列出{len(rows)}项指标，重点包括{indicator_text}等。该表用于判断同济大学在不同评价维度上的连续变化，而不是只看综合位次。"
+
+
+def summarize_paper(artifact_id: str, segment_key: str) -> str:
+    rows = read_artifact_rows(artifact_id, "chart_data.csv")
+    tongji = tongji_data_row(rows)
+    if not tongji:
+        return ""
+    if "figure_13" in artifact_id:
+        docs = format_number(tongji.get("WOS_documents", ""))
+        docs_rank = format_number(tongji.get("WOS_documents_relative_rank", ""))
+        cited = format_number(tongji.get("times_cited", ""))
+        cited_rank = format_number(tongji.get("times_cited_relative_rank", ""))
+        return f"Web of Science 学科论文数据中，同济大学论文量为{docs}篇，在对标高校中排第{docs_rank}；总被引为{cited}次，排第{cited_rank}。这说明规模和影响力需要结合观察，不能只用论文数量判断学科竞争力。"
+    if "figure_14" in artifact_id:
+        if segment_key == "paper_quality_intro":
+            return "论文质量部分重点观察 CNCI、篇均被引以及高被引论文相关指标。这些指标相较论文总量更能反映成果影响力，可用于判断学科论文产出的质量结构。"
+        cnci = format_number(tongji.get("CNCI", ""), 2)
+        cnci_rank = format_number(tongji.get("CNCI_relative_rank", ""))
+        impact = format_number(tongji.get("citation_impact", ""), 2)
+        impact_rank = format_number(tongji.get("citation_impact_relative_rank", ""))
+        return f"同济大学 CNCI 为{cnci}，对标高校中排第{cnci_rank}；篇均被引为{impact}，排第{impact_rank}。该组指标更能反映论文质量和规范化影响力，是解释论文短板的重要依据。"
+    if "figure_15" in artifact_id:
+        top1 = format_number(first_present(tongji, ["documents_top_1", "P_top_1"]))
+        top10 = format_number(first_present(tongji, ["documents_top_10", "P_top_10", "highly_cited_papers"]))
+        r1 = format_number(first_present(tongji, ["documents_top_1_relative_rank", "P_top_1_relative_rank"]))
+        r10 = format_number(first_present(tongji, ["documents_top_10_relative_rank", "P_top_10_relative_rank", "highly_cited_papers_relative_rank"]))
+        return f"高被引论文方面，同济大学 Top 1%论文数为{top1}、相对排名第{r1}，Top 10%论文数为{top10}、相对排名第{r10}。高影响力成果的占位应与 CNCI 和篇均被引共同分析。"
+    if "figure_16" in artifact_id:
+        intl = format_number(first_present(tongji, ["international_documents", "P_int_collab"]))
+        pct = format_number(first_present(tongji, ["pct_international_documents", "PP_int_collab"]), 1)
+        rank = format_number(first_present(tongji, ["international_documents_relative_rank", "P_int_collab_relative_rank"]))
+        return f"国际合作方面，同济大学国际合著论文为{intl}篇，占比{pct}%，对标高校中排第{rank}。该指标体现国际合作网络活跃度，也会影响部分国际榜单的国际化评价。"
+    return ""
+
+
+def artifact_data_summary_text(row: dict[str, str], segment_key: str) -> str:
+    artifact_id = row.get("artifact_id", "")
+    if artifact_id == "figure_01_tongji_subject_ranking_overview":
+        return summarize_overview(artifact_id)
+    if "indicator_weight" in artifact_id:
+        return summarize_weight(artifact_id)
+    if artifact_id == "figure_07_all_rankings_history":
+        return summarize_history(artifact_id)
+    if artifact_id == "figure_10_usnews_indicator_history_trend":
+        return summarize_usnews_indicator_trend(artifact_id)
+    if "peer_indicator" in artifact_id:
+        return summarize_peer_indicator(artifact_id)
+    if artifact_id == "table_04_mainland_rank_band_distribution":
+        return summarize_distribution(artifact_id)
+    if artifact_id.startswith(("table_01", "table_02", "table_03")):
+        return summarize_indicator_history_table(artifact_id)
+    if artifact_id.startswith(("table_05", "table_06", "table_07", "table_08")):
+        return summarize_peer_table(artifact_id)
+    if artifact_id.startswith(("figure_13", "figure_14", "figure_15", "figure_16")):
+        return summarize_paper(artifact_id, segment_key)
+    return ""
+
+
 def fallback_narrative_text(row: dict[str, str], segment_key: str = "") -> str:
     subject_name = read_target_subject_name()
     subject_label = f"{subject_name}学科"
     artifact_id = row.get("artifact_id", "")
     slot_kind = row.get("slot_kind", "")
+    data_summary = artifact_data_summary_text(row, segment_key)
+    if data_summary:
+        return data_summary
 
     if "indicator_weight" in artifact_id:
         return (
             f"该排名体系的指标权重展示了{subject_label}评价中不同维度的相对重要性。"
-            "后续解读应优先关注权重较高的评价维度，并结合学校在对应分项中的表现判断主要优势和短板。"
+            "正文应优先关注权重较高的评价维度，并结合学校在对应分项中的表现判断主要优势和短板。"
         )
     if "commonality" in artifact_id:
         return (
             "该图用于对比不同国际排名的指标口径。"
             "四类排名在学术影响、科研产出、声誉评价和国际化等维度上存在交叉，也保留了各自的评价偏重。"
         )
-    if "history" in artifact_id:
+    if "history" in artifact_id and slot_kind != "table":
         return (
             f"排名历史部分呈现了{subject_label}在主要国际榜单中的历年变化。"
             "阅读该图时应同时观察最新位次、长期趋势和榜单口径变化，避免只依据单一年份判断学科发展状态。"
@@ -586,7 +860,7 @@ def fallback_narrative_text(row: dict[str, str], segment_key: str = "") -> str:
         if segment_key == "paper_quality_values":
             return (
                 f"从相对排名看，{subject_label}需要同时关注规范化影响力和篇均被引表现。"
-                "若两项指标与论文规模排名存在差距，后续建设应更强调高质量论文产出和代表性成果培育。"
+                "若两项指标与论文规模排名存在差距，建设工作应更强调高质量论文产出和代表性成果培育。"
             )
         if segment_key == "paper_highly_cited_summary":
             return (
@@ -596,7 +870,7 @@ def fallback_narrative_text(row: dict[str, str], segment_key: str = "") -> str:
         if segment_key == "paper_collab_summary":
             return (
                 "国际合著指标反映学科国际合作网络的活跃程度。"
-                "若国际合著占比或相对排名偏低，后续可围绕稳定合作团队、联合发表和国际项目组织能力进行提升。"
+                "若国际合著占比或相对排名偏低，可围绕稳定合作团队、联合发表和国际项目组织能力进行提升。"
             )
         return (
             f"论文指标部分从产出规模、影响力或合作结构补充观察{subject_label}的科研表现。"
@@ -609,7 +883,7 @@ def fallback_narrative_text(row: dict[str, str], segment_key: str = "") -> str:
         )
     return (
         f"该图表提供了{subject_label}国际排名分析中的关键证据。"
-        "后续正式正文可在此基础上补充具体数值解释、原因分析和建设建议。"
+        "正文应围绕图表中的位次、趋势和对标差距展开具体解释，并形成可落地的建设建议。"
     )
 
 
@@ -1175,6 +1449,69 @@ def compact_cover_main_spacing(document: Document) -> int:
     return len(remove_indices)
 
 
+def paragraph_has_page_break(paragraph: Paragraph) -> bool:
+    page_breaks = paragraph._p.findall(".//" + qn("w:br"))
+    return any(page_break.get(qn("w:type")) == "page" for page_break in page_breaks)
+
+
+def remove_empty_page_breaks_before_heading1(document: Document) -> int:
+    body = document._body._element
+    paragraphs = list(document.paragraphs)
+    removed = 0
+    for index, paragraph in enumerate(paragraphs[:-1]):
+        if paragraph_text(paragraph).strip():
+            continue
+        if not paragraph_has_page_break(paragraph):
+            continue
+        next_paragraph = paragraphs[index + 1]
+        next_text = paragraph_text(next_paragraph).strip()
+        next_style = getattr(next_paragraph.style, "style_id", "")
+        if next_style != "1" and not re.match(r"^[一二三四五六七八九十]+、", next_text):
+            continue
+        body.remove(paragraph._p)
+        removed += 1
+    return removed
+
+
+def replace_residual_template_paragraphs(document: Document) -> int:
+    subject_name = read_target_subject_name()
+    replacements = [
+        (
+            "THE排名在2023年更新指标体系后研究质量、国际展望相对排名比较低",
+            f"当前 QS 学科排名可用于观察{subject_name}学科综合位次和同行梯队，但本地数据暂未形成可与 U.S.News、THE 直接对应的多年分项历史表；因此本节主要把 QS 作为综合趋势参考。",
+        ),
+        (
+            "2025年发布的THE世界排名中中国内地高校有13所进入前200位",
+            f"QS 对标样本用于观察{subject_name}学科在内地高校中的位次梯队。当前同济大学在 QS 计算机科学与信息系统口径下进入 201-250 区间，需结合声誉、篇均被引和 H 指数等 QS 指标口径理解提升空间。",
+        ),
+        (
+            "2025年THE排名前200位的3所内地高校",
+            "当前尚未形成 QS 分项指标相对排名图，本报告将 QS 作为综合位次与同行梯队参考；待补充 QS 分项数据后，可再纳入学术声誉、雇主声誉、篇均被引和 H 指数等维度对标。",
+        ),
+        (
+            "综合分析三大世界排名的数据",
+            f"综合四类学科排名和论文指标看，同济大学{subject_name}学科在 U.S.News 中位次相对靠前，在 QS、THE 和部分论文质量指标上仍有提升空间。下一阶段建设应同时关注国际榜单口径差异、论文质量结构和国际合作网络。",
+        ),
+        (
+            "针对提升U.S.News排名的建议是提升论文质量",
+            "针对 U.S.News 等强调科研影响力的榜单，应重点提升标准化引文影响、前10%高被引论文占比、前1%高被引论文占比和国际合作论文质量，减少低被引成果对整体影响力的稀释。",
+        ),
+        (
+            "对于软科排名可提升的空间是",
+            "针对软科、QS 和 THE，应分别关注高水平成果与高被引学者、学术声誉与雇主声誉、研究质量与国际展望等维度；这些方向需要与学院人才引育、标志性成果培育和国际合作组织能力同步推进。",
+        ),
+    ]
+    changed = 0
+    for paragraph in document.paragraphs:
+        text = paragraph_text(paragraph)
+        for marker, replacement in replacements:
+            if marker in text:
+                set_paragraph_text_with_template_style(paragraph, replacement, paragraph_run_style(paragraph))
+                changed += 1
+                break
+    return changed
+
+
 def replace_subject_placeholders_in_xml_parts(docx_path: Path, subject_name: str, the_subject_area: str = "") -> int:
     temp_docx = docx_path.with_suffix(".tmp.docx")
     changed_members = 0
@@ -1232,6 +1569,8 @@ def scale_embedded_image(docx_path: Path, target_member: str, scale: float) -> i
 
 def embedded_image_width_ratio(row: dict[str, str]) -> float:
     artifact_id = row.get("artifact_id", "")
+    if artifact_id == "figure_06_the_indicator_weight":
+        return 0.90
     if "peer_indicator" in artifact_id:
         return 1.0
     if artifact_id.startswith(("figure_13", "figure_14", "figure_15", "figure_16")):
@@ -1332,6 +1671,8 @@ def postprocess_final_document(rows: list[dict[str, str]]) -> list[dict[str, Any
     the_subject_area = read_target_subject_area()
     document = Document(str(OUTPUT_DOCX))
     placeholder_changes = replace_subject_placeholders(document, subject_name, the_subject_area)
+    residual_paragraph_changes = replace_residual_template_paragraphs(document)
+    removed_heading_page_breaks = remove_empty_page_breaks_before_heading1(document)
     cover_main_spacing_changes = compact_cover_main_spacing(document)
     cover_spacing_changes = compact_cover_section_break(document)
     doc_content_width = content_width_emu(document)
@@ -1373,11 +1714,25 @@ def postprocess_final_document(rows: list[dict[str, str]]) -> list[dict[str, Any
             "removed_blank_paragraphs": cover_main_spacing_changes,
         },
         {
+            "slot": "heading_page_breaks",
+            "artifact_id": "",
+            "operation": "remove_empty_page_breaks_before_heading1",
+            "status": "ok",
+            "removed_page_breaks": removed_heading_page_breaks,
+        },
+        {
             "slot": "document_xml_subject_placeholders",
             "artifact_id": "",
             "operation": "replace_subject_placeholders_in_xml_parts",
             "status": "ok",
             "changed_members": xml_placeholder_changes,
+        },
+        {
+            "slot": "residual_template_paragraphs",
+            "artifact_id": "",
+            "operation": "replace_residual_template_paragraphs",
+            "status": "ok",
+            "changed_paragraphs": residual_paragraph_changes,
         },
     ] + image_extent_changes
 

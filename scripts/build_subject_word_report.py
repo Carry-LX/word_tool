@@ -12,6 +12,7 @@ import build_narrative_generation_bundle as narrative_bundle
 import build_word_assembly_manifest as assembly_manifest
 import build_word_replacement_trial as word_trial
 import run_subject_agent as subject_agent
+import update_word_fields
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -35,6 +36,7 @@ BUILD_NARRATIVE_BUNDLE = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipel
 USE_DEMO_NARRATIVE_RESULT = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.use_demo_narrative_result", False)
 RUN_WORD_QA = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.run_word_qa", True)
 RUN_RENDER_QA = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.run_render_qa", False)
+UPDATE_WORD_FIELDS_WITH_COM = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.update_word_fields_with_com", True)
 TABLE_REPLACEMENT_MODE = agent_runtime.profile_str(RUNTIME_PROFILE, "word_pipeline.table_replacement_mode", "native")
 
 
@@ -107,6 +109,11 @@ def build_subject_word_report() -> dict[str, Any]:
     narrative_assets = prepare_narrative_assets(run_dir)
     output_docx = configure_word_writer(run_dir, manifest, subject_summary)
     word_trial.main()
+    field_update_result = (
+        update_word_fields.update_word_fields(output_docx)
+        if UPDATE_WORD_FIELDS_WITH_COM
+        else {"status": "skipped", "reason": "disabled_by_runtime_profile"}
+    )
 
     qa_result = {}
     if RUN_WORD_QA:
@@ -129,6 +136,7 @@ def build_subject_word_report() -> dict[str, Any]:
         "artifact_summary": subject_summary.get("parameterized_artifacts", {}),
         "artifact_audit": subject_summary.get("subject_artifact_audit", {}),
         "word_replacement_audit": str(word_trial.REPLACEMENT_AUDIT_JSON),
+        "word_field_update": field_update_result,
         "word_qa": qa_result,
     }
     write_json(output_docx.parent / "subject_word_report_summary.json", payload)

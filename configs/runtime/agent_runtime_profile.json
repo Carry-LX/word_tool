@@ -24,6 +24,7 @@
     "use_demo_narrative_result": false,
     "run_word_qa": true,
     "run_render_qa": false,
+    "update_word_fields_with_com": true,
     "table_replacement_mode": "native"
   },
   "paths": {

@@ -2536,6 +2536,14 @@ def build_appendix(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
     )
     avg_sort = pd.to_numeric(matrix["排名平均位次"], errors="coerce")
     matrix = matrix.assign(_avg_sort=avg_sort).sort_values(["_avg_sort", "学校名称"], na_position="last").drop(columns=["_avg_sort"])
+    # Word 版附表控制在模板接近的篇幅内；完整长表仍保留在 table_data/source_trace 中。
+    max_word_rows = 50
+    if len(matrix) > max_word_rows:
+        tongji_rows = matrix[matrix["学校名称"].astype(str).str.contains("同济", na=False)].copy()
+        compact_matrix = matrix.head(max_word_rows).copy()
+        if not tongji_rows.empty and not compact_matrix["学校名称"].astype(str).str.contains("同济", na=False).any():
+            compact_matrix = pd.concat([compact_matrix.head(max_word_rows - 1), tongji_rows.head(1)], ignore_index=True)
+        matrix = compact_matrix.copy()
     matrix["序号"] = range(1, len(matrix) + 1)
     ordered_cols = ["序号", "学校名称", "省份"] + source_cols + ["排名平均位次"]
     matrix = matrix[ordered_cols]
