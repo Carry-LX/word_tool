@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 SLOT_MAPPING_CSV = PROJECT_DIR / "configs" / "template_slot_inventory" / "logical_slot_artifact_mapping.csv"
 NARRATIVE_MAPPING_JSON = PROJECT_DIR / "configs" / "template_slot_inventory" / "narrative_paragraph_mapping.json"
 SUBJECT_RUNS_ROOT = PROJECT_DIR / "outputs" / "subject_agent_runs"
@@ -54,11 +54,22 @@ def build_bundle(subject_run_dir: Path | None = None) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     slot_mapping_by_id = {row["logical_slot_id"]: row for row in read_slot_mapping()}
+    manifest_path = subject_run_dir / "word_assembly" / "word_assembly_manifest.json"
+    assembly_manifest = json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.exists() else {}
+    slot_decisions = {
+        str(row.get("logical_slot_id", "")): row
+        for row in assembly_manifest.get("slot_decisions", [])
+        if row.get("logical_slot_id")
+    }
+    template_policy = assembly_manifest.get("template_policy", {})
     tasks: list[dict[str, Any]] = []
 
     for slot_item in read_narrative_mapping():
         slot_id = str(slot_item.get("logical_slot_id", "")).strip()
         if not slot_id or str(slot_item.get("replace_decision", "replace")) != "replace":
+            continue
+        decision = slot_decisions.get(slot_id, {})
+        if decision and not decision.get("include_in_word"):
             continue
         slot_row = slot_mapping_by_id.get(slot_id, {})
         artifact_id = str(slot_item.get("artifact_id", "")).strip()
@@ -85,6 +96,10 @@ def build_bundle(subject_run_dir: Path | None = None) -> Path:
                     "artifact_narrative": narrative,
                     "data_preview": preview,
                     "source_files": source_files,
+                    "template_mode": template_policy.get("template_mode", ""),
+                    "requires_disclosure": template_policy.get("requires_disclosure", False),
+                    "disclosure_text": template_policy.get("disclosure_text", ""),
+                    "word_assembly_decision": decision,
                 }
             )
 
@@ -93,6 +108,8 @@ def build_bundle(subject_run_dir: Path | None = None) -> Path:
         "subject_run_dir": str(subject_run_dir),
         "prompt_template": str(PROJECT_DIR / "configs" / "template_slot_inventory" / "narrative_llm_prompt_template.md"),
         "output_template": str(PROJECT_DIR / "configs" / "template_slot_inventory" / "narrative_llm_output_template.json"),
+        "word_assembly_manifest": str(manifest_path) if manifest_path.exists() else "",
+        "template_policy": template_policy,
         "task_count": len(tasks),
         "tasks": tasks,
     }

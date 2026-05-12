@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 RUN_ROOT = PROJECT_DIR / "outputs" / "subject_agent_runs"
 PROCESSED_QA_DIR = PROJECT_DIR / "processed" / "qa"
 OUTPUT_DIR = PROJECT_DIR / "configs" / "pre_word_pipeline_qa"

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 STAGE1_DIR = PROJECT_DIR / "configs" / "stage1_inventory"
 GOVERNANCE_DIR = PROJECT_DIR / "configs" / "data_governance"
 RECIPES_DIR = PROJECT_DIR / "configs" / "artifact_recipes"

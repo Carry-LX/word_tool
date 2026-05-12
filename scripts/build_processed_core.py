@@ -10,7 +10,7 @@ from typing import Any
 import pandas as pd
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_DIR / "data"
 PROCESSED_DIR = PROJECT_DIR / "processed"
 QA_DIR = PROCESSED_DIR / "qa"

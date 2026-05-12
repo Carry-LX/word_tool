@@ -9,7 +9,7 @@ from typing import Any
 import pandas as pd
 
 
-PROJECT_ROOT = Path(r"E:\projects\water\word_tool")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CWTS_TRADITIONAL_XLSX = (
     PROJECT_ROOT
     / "external_data"

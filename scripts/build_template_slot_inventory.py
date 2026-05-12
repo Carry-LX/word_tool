@@ -9,7 +9,7 @@ from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_DIR / "data"
 OUTPUT_DIR = PROJECT_DIR / "configs" / "template_slot_inventory"
 REFERENCE_DOCX_NAME_CONTAINS = "国际排名发展分析"

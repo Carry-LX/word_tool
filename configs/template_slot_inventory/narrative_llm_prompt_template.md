@@ -17,6 +17,9 @@
 7. 不要输出 Markdown，不要加标题，不要使用项目符号。
 8. 输出必须是合法 JSON，字段名与输出模板完全一致。
 9. 风格尽量贴近原模板：结论先行、句子偏短、少用解释性套话，避免“换句话说”“这说明”“从某种意义上”等扩写口吻。
+10. 如果输入中包含 `template_mode=proxy_full` 或 `requires_disclosure=true`，必须在相关段落里自然保留代理口径边界，不要把代理学科写成精确一级学科数据。
+11. 如果输入中包含 `template_mode=partial`，只能围绕已提供来源写结论；缺失来源要写成“未检索到/暂不纳入比较”，不要用相邻来源补成完整结论。
+12. 如果输入中包含 `word_assembly_manifest` 的 `slot_decisions`，只为 `include_in_word=true` 的槽位生成正文；被排除槽位不要生成段落。
 
 ## 生成偏好
 
@@ -40,6 +43,10 @@
 - `artifact_narrative`
 - `data_preview`
 - `source_files`
+- `template_mode`
+- `requires_disclosure`
+- `disclosure_text`
+- `word_assembly_manifest`
 
 ## 输出
 

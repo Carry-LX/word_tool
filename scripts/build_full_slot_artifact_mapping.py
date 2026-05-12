@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 INVENTORY_DIR = PROJECT_DIR / "configs" / "template_slot_inventory"
 REFERENCE_SLOTS_CSV = INVENTORY_DIR / "reference_slots.csv"
 REFERENCE_BLOCKS_CSV = INVENTORY_DIR / "reference_blocks.csv"

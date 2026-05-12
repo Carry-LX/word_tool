@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-PROJECT_ROOT = Path(r"E:\projects\water\word_tool")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EXTERNAL_DATA_ROOT = PROJECT_ROOT / "external_data"
 RAW_ROOT = EXTERNAL_DATA_ROOT / "raw"
 REPORT_ROOT = EXTERNAL_DATA_ROOT / "reports"

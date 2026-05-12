@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = PROJECT_DIR / "configs" / "artifact_registry.yaml"
 AUDIT_DIR = PROJECT_DIR / "configs" / "artifact_audit"
 LOG_DIR = PROJECT_DIR / "logs"

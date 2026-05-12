@@ -10,7 +10,7 @@ import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = PROJECT_DIR / "processed"
 OUTPUT_DIR = PROJECT_DIR / "outputs" / "artifacts" / "table_05_arwu_mainland_peer_ranking"
 LOG_DIR = PROJECT_DIR / "logs"

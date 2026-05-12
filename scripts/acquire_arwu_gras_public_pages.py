@@ -13,7 +13,7 @@ from typing import Any
 import pandas as pd
 
 
-PROJECT_ROOT = Path(r"E:\projects\water\word_tool")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 NODE_EXE = Path(r"C:\Users\李鑫\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe")
 RAW_ROOT = PROJECT_ROOT / "external_data" / "raw" / "shanghairanking_gras_public"
 PROCESSED_ROOT = PROJECT_ROOT / "external_data" / "processed"

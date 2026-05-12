@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 
 
-PROJECT_ROOT = Path(r"E:\projects\water\word_tool")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_ROOT = PROJECT_ROOT / "data"
 PROCESSED_ROOT = PROJECT_ROOT / "external_data" / "processed"
 REPORT_ROOT = PROJECT_ROOT / "external_data" / "reports"

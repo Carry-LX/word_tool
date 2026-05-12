@@ -1,0 +1,60 @@
+{
+  "version": "2026-05-12",
+  "templates": {
+    "default_template_docx": "data/同济大学XX学科的国际排名发展分析-2026年5月.docx",
+    "full_template_docx": "data/同济大学XX学科的国际排名发展分析-2026年5月.docx",
+    "proxy_template_docx": "data/同济大学XX学科的国际排名发展分析-2026年5月.docx",
+    "partial_template_docx": "data/同济大学XX学科的国际排名发展分析-2026年5月.docx"
+  },
+  "status_policy": {
+    "full_ready_exact_or_existing": {
+      "template_mode": "full",
+      "allow_all_ready_artifacts": true,
+      "requires_disclosure": false,
+      "narrative_tone": "complete_evidence"
+    },
+    "full_ready_via_subject_proxy": {
+      "template_mode": "proxy_full",
+      "allow_all_ready_artifacts": true,
+      "requires_disclosure": true,
+      "narrative_tone": "proxy_disclosed"
+    },
+    "partial_sources_after_supplement": {
+      "template_mode": "partial",
+      "allow_all_ready_artifacts": false,
+      "requires_disclosure": true,
+      "narrative_tone": "limited_evidence"
+    },
+    "fallback_full": {
+      "template_mode": "full",
+      "allow_all_ready_artifacts": true,
+      "requires_disclosure": false,
+      "narrative_tone": "complete_evidence"
+    },
+    "fallback_partial": {
+      "template_mode": "partial",
+      "allow_all_ready_artifacts": false,
+      "requires_disclosure": true,
+      "narrative_tone": "limited_evidence"
+    }
+  },
+  "partial_mode_allowed_sections": [
+    "一、概述",
+    "三、xx学科排名历史发展分析",
+    "六、1、论文整体",
+    "六、2、论文质量",
+    "六、3、国际合著"
+  ],
+  "partial_mode_allowed_artifacts": [
+    "figure_01_tongji_subject_ranking_overview",
+    "figure_07_all_rankings_history",
+    "figure_13_paper_output_citation_relative_rank",
+    "figure_14_paper_cnci_cpp_relative_rank",
+    "figure_15_paper_highly_cited_relative_rank",
+    "figure_16_paper_international_collab_relative_rank"
+  ],
+  "disclosure_text": {
+    "proxy_full": "本报告部分图表采用相邻一级学科或国际榜单相近学科作为代理口径，相关结论应按代理口径解释。",
+    "partial": "本报告仅基于当前可获得的部分国际榜单和论文指标生成，缺失来源不作强行补齐，相关结论应谨慎解释。"
+  }
+}

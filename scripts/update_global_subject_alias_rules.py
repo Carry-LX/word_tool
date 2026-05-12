@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 
-PROJECT_DIR = Path(r"E:\projects\water\word_tool")
+PROJECT_DIR = Path(__file__).resolve().parent.parent
 CONFIG_PATH = PROJECT_DIR / "configs" / "runtime" / "manual_subject_aliases.json"
 REPORT_PATH = PROJECT_DIR / "processed" / "qa" / "global_subject_alias_rule_update.md"
 
