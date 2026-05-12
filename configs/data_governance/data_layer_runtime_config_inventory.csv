@@ -1,0 +1,9 @@
+﻿name,path,size_bytes,note
+current_subject_request.json,E:\projects\water\word_tool\configs\runtime\current_subject_request.json,1652,当前请求状态，不应被当作长期配置。
+indicator_group_crosswalk.json,E:\projects\water\word_tool\configs\runtime\indicator_group_crosswalk.json,181,领域/指标口径 crosswalk，应并入统一 mapping registry。
+manual_subject_aliases.json,E:\projects\water\word_tool\configs\runtime\manual_subject_aliases.json,63134,人工 alias 规则很大，是必要但高风险的映射层，需要 schema、审计和版本化。
+peer_scope_rules.yaml,E:\projects\water\word_tool\configs\runtime\peer_scope_rules.yaml,1483,
+query_contract.md,E:\projects\water\word_tool\configs\runtime\query_contract.md,1220,
+subject_request_schema.yaml,E:\projects\water\word_tool\configs\runtime\subject_request_schema.yaml,1999,
+subject_resolution_rules.md,E:\projects\water\word_tool\configs\runtime\subject_resolution_rules.md,2505,
+the_weight_area_crosswalk.json,E:\projects\water\word_tool\configs\runtime\the_weight_area_crosswalk.json,925,领域/指标口径 crosswalk，应并入统一 mapping registry。

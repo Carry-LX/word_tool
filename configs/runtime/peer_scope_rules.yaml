@@ -1,0 +1,44 @@
+version: 1
+purpose: "定义后续对标高校范围的可复用规则。"
+
+rules:
+  mainland_top200_by_ranking:
+    description: "在某榜单、某学科、某年度中筛选中国内地高校，并保留世界排名前200或排名区间中位数不高于200的高校。"
+    required_tables:
+      - "fact_ranking"
+      - "dim_subject_alias"
+    filters:
+      - "is_mainland_china = true"
+      - "rank_midpoint <= 200"
+    notes:
+      - "适合国际排名对标图表。"
+      - "如果同济未进入前200，仍应额外保留同济用于定位。"
+
+  double_first_class_subject:
+    description: "筛选同一教育部一级学科下的双一流建设高校。"
+    required_tables:
+      - "fact_domestic_status"
+      - "dim_subject"
+    filters:
+      - "is_double_first_class = true"
+      - "subject_id = target_subject_id"
+    notes:
+      - "适合国内评估和国内学科建设对标。"
+
+  round5_same_or_better:
+    description: "筛选五轮评估中与同济同档或更高档的高校。"
+    required_tables:
+      - "fact_domestic_evaluation"
+      - "dim_subject"
+    filters:
+      - "evaluation_round = 5"
+      - "evaluation_result >= tongji_result_rank_order"
+    notes:
+      - "第五轮评估数据不完全，报告必须说明数据边界。"
+
+  user_defined:
+    description: "用户手工指定对标高校列表。"
+    required_inputs:
+      - "peer_universities"
+    notes:
+      - "适合院系已有明确对标高校名单的场景。"

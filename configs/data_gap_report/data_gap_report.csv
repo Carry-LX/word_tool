@@ -1,0 +1,6 @@
+﻿logical_slot_id,artifact_id,object,gap_type,why_blocking,required_input
+L005,figure_05_usnews_indicator_weight,US News 数学学科指标权重图,missing_usnews_math_weight,fact_indicator_weight 当前没有 US News-数学 权重行，不能用计算机科学、商业与经济等其他学科权重替代。,US News 数学学科指标体系及权重表，至少包含指标名、权重、适用学科/年份、来源文件。
+L019,figure_13_paper_output_citation_relative_rank,论文及被引总量相对排名图,missing_paper_metric_source,data/ 与 processed/ 中未发现 WOS、InCites、ESI 或论文指标独立来源，不能从排名表臆造论文量和被引量。,37 所对标高校论文总量、被引总量及统计口径字段。
+L020,figure_14_paper_cnci_cpp_relative_rank,CNCI 及篇均被引相对排名图,missing_paper_quality_source,当前数据没有 CNCI 与篇均被引字段。,37 所对标高校 CNCI、篇均被引数、统计年份/窗口。
+L021,figure_15_paper_highly_cited_relative_rank,高被引 TOP 论文量相对排名图,missing_highly_cited_source,当前数据没有 TOP1% / TOP10% 高被引论文量字段。,37 所对标高校高被引论文数量及 TOP 口径。
+L022,figure_16_paper_international_collab_relative_rank,国际合著论文占比相对排名图,missing_international_collab_source,当前数据没有国际合著论文数量或占比字段。,37 所对标高校国际合著论文数、论文总数或国际合著占比。

@@ -1,0 +1,963 @@
+version: 1
+data_dir: "E:\\projects\\water\\word_tool\\data"
+policy:
+  raw_files: "只读保留，不覆盖、不重命名。"
+  derived_files: "后续放入 processed 或 outputs，并保留来源追踪。"
+  status_meaning:
+    use: "默认纳入数据层"
+    use_with_caveat: "可用但报告必须说明限制"
+    validate_or_fallback: "校验或兜底，不与主表自动混用"
+    use_when_needed: "按章节需要启用"
+    reference_only: "人工参考，不直接入结构化模型"
+    compare_when_needed: "版本比较时使用"
+excel_sources:
+  -
+    id: "map_ministry_rankings"
+    file: "教育部学科与四大国际学科排名映射关系.xlsx"
+    tier: "core"
+    role: "subject_crosswalk"
+    status: "use"
+    purpose: "教育部一级学科到软科、QS、US News、THE榜单学科的主映射表。"
+    canonical_tables:
+      - "dim_subject"
+    notes: "后续所有榜单数据进入统一模型前，优先通过该表做学科名称对齐。"
+    exists: true
+    sheet_count: 2
+    sheets:
+      -
+        sheet: "学科映射关系"
+        rows: 182
+        columns: 10
+        headers:
+          - "序号"
+          - "门类代码"
+          - "学科门类"
+          - "一级学科代码"
+          - "一级学科名称"
+          - "目录年度"
+          - "软科世界一流学科对应名称"
+          - "QS对应的学科名称"
+          - "U.S.NEWS学科排名对应名称"
+          - "THE对应领域"
+      -
+        sheet: "Sheet1"
+        rows: 176
+        columns: 5
+        headers:
+          - "榜单名称"
+          - "榜单学科"
+          - "对应一级学科"
+          - "榜单学科"
+          - "匹对情况"
+  -
+    id: "map_tongji_college_subject"
+    file: "同济大学学院+学科映射关系20260509.xlsx"
+    tier: "core"
+    role: "tongji_subject_crosswalk"
+    status: "use"
+    purpose: "同济学院、学位点、一级学科、第五轮评估、双一流、高峰高原、四大榜单名称之间的映射。"
+    canonical_tables:
+      - "dim_subject"
+      - "dim_tongji_unit"
+    notes: "生成不同学院/学科报告时，这是定位目标学科和榜单名称的入口。"
+    exists: true
+    sheet_count: 2
+    sheets:
+      -
+        sheet: "Sheet1"
+        rows: 84
+        columns: 14
+        headers:
+          - "编号"
+          - "学院"
+          - "学术学位点"
+          - "专业学位点"
+          - "本科专业"
+          - "一级学科学科代码"
+          - "层次级别"
+          - "第五轮评估结果"
+          - "是否双一流学科"
+          - "上海市高峰高原"
+          - "软科世界一流学科对应名称"
+          - "QS对应的学科名称"
+      -
+        sheet: "Sheet2"
+        rows: 12
+        columns: 3
+        headers:
+          - ""
+          - "占比"
+          - "数量"
+  -
+    id: "directory_postgraduate_subjects"
+    file: "1.研究生教育学科专业目录（2022年）.xlsx"
+    tier: "support"
+    role: "official_subject_directory"
+    status: "use_when_needed"
+    purpose: "官方学科门类、一级学科代码和名称校验。"
+    canonical_tables:
+      - "dim_subject"
+    notes: "用于补齐学科代码、门类和规范名称，不直接生成图表。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "Sheet1"
+        rows: 185
+        columns: 11
+        headers:
+          - "序号"
+          - "门类代码"
+          - "学科门类"
+          - "一级学科代码"
+          - "一级学科名称"
+          - "一级学科代码"
+          - "年度"
+          - "可授予专业学位层次"
+          - "可授予学位门类"
+          - "备注"
+          - "学科简称"
+  -
+    id: "weights_four_rankings_2025"
+    file: "四大世界学科2025指标权重.xlsx"
+    tier: "core"
+    role: "indicator_weight"
+    status: "use"
+    purpose: "四大榜单指标体系和权重的主数据源。"
+    canonical_tables:
+      - "dim_indicator"
+      - "fact_indicator_weight"
+    notes: "优先使用该文件；另一个同名权重文件作为校验或历史副本。"
+    exists: true
+    sheet_count: 4
+    sheets:
+      -
+        sheet: "软科"
+        rows: 59
+        columns: 21
+        headers:
+          - "学科领域"
+          - "学科名称"
+          - "世界一流教师"
+          - ""
+          - ""
+          - ""
+          - "世界一流成果"
+          - ""
+          - "高水平研究成果"
+          - "科研影响力"
+          - "国际合作"
+          - "权重"
+      -
+        sheet: "usnews"
+        rows: 42
+        columns: 15
+        headers:
+          - "US News学科领域"
+          - "细分学科"
+          - "全球研究声誉"
+          - "区域研究声誉"
+          - "出版物"
+          - "图书"
+          - "会议"
+          - "标准化引用影响"
+          - "总引用次数"
+          - "被引用次数最多的 10% 的出版物数量"
+          - "被引用次数最多的 10% 的出版物占总出版物的百分比"
+          - "在各自领域中被引用次数最多的前 1% 的高被引论文数量"
+      -
+        sheet: "the"
+        rows: 25
+        columns: 16
+        headers:
+          - ""
+          - "一级指标名称"
+          - "二级指标名称"
+          - ""
+          - "大学排名"
+          - "艺术与人文"
+          - "医学与健康"
+          - "工程学"
+          - "计算机科学"
+          - "生命科学"
+          - "自然科学"
+          - "社会科学"
+      -
+        sheet: "QS"
+        rows: 62
+        columns: 11
+        headers:
+          - "QS学科排名指标占比（%）"
+          - ""
+          - "2026QS学科排名指标更新"
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - "2026年"
+  -
+    id: "weights_four_rankings_legacy"
+    file: "世界大学学科排名2025指标权重.xlsx"
+    tier: "support"
+    role: "indicator_weight"
+    status: "validate_or_fallback"
+    purpose: "指标权重备份/旧版来源。"
+    canonical_tables:
+      - "fact_indicator_weight"
+    notes: "如与主权重表冲突，先人工确认，不自动混用。"
+    exists: true
+    sheet_count: 4
+    sheets:
+      -
+        sheet: "软科"
+        rows: 59
+        columns: 11
+        headers:
+          - "学科领域"
+          - "学科名称"
+          - "世界一流教师"
+          - ""
+          - ""
+          - ""
+          - "世界一流成果"
+          - ""
+          - "高水平研究成果"
+          - "科研影响力"
+          - "国际合作"
+      -
+        sheet: "usnews"
+        rows: 42
+        columns: 15
+        headers:
+          - "US News学科领域"
+          - "细分学科"
+          - "全球研究声誉"
+          - "区域研究声誉"
+          - "出版物"
+          - "图书"
+          - "会议"
+          - "标准化引用影响"
+          - "总引用次数"
+          - "被引用次数最多的 10% 的出版物数量"
+          - "被引用次数最多的 10% 的出版物占总出版物的百分比"
+          - "在各自领域中被引用次数最多的前 1% 的高被引论文数量"
+      -
+        sheet: "the"
+        rows: 25
+        columns: 16
+        headers:
+          - ""
+          - "一级指标名称"
+          - "二级指标名称"
+          - ""
+          - "大学排名"
+          - "艺术与人文"
+          - "医学与健康"
+          - "工程学"
+          - "计算机科学"
+          - "生命科学"
+          - "自然科学"
+          - "社会科学"
+      -
+        sheet: "QS"
+        rows: 62
+        columns: 11
+        headers:
+          - "QS学科排名指标占比（%）"
+          - ""
+          - "2026QS学科排名指标更新"
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - "2026年"
+  -
+    id: "rank_arwu_2023"
+    file: "2023年软科世界一流学科排名-20231030.xlsx"
+    tier: "historical"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "软科 2023 发布年度学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "字段含总得分和多项论文/合作指标。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "名单"
+        rows: 19151
+        columns: 13
+        headers:
+          - "序号"
+          - "学校名称"
+          - "中文名称"
+          - "发布年度"
+          - "国际排名"
+          - "所在地区"
+          - "学科领域"
+          - "总得分"
+          - "重要期刊论文数"
+          - "论文标准化影响力"
+          - "国际合作论文比例"
+          - "顶尖期刊论文数"
+  -
+    id: "rank_arwu_2024"
+    file: "2024年软科世界一流学科排名-20241111.xlsx"
+    tier: "historical"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "软科 2024 发布年度学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "字段名称与 2025 软科较接近，适合历史趋势。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "所有高校"
+        rows: 18951
+        columns: 12
+        headers:
+          - "中文校名"
+          - "英文校名"
+          - "国家"
+          - "学科领域"
+          - "排名"
+          - "总分"
+          - "年份"
+          - "世界一流教师"
+          - "世界一流成果"
+          - "高水平研究成果"
+          - "科研影响力"
+          - "国际合作"
+  -
+    id: "rank_arwu_2025"
+    file: "2025年软科世界一流学科排名20251118.xlsx"
+    tier: "current"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "软科最新可用学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "对标高校整体排名、分项指标、论文代理指标的重要来源。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "数据"
+        rows: 19651
+        columns: 14
+        headers:
+          - "序号"
+          - "学校名称"
+          - "所在地区"
+          - "发布年度"
+          - "学科领域"
+          - "学科名称"
+          - "国际排名"
+          - "总得分"
+          - "高水平研究成果/重要期刊论文数"
+          - "科研影响力/论文标准化影响力"
+          - "国际合作/国际合作论文比例"
+          - "世界一流成果"
+  -
+    id: "rank_qs_2023"
+    file: "2023年QS世界学科排名.xlsx"
+    tier: "historical"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "QS 2023 学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+    notes: "字段较少，主要用于排名和综合得分历史趋势。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "2023"
+        rows: 15664
+        columns: 5
+        headers:
+          - "学科"
+          - "地区"
+          - "高校名称"
+          - "国际排名"
+          - "综合得分"
+  -
+    id: "rank_qs_2024"
+    file: "2024年QS世界学科排名-20240412.xlsx"
+    tier: "historical"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "QS 2024 学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "含H指数、篇均引用、学术声誉等指标。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "数据"
+        rows: 16409
+        columns: 15
+        headers:
+          - "序号"
+          - "中文名称"
+          - "英文名称"
+          - "发布年度"
+          - "国际排名"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "国际网络研究排名"
+          - "国际网络研究"
+          - "总得分"
+          - "H指数"
+  -
+    id: "rank_qs_2025"
+    file: "2025年QS世界大学学科排名20250313.xlsx"
+    tier: "historical"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "QS 2025 学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "含学术声誉、雇主声誉、H指数等指标。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "明细数"
+        rows: 18333
+        columns: 13
+        headers:
+          - "年份"
+          - "学科中文"
+          - "学科领域"
+          - "洲际"
+          - "地区"
+          - "排名"
+          - "大学"
+          - "综合得分"
+          - "学术声誉"
+          - "论文篇均引用率"
+          - "雇主声誉"
+          - "H指数排名"
+  -
+    id: "rank_qs_2026"
+    file: "2026年QS世界学科排名20260326.xlsx"
+    tier: "current"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "QS 最新可用学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "优先用于2026报告中的QS当前表现分析。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "数据"
+        rows: 18586
+        columns: 14
+        headers:
+          - "序号"
+          - "中文名称"
+          - "英文名称"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "发布年度"
+          - "国际排名"
+          - "总得分"
+          - "H指数"
+          - "篇均被引次数"
+          - "学术声誉"
+  -
+    id: "rank_the_2022_2026_history"
+    file: "世界大学学科排名THE（2022-2026年）20260123.xlsx"
+    tier: "core"
+    role: "ranking_detail_history"
+    status: "use"
+    purpose: "THE 2022-2026 学科排名总库，含同济、同济历史、排名方法。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+      - "fact_indicator_weight"
+    notes: "THE 历史趋势优先用该文件，避免多文件拼接误差。"
+    exists: true
+    sheet_count: 4
+    sheets:
+      -
+        sheet: "数据"
+        rows: 42461
+        columns: 28
+        headers:
+          - "序号"
+          - "外文名称"
+          - "中文名称"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "总得分"
+          - "教学"
+          - "教学排名"
+      -
+        sheet: "同济"
+        rows: 11
+        columns: 18
+        headers:
+          - "序号"
+          - "中文名称"
+          - "外文名称"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "总得分"
+          - "篇均被引次数"
+          - "商业收入"
+      -
+        sheet: "同济历史"
+        rows: 12
+        columns: 10
+        headers:
+          - "THE学科领域"
+          - "2019国际排名"
+          - "2020国际排名"
+          - "2021国际排名"
+          - "2022国际排名"
+          - "2023国际排名"
+          - "2024国际排名"
+          - "2025国际排名"
+          - "2026国际排名"
+          - "变化情况"
+      -
+        sheet: "排名方法"
+        rows: 12
+        columns: 7
+        headers:
+          - "大类"
+          - "教学环境"
+          - "研究环境"
+          - "研究质量"
+          - "国际视野"
+          - "知识转化"
+          - "总计"
+  -
+    id: "rank_the_2026"
+    file: "2026年THE世界学科排名20260123.xlsx"
+    tier: "current"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "THE 2026 学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "与THE历史总库互相校验，生成当前年度对标分析时优先用明细表。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "数据"
+        rows: 11694
+        columns: 17
+        headers:
+          - "序号"
+          - "中文名称"
+          - "外文名称"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "总得分"
+          - "篇均被引次数"
+          - "商业收入"
+  -
+    id: "rank_usnews_2021"
+    file: "2021US News世界学科排名2020年发布.xlsx"
+    tier: "historical"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "US News 2021/2020发布口径历史数据。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "字段命名与后续年份差异较大，需单独映射。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "Sheet1"
+        rows: 12747
+        columns: 10
+        headers:
+          - "subjectrank"
+          - "subject"
+          - "university"
+          - "university_zh"
+          - "location"
+          - "city"
+          - "pubyear"
+          - "globalscore"
+          - "subjectscore"
+          - "enrollment"
+  -
+    id: "rank_usnews_2022"
+    file: "2022US News世界学科排名20211026.xlsx"
+    tier: "historical"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "US News 2022 学科排名历史数据。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "含较完整论文和声誉指标。"
+    exists: true
+    sheet_count: 2
+    sheets:
+      -
+        sheet: "Sheet2"
+        rows: 15651
+        columns: 21
+        headers:
+          - "subject"
+          - "subjectrank"
+          - "university"
+          - "university_zh"
+          - "pubyear"
+          - "overallscore"
+          - "globalresearchreputation"
+          - "regionalresearchreputation"
+          - "publications"
+          - "books"
+          - "conferences"
+          - "normalizedcitationimpact"
+      -
+        sheet: "Sheet3"
+        rows: 1
+        columns: 1
+        headers:
+          []
+  -
+    id: "rank_usnews_2023"
+    file: "2023US News世界学科排名20221026.xlsx"
+    tier: "historical"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "US News 2023 学科排名历史数据。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "含排名、总分和论文指标。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "sheet"
+        rows: 17178
+        columns: 22
+        headers:
+          - "Rank"
+          - "Name"
+          - "Country"
+          - "city"
+          - "发布时间"
+          - "Time"
+          - "Subject"
+          - "OVERALL_SCORE"
+          - "Global_Research_Reputatio"
+          - "Regional_Research_Reputation"
+          - "Publications"
+          - "Books"
+  -
+    id: "rank_usnews_2024_2025"
+    file: "2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx"
+    tier: "historical"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "US News 2024-2025 学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "文件名含2024-2025，需区分发布年份和排名年份。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "全球排名"
+        rows: 21949
+        columns: 26
+        headers:
+          - "学科"
+          - "学科中文"
+          - "名称"
+          - "中文名称"
+          - "国家"
+          - "city"
+          - "总得分"
+          - "Enrollment"
+          - "发布年份"
+          - "排名年份"
+          - "url"
+          - "世界排名"
+  -
+    id: "rank_usnews_2025_2026"
+    file: "2025-2026年度US News世界学科排名20251124.xlsx"
+    tier: "current"
+    role: "ranking_detail"
+    status: "use"
+    purpose: "US News 最新可用学科排名明细。"
+    canonical_tables:
+      - "fact_ranking"
+      - "fact_ranking_indicator"
+    notes: "论文实力章节最重要的数据源之一。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "Sheet1"
+        rows: 23517
+        columns: 24
+        headers:
+          - "序号"
+          - "中文名称"
+          - "外文名称"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "总得分"
+          - "全球学术声誉排名"
+          - "地区学术声誉排名"
+  -
+    id: "domestic_double_first_class"
+    file: "全国双一流学科明细表2022&2017.v2.xlsx"
+    tier: "core"
+    role: "peer_scope"
+    status: "use"
+    purpose: "确定双一流高校和学科范围，用于对标高校筛选。"
+    canonical_tables:
+      - "dim_peer_scope"
+      - "fact_domestic_status"
+    notes: "对标高校范围如采用双一流口径，此表是入口。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "双一流学科（第二轮-不含清北）明细"
+        rows: 899
+        columns: 7
+        headers:
+          - "序号"
+          - "学校名称"
+          - "一级学科"
+          - "批次"
+          - "备注"
+          - "省份"
+          - "年份"
+  -
+    id: "domestic_eval_rounds_3_4"
+    file: "全国高校第四轮&第三轮学科评估结果.xlsx"
+    tier: "support"
+    role: "domestic_evaluation"
+    status: "use"
+    purpose: "第三轮、第四轮学科评估对比。"
+    canonical_tables:
+      - "fact_domestic_evaluation"
+    notes: "用于国内评估历史和对标背景。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "数据"
+        rows: 5113
+        columns: 17
+        headers:
+          - "一级学科名称"
+          - "一级学科代码"
+          - "一级学科名称"
+          - "博士授权"
+          - "本次参评"
+          - "参评高校"
+          - "匹配列"
+          - "第四轮评估结果"
+          - "学校代码"
+          - "学校名称"
+          - "第三轮得分"
+          - "第三轮等级"
+  -
+    id: "domestic_eval_round5_incomplete"
+    file: "第五轮评估结果（不完全）20260508.xlsx"
+    tier: "core"
+    role: "domestic_evaluation"
+    status: "use_with_caveat"
+    purpose: "第五轮评估结果主表，但数据不完全。"
+    canonical_tables:
+      - "fact_domestic_evaluation"
+    notes: "报告必须注明数据不完全，避免过度结论。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "数据"
+        rows: 2307
+        columns: 5
+        headers:
+          - "序号"
+          - "单位名称"
+          - "学科门类"
+          - "一级学科"
+          - "评估结果"
+  -
+    id: "domestic_eval_round5_analysis_copy"
+    file: "副本第五轮评估结果（不完全）20260508(分析).xlsx"
+    tier: "support"
+    role: "domestic_evaluation_enriched"
+    status: "validate_or_fallback"
+    purpose: "第五轮评估分析副本，含第四轮、第三轮、省份、层次等扩展字段。"
+    canonical_tables:
+      - "fact_domestic_evaluation"
+    notes: "可用于更丰富的国内评估图表，但需和主表校验。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "数据"
+        rows: 2307
+        columns: 16
+        headers:
+          - "序号"
+          - "单位名称"
+          - "学科门类"
+          - "学科代码"
+          - "一级学科"
+          - "学科代码"
+          - "第五轮评估结果"
+          - "匹对"
+          - "第四轮学科评估结果"
+          - "第三轮学科得分"
+          - "第三轮等级"
+          - "省份"
+  -
+    id: "tongji_domestic_status"
+    file: "同济大学第五轮学科评估结果+双一流+高峰高原.xlsx"
+    tier: "core"
+    role: "tongji_domestic_status"
+    status: "use"
+    purpose: "同济各学科第五轮评估、双一流、高峰高原状态。"
+    canonical_tables:
+      - "dim_subject"
+      - "fact_domestic_status"
+    notes: "总述和国内评估章节的重要来源。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "Sheet1"
+        rows: 47
+        columns: 8
+        headers:
+          - "序号"
+          - "学校名称"
+          - "学科代码（2018版）"
+          - "学科名称"
+          - "层次级别"
+          - "第五轮评估结果"
+          - "是否双一流学科"
+          - "上海市高峰高原"
+  -
+    id: "tongji_15th_five_year_targets"
+    file: "同济大学学院十五五学科建设目标-指标X7学科国际排名.xlsx"
+    tier: "optional"
+    role: "planning_target"
+    status: "use_when_needed"
+    purpose: "学院十五五建设目标与指标名称。"
+    canonical_tables:
+      - "fact_planning_target"
+    notes: "用于建议和目标差距分析，不作为排名事实来源。"
+    exists: true
+    sheet_count: 1
+    sheets:
+      -
+        sheet: "Sheet2"
+        rows: 34
+        columns: 3
+        headers:
+          - "学院名称"
+          - "十五五建设目标"
+          - "指标名称"
+non_excel_assets:
+  -
+    file: "【标黄】同济大学学科分析报告——理科（2026年）.docx"
+    tier: "core"
+    role: "target_template"
+    status: "use"
+    purpose: "后续最终报告的骨架模板。"
+    exists: true
+  -
+    file: "同济大学XX学科的国际排名发展分析-2026年5月.docx"
+    tier: "core"
+    role: "reference_report"
+    status: "use"
+    purpose: "图表、表格和叙述样式的主要参考。"
+    exists: true
+  -
+    file: "同济大学学科分析报告——理科（2026年给青塔的模板）.docx"
+    tier: "support"
+    role: "alternate_template"
+    status: "compare_when_needed"
+    purpose: "另一个理科模板版本，后续模板差异检查时使用。"
+    exists: true
+  -
+    file: "1.研究生教育学科专业目录（2022年）.pdf"
+    tier: "support"
+    role: "official_reference_pdf"
+    status: "reference_only"
+    purpose: "官方目录 PDF 原件，必要时用于核对 Excel 目录。"
+    exists: true
+  -
+    file: "1.教育部办公厅关于印发《有关学科专业调整对应关系表》等的通知.docx"
+    tier: "support"
+    role: "official_policy_reference"
+    status: "reference_only"
+    purpose: "学科专业调整政策背景材料，不直接入库。"
+    exists: true
+  -
+    file: "THE世界大学排名指标体系3.0版new (数学).xmind"
+    tier: "optional"
+    role: "manual_indicator_mindmap"
+    status: "reference_only"
+    purpose: "THE 指标体系人工整理材料，当前不作为结构化数据源。"
+    exists: true
+  -
+    file: "U.S. News世界大学排名 (数学).xmind"
+    tier: "optional"
+    role: "manual_indicator_mindmap"
+    status: "reference_only"
+    purpose: "US News 指标体系人工整理材料，当前不作为结构化数据源。"
+    exists: true
+unregistered_excel_files:
+  []

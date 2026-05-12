@@ -1,0 +1,137 @@
+version: 1
+principles:
+  - "原始 data 目录只读，不覆盖、不重命名、不清洗写回。"
+  - "所有派生结果进入 processed 或 outputs，且记录 source_file、source_sheet、source_row。"
+  - "先统一学科、学校、榜单、年份字段，再做联表分析。"
+  - "LLM 只负责选择分析意图和生成文字，数值计算由脚本或数据库完成。"
+tables:
+  dim_subject:
+    grain: "一个教育部一级学科或报告分析学科一行。"
+    required_fields:
+      - "subject_id"
+      - "ministry_category_code"
+      - "ministry_category_name"
+      - "ministry_subject_code"
+      - "ministry_subject_name"
+      - "tongji_college"
+      - "tongji_degree_program"
+      - "arwu_subject_name"
+      - "qs_subject_name"
+      - "usnews_subject_name"
+      - "the_subject_area"
+    primary_sources:
+      - "教育部学科与四大国际学科排名映射关系.xlsx"
+      - "同济大学学院+学科映射关系20260509.xlsx"
+      - "1.研究生教育学科专业目录（2022年）.xlsx"
+  dim_university:
+    grain: "一所高校一行。"
+    required_fields:
+      - "university_id"
+      - "university_name_cn"
+      - "university_name_en"
+      - "country_or_region"
+      - "province"
+      - "city"
+      - "is_tongji"
+      - "name_aliases"
+    primary_sources:
+      - "各榜单排名明细"
+      - "全国双一流学科明细表2022&2017.v2.xlsx"
+  dim_ranking_source:
+    grain: "一个排名机构/榜单一行。"
+    required_fields:
+      - "ranking_source"
+      - "source_name_cn"
+      - "source_name_en"
+      - "ranking_family"
+      - "notes"
+    primary_sources:
+      - "配置手工维护"
+  dim_indicator:
+    grain: "一个榜单指标一行。"
+    required_fields:
+      - "indicator_id"
+      - "ranking_source"
+      - "indicator_name_raw"
+      - "indicator_name_cn"
+      - "indicator_group"
+      - "higher_is_better"
+      - "score_or_rank"
+    primary_sources:
+      - "四大世界学科2025指标权重.xlsx"
+      - "各榜单排名明细字段"
+  fact_ranking:
+    grain: "学校-学科-榜单-发布年度/排名年度一行。"
+    required_fields:
+      - "ranking_source"
+      - "release_year"
+      - "ranking_year"
+      - "subject_id"
+      - "ranking_subject_raw"
+      - "university_id"
+      - "world_rank_raw"
+      - "world_rank_min"
+      - "world_rank_max"
+      - "world_rank_midpoint"
+      - "mainland_rank"
+      - "total_score"
+      - "source_file"
+      - "source_sheet"
+      - "source_row"
+    primary_sources:
+      - "软科/QS/THE/US News 年度排名明细"
+  fact_ranking_indicator:
+    grain: "学校-学科-榜单-年度-指标一行。"
+    required_fields:
+      - "ranking_source"
+      - "release_year"
+      - "ranking_year"
+      - "subject_id"
+      - "university_id"
+      - "indicator_id"
+      - "indicator_value"
+      - "indicator_rank"
+      - "indicator_relative_rank"
+      - "source_file"
+      - "source_sheet"
+      - "source_row"
+    primary_sources:
+      - "软科/QS/THE/US News 年度排名明细"
+  fact_indicator_weight:
+    grain: "榜单-学科/领域-指标一行。"
+    required_fields:
+      - "ranking_source"
+      - "ranking_subject_or_area"
+      - "indicator_id"
+      - "weight_percent"
+      - "source_file"
+      - "source_sheet"
+    primary_sources:
+      - "四大世界学科2025指标权重.xlsx"
+  fact_domestic_evaluation:
+    grain: "学校-一级学科-评估轮次一行。"
+    required_fields:
+      - "university_id"
+      - "subject_id"
+      - "evaluation_round"
+      - "evaluation_result"
+      - "score"
+      - "province"
+      - "source_file"
+      - "source_sheet"
+      - "source_row"
+    primary_sources:
+      - "第五轮评估结果"
+      - "全国高校第四轮&第三轮学科评估结果"
+  fact_domestic_status:
+    grain: "学校-一级学科-国内建设标签一行。"
+    required_fields:
+      - "university_id"
+      - "subject_id"
+      - "is_double_first_class"
+      - "double_first_class_batch"
+      - "shanghai_peak_plateau"
+      - "source_file"
+    primary_sources:
+      - "全国双一流学科明细表2022&2017.v2.xlsx"
+      - "同济大学第五轮学科评估结果+双一流+高峰高原.xlsx"

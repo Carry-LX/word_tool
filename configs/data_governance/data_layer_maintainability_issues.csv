@@ -1,0 +1,9 @@
+﻿severity,area,issue,impact,recommended_fix
+P0,execution_contract,run_subject_agent.py 仍通过脚本顶部变量切换学科。,适合当前开发，不适合作为真正 agent 的稳定接口。,保留显式变量风格，但改为 subject_request.json/profile 驱动，脚本只读配置，不散落状态。
+P1,mapping,manual_subject_aliases.json 体量大，且 mapping_class 混合 deterministic、broad、approximate。,查询时如果不区分映射可信度，会把宽领域口径当成精确一级学科。,拆成 subject_crosswalk_registry.csv，字段包含 confidence、scope_type、requires_disclosure。
+P1,external_data,external_data/processed 中包含候选权重、CWTS 代理、公开网页补源等不同证据等级。,后续 agent 可能误把候选/代理数据写成正式结论。,统一沉淀 external_source_registry 和 evidence_level，在 artifact spec 中强制披露。
+P1,artifact_layer,subject_artifact_builders.py 已承担查询、修补、绘图、表格渲染多重职责。,新图表继续叠加会越来越难维护。,拆成 data_access、artifact_dataset_builders、renderers、validators 四层。
+P2,qa,已有 audit 能检查生成是否失败，但对映射可信度、代理口径、图表模板相似度的约束还不够硬。,可能出现 audit 通过但报告语义仍不够正式。,新增 data_contract_audit 和 artifact_semantic_contract，每个 artifact 明确 allowed_evidence_level。
+P2,data_model,data_layer_v2 已补齐主要一等表，但 artifact 生成器尚未完全切换到新表。,短期绘图逻辑不受影响；长期仍需要逐步迁移读取路径。,下一阶段把 subject_artifact_builders 的数据访问改为消费 artifact_data_contract 和 v2 fact/dim 表。
+P1,candidate_data,仍存在 candidate_or_indirect 外部补充数据。,不能无条件进入正式 Word。,生成器必须把 candidate_only 标记传到最终 slot 状态。
+P1,hardcoded_logic,多个脚本存在硬编码请求变量、数学分支或旧样例逻辑。,后续接手者难判断哪些脚本能跨学科运行。,在 script registry 中标注 legacy/sample/production，并逐步迁移到统一入口。

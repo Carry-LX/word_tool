@@ -1,0 +1,59 @@
+{
+  "generated_at": "2026-05-12T10:56:46",
+  "request": {
+    "target_university": "同济大学",
+    "target_subject": "计算机科学与技术",
+    "target_subject_code": "0812",
+    "report_year": 2026
+  },
+  "resolved_subject": {
+    "target_university": "同济大学",
+    "target_subject": "计算机科学与技术",
+    "target_subject_code": "0812",
+    "report_year": 2026,
+    "subject_id": "subject_0812",
+    "ministry_subject_name": "计算机科学与技术",
+    "subject_short_name": "计算机科学",
+    "tongji_college": "计算机科学与技术学院",
+    "arwu_subject_name": "计算机科学与工程",
+    "qs_subject_name": "计算机科学与信息系统",
+    "usnews_subject_name": "人工智能",
+    "the_subject_area": "计算机科学",
+    "alias_summary": {
+      "QS": [
+        "Data Science",
+        "DataScience",
+        "数据科学与人工智能",
+        "计算机科学与信息系统"
+      ],
+      "THE": [
+        "Computer Science",
+        "计算机科学"
+      ],
+      "US News": [
+        "Computer Science",
+        "Engineering",
+        "artificial intelligence",
+        "computer science",
+        "engineering",
+        "人工智能",
+        "工程学",
+        "计算机科学"
+      ],
+      "ministry": [
+        "计算机科学与技术"
+      ],
+      "软科": [
+        "Artificial Intelligence",
+        "人工智能",
+        "计算机科学与工程"
+      ]
+    },
+    "alias_row_count": 20
+  },
+  "agent_contract": {
+    "single_entrypoint": "scripts/run_subject_agent.py",
+    "no_cli_args": true,
+    "change_subject_by_editing_top_level_variables": true
+  }
+}

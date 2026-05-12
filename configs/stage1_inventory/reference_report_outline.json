@@ -1,0 +1,1592 @@
+{
+  "file": "同济大学XX学科的国际排名发展分析-2026年5月.docx",
+  "path": "E:\\projects\\water\\word_tool\\data\\同济大学XX学科的国际排名发展分析-2026年5月.docx",
+  "paragraph_count": 123,
+  "nonempty_paragraph_count": 83,
+  "table_count": 8,
+  "image_count": 14,
+  "paragraphs": [
+    {
+      "paragraph_index": 3,
+      "kind": "body",
+      "text": "同济大学数学学科的国际排名发展分析",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 4,
+      "kind": "body",
+      "text": "（第一版）",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 14,
+      "kind": "body",
+      "text": "发展规划与学科建设部",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 15,
+      "kind": "body",
+      "text": "2026年5月",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 20,
+      "kind": "section",
+      "text": "一、概述",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 21,
+      "kind": "body",
+      "text": "目前全球公认的四大国际排名机构是：QS（Quacquarelli Symonds公司）、THE（Times Higher Education公司）;U.S.News（美国知名媒体机构《美国新闻与世界报道》（U.S. News & World Report））、软科（上海软科教育信息咨询有限公司,简称ARWU）。每年四大排名机构会发布大学排名及学科排名。同济大学2025年在三大国际主流排名中已稳步进入前150位；排名最优的是U.S.News世界大学排名，位于第124；软科世界一流大学排名中位于101-150名，THE世界大学排名位于141名。XX学科在U.S.News学科排名中名称XX，排名位于XX位；在QS学科排名中对应名称XX，排名位于XX位；在软科学科排名中对应名称XX，排名位于XX位；在THE学科排名中属于XX领域，位于xx位。",
+      "highlight_runs": [
+        {
+          "text": "XX学科在",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "U.S.News",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "学科排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "中名称",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "，",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位于",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "；",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "在",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "QS学科",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名中",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "对应名称",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "，",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位于",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "；",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "在",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "软科",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "学科",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名中",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "对应名称XX，排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位于",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "；",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "在THE学科",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "中属于XX领域，位于xx",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "。",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    },
+    {
+      "paragraph_index": 23,
+      "kind": "figure_caption",
+      "text": "图1、同济大学xx学科国际排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 24,
+      "kind": "section",
+      "text": "二、xx学科国际排名指标介绍",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 25,
+      "kind": "body",
+      "text": "四大排名体系在评估指标、权重分配方面各有侧重，根据四大国际主流排名指标共性分析，主要聚焦在四个方面，一是科研方面，占比最高，四个排名中都有其指标，总权重达162.5%（总计是400%），其中包括了引文影响力，发表论文总数，顶刊论文数等，都属于客观数据。二是声誉，占比103%，在U.S.News、QS、THE三大排名中有权重，属于比较主观评价的数据。三是国际化，占比32.5%，这其中较大部分是国际研究占比17.5%，也属于论文客观数据的一部分。此外，教学占比37%，收入10%这部分数据源在各高校的采集数据。其他部分大部分属于软科排名中独有的，顶尖教师40%，师均表现10%。",
+      "highlight_runs": [
+        {
+          "text": "1",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "62.5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "占比",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "1",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "03%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "占比3",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "2.5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "占比3",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "7%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "收入",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "1",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "0%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "顶尖教师4",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "0%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "，师均表现1",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "0%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "。",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    },
+    {
+      "paragraph_index": 27,
+      "kind": "figure_caption",
+      "text": "图2、XX学科在世界学科排名中指标共性",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 28,
+      "kind": "subsection",
+      "text": "1、软科学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 29,
+      "kind": "body",
+      "text": "软科世界大学学术排名指标中，更多权重在教师质量和科研成果，占比达40%；教育质量（获奖校友）和师均表现分别占比10%。科研成果采用科睿唯安web of science的底层论文数据。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 31,
+      "kind": "figure_caption",
+      "text": "图3、软科世界一流学科数学指标权重",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 32,
+      "kind": "subsection",
+      "text": "2、QS学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 33,
+      "kind": "body",
+      "text": "QS学科排名指标中，学术声誉和雇主声誉占比较重，达60%。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 35,
+      "kind": "figure_caption",
+      "text": "图4、软科世界一流学科数学指标权重",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 37,
+      "kind": "subsection",
+      "text": "3、U.S.News学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 38,
+      "kind": "body",
+      "text": "从定量指标来分析，四大排名中U.S.News排名最看重科研产出，除了声誉指标占比25%外，其余75%均属于论文类相关指标，看中论文的质量及引用情况，与论文引用相关的指标达50%，其余与产出量有关的指标权重15%，国际化研究的权重占10%。论文相关指标采用科睿唯安web of science的底层论文数据。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 40,
+      "kind": "figure_caption",
+      "text": "图3、U.S.News学科排名数学学科指标权重",
+      "highlight_runs": [
+        {
+          "text": "数学学科",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    },
+    {
+      "paragraph_index": 41,
+      "kind": "subsection",
+      "text": "4、THE学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 43,
+      "kind": "figure_caption",
+      "text": "图4、THE世界学科排名自然科学领域指标权重",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 44,
+      "kind": "body",
+      "text": "THE在2023年调整了排名指标体系。权重占比较大的有三项“教学”“研究质量”“研究环境”。THE排名中依赖学校提供数据的指标项如“师生比”“博士学位数与学士学位数的比”“博士学位数与教职工数的比”“国际学生占比”“国际教师占比”及师均类指标共计占32.5%。此外由泰晤士组织声誉调查类指标占33%。论文相关指标权重占34.5%，论文采用爱思唯尔Scopus数据库论文表现。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 47,
+      "kind": "section",
+      "text": "三、xx学科排名历史发展分析",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 49,
+      "kind": "figure_caption",
+      "text": "图5、同济xx学科在世界学科排名中的历史（排名区间的取值中间位次）（待更新）",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 50,
+      "kind": "body",
+      "text": "XX学科在国际学科排名中的历史趋势分析：xx学科排名中每年稳步提升（或有波动），近五年从xx位提升至xx位（或保持在xx位次附近）。",
+      "highlight_runs": [
+        {
+          "text": "稳步提升",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "（或有波动）",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "xx",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位提升至",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "xx",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "（或保持在xx位次附近）",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    },
+    {
+      "paragraph_index": 51,
+      "kind": "subsection",
+      "text": "1、软科学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 52,
+      "kind": "body",
+      "text": "软科学科排名中校友获奖、教师获奖排名得分为0，但是由于其他大部分学校也无此项得分，所有相对排名为200多位和150位左右。高被引学者、N&S论文不占优势，N&S论文相对排名逐年在下降。论文数量和各项师均表现相对排名每年在提升。短期看同济难有顶尖校友和教师的得分。可提升的空间是“N&S论文”“高被引学者”。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 54,
+      "kind": "table_caption",
+      "text": "表3、xx学科在软科排名中的细分指标排名历史（待更新）",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 55,
+      "kind": "subsection",
+      "text": "2、QS学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 56,
+      "kind": "body",
+      "text": "THE排名在2023年更新指标体系后研究质量、国际展望相对排名比较低。教学、研究环境、产业相对排名较靠前。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 58,
+      "kind": "subsection",
+      "text": "3、U.S.News学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 59,
+      "kind": "body",
+      "text": "U.S.News学科排名分项指标中，声誉排名、论文排名、总引用高被引论文的数量排名都是上升的；国际合作论文数量及占比排名一直在下降。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 60,
+      "kind": "table_caption",
+      "text": "表2、xx学科在U.S.News学科排名中的细分指标排名历史（待更新）",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 61,
+      "kind": "body",
+      "text": "U.S.News学科排名指标中，标准化引文影响力排名（权重10%）、前10%高被引论文占比排名（权重10%）、ESI前1%高被引论文占比排名（权重5%）、国际合作论文占比排名（权重5%）、出版书籍排名（权重2.5%）四项指标远低于学科排名位次，急需进一步提升。",
+      "highlight_runs": [
+        {
+          "text": "标准化引文影响力排名（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "10%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）、前",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "10%高被引论文占比排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "10%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）、",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "ESI前1%高被引论文占比排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）、国际合作论文占比排名（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）、出版书籍排名（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "2.5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    },
+    {
+      "paragraph_index": 63,
+      "kind": "figure_caption",
+      "text": "图6、xx学科在U.S.News学科排名中的历史（趋势图分析）",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 64,
+      "kind": "subsection",
+      "text": "4、THE学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 65,
+      "kind": "body",
+      "text": "THE排名在2023年更新指标体系后研究质量、国际展望相对排名比较低。教学、研究环境、产业相对排名较靠前。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 66,
+      "kind": "table_caption",
+      "text": "表4、xx学科在THE排名中的细分指标排名历史（待更新）",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 67,
+      "kind": "section",
+      "text": "四、对标高校整体分析",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 68,
+      "kind": "body",
+      "text": "2025年发布的四大国际排名中内地高校的位次分布如下：",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 69,
+      "kind": "table_caption",
+      "text": "表5、2025年发布的四大国际排名中内地高校位次分布",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 70,
+      "kind": "body",
+      "text": "从数量上看，软科进入前200位的内地高校数量最多35所，其次是U.S.News，THE、QS相对数量较少。属于51-100位梯队上的数量也是软科和U.S.News最多，有7所高校。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 71,
+      "kind": "subsection",
+      "text": "1、软科学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 72,
+      "kind": "body",
+      "text": "2025年发布的世界排名中中国内地高校有35所进入前200位，同济大学位于101-150位，内地高校排第14-27位。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 73,
+      "kind": "table_caption",
+      "text": "表7、软科排名中内地高校位于前列的比较",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 74,
+      "kind": "subsection",
+      "text": "2、QS学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 75,
+      "kind": "body",
+      "text": "2025年发布的THE世界排名中中国内地高校有13所进入前200位。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 76,
+      "kind": "subsection",
+      "text": "3、U.S.News学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 77,
+      "kind": "body",
+      "text": "2025年发布的世界排名中中国内地高校有27所进入前200位，同济大学位于124位，内地高校排第14位。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 78,
+      "kind": "table_caption",
+      "text": "表6、U.S.News排名中内地高校位于前列的比较",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 79,
+      "kind": "subsection",
+      "text": "4、THE学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 80,
+      "kind": "body",
+      "text": "2025年发布的THE世界排名中中国内地高校有13所进入前200位，同济大学位于141位，内地高校排第11位。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 81,
+      "kind": "table_caption",
+      "text": "表8、THE排名中内地高校位于前列的比较",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 83,
+      "kind": "section",
+      "text": "五、对标高校分指标分析",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 84,
+      "kind": "subsection",
+      "text": "1、软科学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 85,
+      "kind": "body",
+      "text": "2025年发布软科排名中中国内地高校进入200位的35所中大部分高校的校友获奖、教师获奖都是没有得分。同济大学高被引学者位于第218位，N&S论文位于第319位，在前列高校中相对较差。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 87,
+      "kind": "figure_caption",
+      "text": "图8、软科排名前200位内地高校分项指标相对排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 88,
+      "kind": "subsection",
+      "text": "2、QS学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 89,
+      "kind": "body",
+      "text": "2025年THE排名前200位的3所内地高校，教学环境、研究环境、产业排名都相对较高。同济大学教学环境、研究环境略高于学校整体位次，产业得分较高，排名位于38位。研究质量和国际展望相对排名较差。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 90,
+      "kind": "subsection",
+      "text": "3、U.S.News学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 91,
+      "kind": "body",
+      "text": "2025年U.S.News排名前200位的27所内地高校一级指标相对排名如下。同济大学全球学术声誉相对排名与学校整体排名差异较小，区域学术声誉排名较高，前50位。涉及总量指标的，论文总量、总引用量、高被引论文量等排名在50位左右。涉及论文质量或占比类的指标都排名较靠后，标准化引文影响力（868位）、前10%高被引论文占比（401位）、前1%高被引论文占比（745位）、国际化论文占比（1811位）。与国际排名第90位的武汉大学相比主要的主要落后的点在于标准化引文影响力、前10%高被引论文占比、前1%高被引论文占比。说明同济论文数量较大但是质量不高，建议学校减少低被引或零被引论文的发表。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 93,
+      "kind": "figure_caption",
+      "text": "图7、U.S.News排名前200位内地高校分项指标相对排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 94,
+      "kind": "subsection",
+      "text": "4、THE学科排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 95,
+      "kind": "body",
+      "text": "2025年THE排名前200位的3所内地高校，教学环境、研究环境、产业排名都相对较高。同济大学教学环境、研究环境略高于学校整体位次，产业得分较高，排名位于38位。研究质量和国际展望相对排名较差。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 97,
+      "kind": "figure_caption",
+      "text": "图9、THE排名前200位内地高校分项指标相对排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 98,
+      "kind": "section",
+      "text": "六、对标高校论文指标分析",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 99,
+      "kind": "subsection",
+      "text": "1、论文整体",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 100,
+      "kind": "body",
+      "text": "分析42所双一流高校的五年论文数据（2021-2025年web of science论文）。同济大学XX学科论文总数位于xx位，内地高校位于第xx位。同济大学XX学科总被引排名论文总数位于xx位，内地高校位于第xx位。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 102,
+      "kind": "figure_caption",
+      "text": "图10、37所内地高校论文及被引总量及相对排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 103,
+      "kind": "subsection",
+      "text": "2、论文质量",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 104,
+      "kind": "body",
+      "text": "下面从学科规范化引文影响力CNCI（Category Normalized Citation Impact）、篇均被引、被引TOP1%论文占比、被引TOP10%论文占比四个方面比较37所高校的数据。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 105,
+      "kind": "body",
+      "text": "同济大学CNCI为1.35，世界位次5149位；篇均被引12.21，世界位次3397位。在内地高校中排名接近30名。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 107,
+      "kind": "figure_caption",
+      "text": "图11、37所内地高校论文CNCI及篇均被引数及相对排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 108,
+      "kind": "body",
+      "text": "同济在内地高校被引TOP1%论文占比、被引TOP10%论文相对排名都较靠后。同济大学在内地高校中排名30位以后。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 110,
+      "kind": "figure_caption",
+      "text": "图12、37所内地高校高被引TOP论文量及相对排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 111,
+      "kind": "subsection",
+      "text": "3、国际合著",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 112,
+      "kind": "body",
+      "text": "同济的国际合著占比为24.29%，在内地高校排名22位，国际位次5714，较靠后。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 114,
+      "kind": "figure_caption",
+      "text": "图13、37所内地高校国际合著论文占比及相对排名",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 115,
+      "kind": "section",
+      "text": "七、同济发展潜力及建议",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 116,
+      "kind": "body",
+      "text": "综合分析三大世界排名的数据，同济大学在U.S.News排名和软科排名中提升较多，保持稳定在前列。更有可能取得较大提升位次。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 117,
+      "kind": "body",
+      "text": "针对提升U.S.News排名的建议是提升论文质量，提升论文被引，减少低被引论文的发布，增加高被引论文占比。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 118,
+      "kind": "body",
+      "text": "对于软科排名可提升的空间是“N&S论文”“高被引学者”。可通过引进科睿唯安高被引学者或者与这些高被引学者合作，让他们发布署名同济大学为第二单位，也可以获得一定的得分。",
+      "highlight_runs": []
+    },
+    {
+      "paragraph_index": 122,
+      "kind": "body",
+      "text": "附表：XX学科对标高校学科排名历史",
+      "highlight_runs": []
+    }
+  ],
+  "highlighted_paragraphs": [
+    {
+      "paragraph_index": 21,
+      "kind": "body",
+      "text": "目前全球公认的四大国际排名机构是：QS（Quacquarelli Symonds公司）、THE（Times Higher Education公司）;U.S.News（美国知名媒体机构《美国新闻与世界报道》（U.S. News & World Report））、软科（上海软科教育信息咨询有限公司,简称ARWU）。每年四大排名机构会发布大学排名及学科排名。同济大学2025年在三大国际主流排名中已稳步进入前150位；排名最优的是U.S.News世界大学排名，位于第124；软科世界一流大学排名中位于101-150名，THE世界大学排名位于141名。XX学科在U.S.News学科排名中名称XX，排名位于XX位；在QS学科排名中对应名称XX，排名位于XX位；在软科学科排名中对应名称XX，排名位于XX位；在THE学科排名中属于XX领域，位于xx位。",
+      "highlight_runs": [
+        {
+          "text": "XX学科在",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "U.S.News",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "学科排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "中名称",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "，",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位于",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "；",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "在",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "QS学科",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名中",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "对应名称",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "，",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位于",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "；",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "在",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "软科",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "学科",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名中",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "对应名称XX，排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位于",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "XX",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "；",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "在THE学科",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "中属于XX领域，位于xx",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "。",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    },
+    {
+      "paragraph_index": 25,
+      "kind": "body",
+      "text": "四大排名体系在评估指标、权重分配方面各有侧重，根据四大国际主流排名指标共性分析，主要聚焦在四个方面，一是科研方面，占比最高，四个排名中都有其指标，总权重达162.5%（总计是400%），其中包括了引文影响力，发表论文总数，顶刊论文数等，都属于客观数据。二是声誉，占比103%，在U.S.News、QS、THE三大排名中有权重，属于比较主观评价的数据。三是国际化，占比32.5%，这其中较大部分是国际研究占比17.5%，也属于论文客观数据的一部分。此外，教学占比37%，收入10%这部分数据源在各高校的采集数据。其他部分大部分属于软科排名中独有的，顶尖教师40%，师均表现10%。",
+      "highlight_runs": [
+        {
+          "text": "1",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "62.5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "占比",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "1",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "03%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "占比3",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "2.5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "占比3",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "7%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "收入",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "1",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "0%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "顶尖教师4",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "0%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "，师均表现1",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "0%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "。",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    },
+    {
+      "paragraph_index": 40,
+      "kind": "figure_caption",
+      "text": "图3、U.S.News学科排名数学学科指标权重",
+      "highlight_runs": [
+        {
+          "text": "数学学科",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    },
+    {
+      "paragraph_index": 50,
+      "kind": "body",
+      "text": "XX学科在国际学科排名中的历史趋势分析：xx学科排名中每年稳步提升（或有波动），近五年从xx位提升至xx位（或保持在xx位次附近）。",
+      "highlight_runs": [
+        {
+          "text": "稳步提升",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "（或有波动）",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "xx",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位提升至",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "xx",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "位",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "（或保持在xx位次附近）",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    },
+    {
+      "paragraph_index": 61,
+      "kind": "body",
+      "text": "U.S.News学科排名指标中，标准化引文影响力排名（权重10%）、前10%高被引论文占比排名（权重10%）、ESI前1%高被引论文占比排名（权重5%）、国际合作论文占比排名（权重5%）、出版书籍排名（权重2.5%）四项指标远低于学科排名位次，急需进一步提升。",
+      "highlight_runs": [
+        {
+          "text": "标准化引文影响力排名（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "10%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）、前",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "10%高被引论文占比排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "10%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）、",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "ESI前1%高被引论文占比排名",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）、国际合作论文占比排名（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）、出版书籍排名（权重",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "2.5%",
+          "highlight": "YELLOW (7)"
+        },
+        {
+          "text": "）",
+          "highlight": "YELLOW (7)"
+        }
+      ]
+    }
+  ],
+  "tables": [
+    {
+      "table_index": 1,
+      "rows": 16,
+      "columns": 6,
+      "sample_rows": [
+        [
+          "发布年度",
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        [
+          "世界排名",
+          "151-200",
+          "151-200",
+          "151-200",
+          "151-200",
+          "101-150"
+        ],
+        [
+          "地区排名",
+          "11-24",
+          "14-26",
+          "24-32",
+          "23-33",
+          "14-27"
+        ],
+        [
+          "总得分",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    },
+    {
+      "table_index": 2,
+      "rows": 16,
+      "columns": 5,
+      "sample_rows": [
+        [
+          "排名发布年度",
+          "2021",
+          "2022",
+          "2023",
+          "2025"
+        ],
+        [
+          "国际排名",
+          "224",
+          "196",
+          "153",
+          "124"
+        ],
+        [
+          "总得分",
+          "62.7",
+          "63.2",
+          "67.6",
+          "68.2"
+        ],
+        [
+          "全球学术声誉排名12.5%",
+          "238",
+          "196",
+          "165",
+          "148"
+        ]
+      ]
+    },
+    {
+      "table_index": 3,
+      "rows": 14,
+      "columns": 4,
+      "sample_rows": [
+        [
+          "发布年份",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        [
+          "排名年度",
+          "2024",
+          "2025",
+          "2026"
+        ],
+        [
+          "国际排名",
+          "185",
+          "154",
+          "141"
+        ],
+        [
+          "综合得分",
+          "59.6",
+          "61.7",
+          "62.3"
+        ]
+      ]
+    },
+    {
+      "table_index": 4,
+      "rows": 6,
+      "columns": 5,
+      "sample_rows": [
+        [
+          "内地高校",
+          "U.S.News",
+          "软科",
+          "THE",
+          "QS"
+        ],
+        [
+          "前50高校数",
+          "4",
+          "6",
+          "5",
+          "5"
+        ],
+        [
+          "51-100位数量",
+          "7",
+          "7",
+          "2",
+          "0"
+        ],
+        [
+          "101-150位数量",
+          "7",
+          "14",
+          "4",
+          "2"
+        ]
+      ]
+    },
+    {
+      "table_index": 5,
+      "rows": 36,
+      "columns": 9,
+      "sample_rows": [
+        [
+          "序号",
+          "学校名称",
+          "省份",
+          "2020",
+          "2021",
+          "2022",
+          "2023",
+          "2024",
+          "2025"
+        ],
+        [
+          "1",
+          "清华大学",
+          "北京",
+          "29",
+          "28",
+          "26",
+          "22",
+          "22",
+          "18"
+        ],
+        [
+          "2",
+          "北京大学",
+          "北京",
+          "49",
+          "45",
+          "34",
+          "29",
+          "24",
+          "23"
+        ],
+        [
+          "3",
+          "浙江大学",
+          "浙江",
+          "58",
+          "52",
+          "36",
+          "33",
+          "27",
+          "24"
+        ]
+      ]
+    },
+    {
+      "table_index": 6,
+      "rows": 28,
+      "columns": 8,
+      "sample_rows": [
+        [
+          "序号",
+          "学校名称",
+          "省份",
+          "2020-2021",
+          "2021-2022",
+          "2022-2023",
+          "2024-2025",
+          "2025-2026"
+        ],
+        [
+          "1",
+          "清华大学",
+          "北京",
+          "28",
+          "26",
+          "23",
+          "16",
+          "11"
+        ],
+        [
+          "2",
+          "北京大学",
+          "北京",
+          "51",
+          "45",
+          "39",
+          "31",
+          "25"
+        ],
+        [
+          "3",
+          "浙江大学",
+          "浙江",
+          "135",
+          "115",
+          "93",
+          "51",
+          "45"
+        ]
+      ]
+    },
+    {
+      "table_index": 7,
+      "rows": 19,
+      "columns": 6,
+      "sample_rows": [
+        [
+          "序号",
+          "中文名称",
+          "省份",
+          "2023年排名",
+          "2024年排名",
+          "2025年排名"
+        ],
+        [
+          "1",
+          "清华大学",
+          "北京",
+          "12",
+          "12",
+          "12"
+        ],
+        [
+          "2",
+          "北京大学",
+          "北京",
+          "14",
+          "13",
+          "13"
+        ],
+        [
+          "3",
+          "复旦大学",
+          "上海",
+          "44",
+          "36",
+          "36"
+        ]
+      ]
+    },
+    {
+      "table_index": 8,
+      "rows": 39,
+      "columns": 27,
+      "sample_rows": [
+        [
+          "序号",
+          "学校名称",
+          "省份",
+          "US News学科排名",
+          "US News学科排名",
+          "US News学科排名",
+          "US News学科排名",
+          "US News学科排名",
+          "软科世界一流学科排名",
+          "软科世界一流学科排名"
+        ],
+        [
+          "序号",
+          "学校名称",
+          "省份",
+          "2020-2021",
+          "2021-2022",
+          "2022-2023",
+          "2024-2025",
+          "2025-2026",
+          "2020",
+          "2021"
+        ],
+        [
+          "1",
+          "清华大学",
+          "北京",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "2",
+          "北京大学",
+          "北京",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      ]
+    }
+  ],
+  "images": [
+    {
+      "image_index": 1,
+      "width_emu": 5256000,
+      "height_emu": 2241109,
+      "width_cm": 14.6,
+      "height_cm": 6.23
+    },
+    {
+      "image_index": 2,
+      "width_emu": 5141344,
+      "height_emu": 4404054,
+      "width_cm": 14.28,
+      "height_cm": 12.23
+    },
+    {
+      "image_index": 3,
+      "width_emu": 4374107,
+      "height_emu": 2777868,
+      "width_cm": 12.15,
+      "height_cm": 7.72
+    },
+    {
+      "image_index": 4,
+      "width_emu": 4111341,
+      "height_emu": 2713653,
+      "width_cm": 11.42,
+      "height_cm": 7.54
+    },
+    {
+      "image_index": 5,
+      "width_emu": 4817660,
+      "height_emu": 3958648,
+      "width_cm": 13.38,
+      "height_cm": 11.0
+    },
+    {
+      "image_index": 6,
+      "width_emu": 4974112,
+      "height_emu": 3957850,
+      "width_cm": 13.82,
+      "height_cm": 10.99
+    },
+    {
+      "image_index": 7,
+      "width_emu": 5419725,
+      "height_emu": 2630068,
+      "width_cm": 15.05,
+      "height_cm": 7.31
+    },
+    {
+      "image_index": 8,
+      "width_emu": 6202907,
+      "height_emu": 3029014,
+      "width_cm": 17.23,
+      "height_cm": 8.41
+    },
+    {
+      "image_index": 9,
+      "width_emu": 6501392,
+      "height_emu": 3145809,
+      "width_cm": 18.06,
+      "height_cm": 8.74
+    },
+    {
+      "image_index": 10,
+      "width_emu": 6231440,
+      "height_emu": 2995683,
+      "width_cm": 17.31,
+      "height_cm": 8.32
+    },
+    {
+      "image_index": 11,
+      "width_emu": 6163404,
+      "height_emu": 3132161,
+      "width_cm": 17.12,
+      "height_cm": 8.7
+    },
+    {
+      "image_index": 12,
+      "width_emu": 5697941,
+      "height_emu": 2744698,
+      "width_cm": 15.83,
+      "height_cm": 7.62
+    },
+    {
+      "image_index": 13,
+      "width_emu": 5875449,
+      "height_emu": 2859206,
+      "width_cm": 16.32,
+      "height_cm": 7.94
+    },
+    {
+      "image_index": 14,
+      "width_emu": 6469362,
+      "height_emu": 3057098,
+      "width_cm": 17.97,
+      "height_cm": 8.49
+    }
+  ]
+}

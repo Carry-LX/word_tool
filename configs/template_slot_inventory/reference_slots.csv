@@ -1,0 +1,45 @@
+﻿slot_id,slot_type,block_index,caption_text,media_target,table_rows,table_cols,style_hint,artifact_candidate,artifact_exists,coverage_status
+image_001,image,21,,media/image1.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_002,caption_or_heading,22,图1、同济大学xx学科国际排名,,,,ranking_chart_or_table,,False,needs_mapping_or_new_artifact
+image_002,image,25,,media/image2.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_004,caption_or_heading,26,图2、XX学科在世界学科排名中指标共性,,,,multi_indicator_chart,,False,needs_mapping_or_new_artifact
+image_003,image,29,,media/image3.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_006,caption_or_heading,30,图3、软科世界一流学科数学指标权重,,,,multi_indicator_chart,table_05_arwu_mainland_peer_ranking,True,covered_by_existing_artifact
+image_004,image,33,,media/image4.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_008,caption_or_heading,34,图4、软科世界一流学科数学指标权重,,,,multi_indicator_chart,table_05_arwu_mainland_peer_ranking,True,covered_by_existing_artifact
+image_005,image,38,,media/image5.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_010,caption_or_heading,39,图3、U.S.News学科排名数学学科指标权重,,,,multi_indicator_chart,table_06_usnews_mainland_peer_ranking,True,covered_by_existing_artifact
+image_006,image,41,,media/image6.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_012,caption_or_heading,42,图4、THE世界学科排名自然科学领域指标权重,,,,multi_indicator_chart,table_08_the_mainland_peer_ranking,True,covered_by_existing_artifact
+image_007,image,47,,media/image7.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_014,caption_or_heading,48,图5、同济xx学科在世界学科排名中的历史（排名区间的取值中间位次）（待更新）,,,,line_chart,,False,needs_mapping_or_new_artifact
+caption_015,caption_or_heading,53,表3、xx学科在软科排名中的细分指标排名历史（待更新）,,,,line_chart,table_05_arwu_mainland_peer_ranking,True,covered_by_existing_artifact
+table_001,table,54,发布年度 | 2021 | 2022 | 2023 | 2024 | 2025 | 世界排名 | 151-200 | 151-200 | 151-200,,16,6,wide_peer_ranking_table,,False,needs_mapping_or_new_artifact
+caption_017,caption_or_heading,60,表2、xx学科在U.S.News学科排名中的细分指标排名历史（待更新）,,,,line_chart,table_06_usnews_mainland_peer_ranking,True,covered_by_existing_artifact
+table_002,table,61,排名发布年度 | 2021 | 2022 | 2023 | 2025 | 国际排名 | 224 | 196 | 153 | 124,,16,5,wide_peer_ranking_table,,False,needs_mapping_or_new_artifact
+caption_019,caption_or_heading,64,图6、xx学科在U.S.News学科排名中的历史（趋势图分析）,,,,line_chart,table_06_usnews_mainland_peer_ranking,True,covered_by_existing_artifact
+caption_020,caption_or_heading,67,表4、xx学科在THE排名中的细分指标排名历史（待更新）,,,,line_chart,table_08_the_mainland_peer_ranking,True,covered_by_existing_artifact
+table_003,table,68,发布年份 | 2023 | 2024 | 2025 | 排名年度 | 2024 | 2025 | 2026 | 国际排名 | 185,,14,4,word_table,,False,needs_mapping_or_new_artifact
+caption_022,caption_or_heading,71,表5、2025年发布的四大国际排名中内地高校位次分布,,,,rank_distribution_table,figure_01_tongji_subject_ranking_overview,True,covered_by_existing_artifact
+table_004,table,72,内地高校 | U.S.News | 软科 | THE | QS | 前50高校数 | 4 | 6 | 5 | 5,,6,5,word_table,table_05_arwu_mainland_peer_ranking,True,covered_by_existing_artifact
+caption_024,caption_or_heading,76,表7、软科排名中内地高校位于前列的比较,,,,ranking_chart_or_table,table_05_arwu_mainland_peer_ranking,True,covered_by_existing_artifact
+table_005,table,77,序号 | 学校名称 | 省份 | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 1,,36,9,wide_peer_ranking_table,,False,needs_mapping_or_new_artifact
+caption_026,caption_or_heading,82,表6、U.S.News排名中内地高校位于前列的比较,,,,ranking_chart_or_table,table_06_usnews_mainland_peer_ranking,True,covered_by_existing_artifact
+table_006,table,83,序号 | 学校名称 | 省份 | 2020-2021 | 2021-2022 | 2022-2023 | 2024-2025 | 2025-2026 | 1 | 清华大学,,28,8,wide_peer_ranking_table,,False,needs_mapping_or_new_artifact
+caption_028,caption_or_heading,86,表8、THE排名中内地高校位于前列的比较,,,,ranking_chart_or_table,table_08_the_mainland_peer_ranking,True,covered_by_existing_artifact
+table_007,table,87,序号 | 中文名称 | 省份 | 2023年排名 | 2024年排名 | 2025年排名 | 1 | 清华大学 | 北京 | 12,,19,6,wide_peer_ranking_table,,False,needs_mapping_or_new_artifact
+image_008,image,92,,media/image8.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_031,caption_or_heading,93,图8、软科排名前200位内地高校分项指标相对排名,,,,multi_indicator_chart,figure_09_arwu_peer_indicator_relative_rank,True,covered_by_existing_artifact
+image_009,image,98,,media/image9.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_033,caption_or_heading,99,图7、U.S.News排名前200位内地高校分项指标相对排名,,,,multi_indicator_chart,figure_11_usnews_peer_indicator_relative_rank,True,covered_by_existing_artifact
+image_010,image,102,,media/image10.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_035,caption_or_heading,103,图9、THE排名前200位内地高校分项指标相对排名,,,,multi_indicator_chart,figure_12_the_peer_indicator_relative_rank,True,covered_by_existing_artifact
+image_011,image,107,,media/image11.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_037,caption_or_heading,108,图10、37所内地高校论文及被引总量及相对排名,,,,ranking_chart_or_table,,False,needs_mapping_or_new_artifact
+image_012,image,112,,media/image12.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_039,caption_or_heading,113,图11、37所内地高校论文CNCI及篇均被引数及相对排名,,,,ranking_chart_or_table,,False,needs_mapping_or_new_artifact
+image_013,image,115,,media/image13.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_041,caption_or_heading,116,图12、37所内地高校高被引TOP论文量及相对排名,,,,ranking_chart_or_table,,False,needs_mapping_or_new_artifact
+image_014,image,119,,media/image14.png,,,embedded_reference_image,,False,needs_mapping_or_new_artifact
+caption_043,caption_or_heading,120,图13、37所内地高校国际合著论文占比及相对排名,,,,ranking_chart_or_table,,False,needs_mapping_or_new_artifact
+table_008,table,129,序号 | 学校名称 | 省份 | US News学科排名 | 软科世界一流学科排名 | THE学科排名 | QS学科排名 | 排名平均位次 | 2020-2021 | 2021-2022,,39,27,wide_peer_ranking_table,table_05_arwu_mainland_peer_ranking,True,covered_by_existing_artifact

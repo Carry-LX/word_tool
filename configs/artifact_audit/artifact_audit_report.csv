@@ -1,0 +1,17 @@
+﻿artifact_id,artifact_type,registry_status,audit_status,error_count,warning_count,primary_data_file,primary_data_rows,source_trace_rows,script_exists,output_dir_exists
+figure_01_tongji_subject_ranking_overview,chart,verified,pass,0,0,chart_data.csv,4,31,True,True
+figure_07_all_rankings_history,chart,verified,pass,0,0,chart_data.csv,13,31,True,True
+figure_09_arwu_peer_indicator_relative_rank,chart,verified,pass,0,0,chart_data.csv,5,119,True,True
+figure_11_usnews_peer_indicator_relative_rank,chart,verified,pass,0,0,chart_data.csv,11,495,True,True
+figure_12_the_peer_indicator_relative_rank,chart,verified,pass,0,0,chart_data.csv,5,95,True,True
+table_04_mainland_rank_band_distribution,table,verified,pass,0,0,table_data.csv,16,1259,True,True
+table_05_arwu_mainland_peer_ranking,table,verified,pass,0,0,table_data.csv,63,130,True,True
+table_06_usnews_mainland_peer_ranking,table,verified,pass,0,0,table_data.csv,154,321,True,True
+table_07_qs_mainland_peer_ranking,table,verified,pass,0,0,table_data.csv,63,201,True,True
+table_08_the_mainland_peer_ranking,table,verified,pass,0,0,table_data.csv,69,138,True,True
+figure_02_ranking_indicator_commonality,chart,verified,pass,0,0,chart_data.csv,18,48,True,True
+figure_03_arwu_indicator_weight,chart,verified,pass,0,0,chart_data.csv,9,9,True,True
+figure_04_qs_indicator_weight,chart,verified,pass,0,0,chart_data.csv,5,5,True,True
+figure_06_the_indicator_weight,chart,verified,pass,0,0,chart_data.csv,23,23,True,True
+table_03_the_tongji_indicator_history,table,verified,pass,0,0,table_data.csv,46,46,True,True
+table_09_peer_full_ranking_history_appendix,table,verified,pass,0,0,table_data.csv,469,98,True,True

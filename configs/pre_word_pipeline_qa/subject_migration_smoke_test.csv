@@ -1,0 +1,6 @@
+﻿subject_code,subject_name,subject_id,alias_count,tongji_sources,peer_sources,indicator_sources,weight_available_sources,weight_missing,ready_like_for_agent,status
+0701,数学,subject_0701,21,QS;THE;US News;软科,QS;THE;US News;软科,QS;THE;US News;软科,QS;THE;US News;软科,,True,ok
+0702,物理学,subject_0702,27,QS;THE;US News;软科,QS;THE;US News;软科,QS;THE;US News;软科,QS;THE;US News;软科,,True,ok
+0703,化学,subject_0703,31,QS;THE;US News;软科,QS;THE;US News;软科,QS;THE;US News;软科,QS;THE;US News;软科,,True,ok
+0814,土木工程,subject_0814,23,QS;THE;US News;软科,QS;THE;US News;软科,QS;THE;US News;软科,QS;THE;US News;软科,,True,ok
+0831,生物医学工程,subject_0831,13,THE;US News;软科,THE;US News;软科,THE;US News;软科,THE;软科,QS:无;US News:生物医学工程,True,ok

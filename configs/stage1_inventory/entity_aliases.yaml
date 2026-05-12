@@ -1,0 +1,80 @@
+version: 1
+universities:
+  同济大学:
+    - "Tongji University"
+    - "同济"
+  清华大学:
+    - "Tsinghua University"
+  北京大学:
+    - "Peking University"
+  上海交通大学:
+    - "Shanghai Jiao Tong University"
+  复旦大学:
+    - "Fudan University"
+  浙江大学:
+    - "Zhejiang University"
+  南京大学:
+    - "Nanjing University"
+  中国科学技术大学:
+    - "University of Science and Technology of China"
+    - "USTC"
+ranking_sources:
+  软科:
+    - "ARWU"
+    - "ShanghaiRanking"
+    - "软科世界一流学科排名"
+  QS:
+    - "Quacquarelli Symonds"
+    - "QS世界学科排名"
+  THE:
+    - "Times Higher Education"
+    - "泰晤士"
+    - "THE世界学科排名"
+  US News:
+    - "U.S.News"
+    - "U.S. News"
+    - "USNews"
+    - "美国新闻"
+field_aliases:
+  university:
+    - "学校名称"
+    - "高校名称"
+    - "中文名称"
+    - "大学"
+    - "Name"
+    - "university"
+    - "单位名称"
+  subject:
+    - "学科"
+    - "学科中文"
+    - "学科名称"
+    - "学科领域"
+    - "Subject"
+    - "一级学科"
+  rank:
+    - "国际排名"
+    - "世界排名"
+    - "排名"
+    - "Rank"
+    - "subjectrank"
+  score:
+    - "总得分"
+    - "总分"
+    - "综合得分"
+    - "OVERALL_SCORE"
+    - "overallscore"
+    - "globalscore"
+  year:
+    - "发布年度"
+    - "排名年度"
+    - "年份"
+    - "发布时间"
+    - "pubyear"
+    - "Time"
+  region:
+    - "所在地区"
+    - "地区"
+    - "国家"
+    - "省份"
+    - "Country"
+    - "location"

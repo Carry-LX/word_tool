@@ -1,0 +1,13 @@
+{
+  "reference_raw_slots": 44,
+  "reference_image_slots": 14,
+  "reference_table_slots": 8,
+  "reference_caption_slots": 22,
+  "logical_slots": 23,
+  "raw_slots_mapped": 44,
+  "raw_slots_unmapped": 0,
+  "existing_registered_artifacts_used": 9,
+  "planned_new_artifacts": 14,
+  "data_available_or_partial": 18,
+  "data_gap_slots": 5
+}

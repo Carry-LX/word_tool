@@ -1,0 +1,68 @@
+version: 1
+relationships:
+  -
+    task: "确定目标学科"
+    join_path:
+      - "用户输入：学院或一级学科"
+      - "同济大学学院+学科映射关系20260509.xlsx"
+      - "教育部学科与四大国际学科排名映射关系.xlsx"
+      - "得到四大榜单对应学科名称"
+    outputs:
+      - "subject_id"
+      - "arwu_subject_name"
+      - "qs_subject_name"
+      - "usnews_subject_name"
+      - "the_subject_area"
+  -
+    task: "四大排名历史趋势"
+    join_path:
+      - "dim_subject"
+      - "按榜单对应学科名称筛选年度排名明细"
+      - "按 university_name_cn = 同济大学 筛选"
+      - "统一 release_year、ranking_year、rank_raw、rank_midpoint"
+    outputs:
+      - "fact_ranking"
+      - "历史趋势图数据"
+      - "趋势描述"
+  -
+    task: "对标高校整体分析"
+    join_path:
+      - "dim_subject"
+      - "全国双一流学科明细表 或 第五轮评估结果确定 peer_scope"
+      - "peer_scope 学校名单连接 fact_ranking"
+      - "计算内地排名、分档数量、同济相对位置"
+    outputs:
+      - "peer ranking table"
+      - "位次分布表"
+      - "对标结论"
+  -
+    task: "分项指标分析"
+    join_path:
+      - "fact_ranking_indicator"
+      - "fact_indicator_weight"
+      - "peer_scope"
+      - "同学科同年度内重算 indicator_relative_rank"
+    outputs:
+      - "分项指标相对排名图"
+      - "优势/短板指标列表"
+  -
+    task: "论文实力分析"
+    join_path:
+      - "优先查找独立论文库"
+      - "若无独立论文库，使用 US News、软科、THE 中的论文/引用/高被引/国际合作代理指标"
+      - "记录每个指标口径和榜单来源"
+    outputs:
+      - "论文代理指标表"
+      - "数据口径说明"
+      - "谨慎结论"
+  -
+    task: "国内评估分析"
+    join_path:
+      - "dim_subject"
+      - "第五轮评估结果（不完全）"
+      - "全国高校第四轮&第三轮学科评估结果"
+      - "全国双一流学科明细表"
+    outputs:
+      - "评估结果对比表"
+      - "国内建设标签"
+      - "数据不完全说明"

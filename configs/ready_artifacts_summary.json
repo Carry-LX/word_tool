@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-05-10T21:38:22",
+  "built_artifacts": [
+    "figure_02_ranking_indicator_commonality",
+    "figure_03_arwu_indicator_weight",
+    "figure_04_qs_indicator_weight",
+    "figure_06_the_indicator_weight",
+    "table_03_the_tongji_indicator_history",
+    "table_09_peer_full_ranking_history_appendix"
+  ],
+  "restyled_figures": [
+    "figure_01_tongji_subject_ranking_overview",
+    "figure_07_all_rankings_history",
+    "figure_09_arwu_peer_indicator_relative_rank",
+    "figure_11_usnews_peer_indicator_relative_rank",
+    "figure_12_the_peer_indicator_relative_rank"
+  ],
+  "errors": [],
+  "data_gap_report": {
+    "hard_data_gap_count": 5,
+    "partial_constraint_count": 3,
+    "report_dir": "E:\\projects\\water\\word_tool\\configs\\data_gap_report"
+  },
+  "registry": {
+    "artifact_count": 16,
+    "new_or_updated": 6
+  }
+}

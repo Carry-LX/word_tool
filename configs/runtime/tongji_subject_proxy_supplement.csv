@@ -1,0 +1,5 @@
+source_subject_name,proxy_ministry_subject_code,proxy_ministry_subject_name,proxy_subject_id,proxy_level,proxy_confidence,requires_disclosure,proxy_scope_note,evidence_url
+智能电动车辆,0802,机械工程,subject_0802,broad_proxy,medium,yes,智能电动车辆在原同济映射表中未给一级学科代码；按车辆工程/机械工程方向先并入机械工程生成，报告必须披露为代理口径。,"https://www.topuniversities.com/subject-rankings"
+低空技术与工程,0825,航空宇航科学与技术,subject_0825,broad_proxy,medium,yes,低空技术与工程在原同济映射表中未给一级学科代码；按航空宇航科学与技术为主代理，交通运输工程可作为补充参照。,"https://www.shanghairanking.com/rankings/gras/2025"
+光电科学与技术,0803,光学工程,subject_0803,close_proxy,high,yes,光电科学与技术在原同济映射表中未给一级学科代码；教育部目录中接近口径为光学工程，四榜单以US News Optics/THE Engineering等代理。,"https://clarivate.com/news/u-s-news-releases-2025-2026-best-global-universities-rankings/"
+知识产权学,0301,法学,subject_0301,broad_proxy,medium,yes,知识产权学在原同济映射表中未给一级学科代码；四大国际榜单无独立知识产权学学科，先按法学/Law代理。,"https://www.timeshighereducation.com/sites/default/files/breaking_news_files/the_world_university_rankings_2026_methodology.pdf"

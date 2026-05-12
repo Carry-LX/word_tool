@@ -1,0 +1,568 @@
+{
+  "version": 2,
+  "generated_for": "artifact execution registry",
+  "path_style": "project_relative",
+  "artifacts": [
+    {
+      "artifact_id": "figure_01_tongji_subject_ranking_overview",
+      "artifact_type": "chart",
+      "priority": "P1",
+      "status": "verified",
+      "section": "一、概述",
+      "reference_caption": "图1、同济大学xx学科国际排名",
+      "purpose": "用四大榜单最新年份展示同济目标学科的国际排名概览。",
+      "script_path": "scripts/build_artifact_figure_01.py",
+      "output_dir": "outputs/artifacts/figure_01_tongji_subject_ranking_overview",
+      "spec_file": "chart_spec.json",
+      "required_outputs": [
+        "chart_data.csv",
+        "chart_spec.json",
+        "chart.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/dim_subject.csv",
+        "processed/dim_subject_alias.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 4,
+        "sources": [
+          "软科",
+          "QS",
+          "US News",
+          "THE"
+        ],
+        "notes": "每个榜单取最新 release_year，再取最新 ranking_year。"
+      }
+    },
+    {
+      "artifact_id": "figure_07_all_rankings_history",
+      "artifact_type": "chart",
+      "priority": "P1",
+      "status": "verified",
+      "section": "四、对标高校整体分析",
+      "reference_caption": "图、同济大学xx学科四大国际排名历史趋势",
+      "purpose": "展示同济目标学科在四大国际排名中的历史变化。",
+      "script_path": "scripts/build_artifact_figure_07.py",
+      "output_dir": "outputs/artifacts/figure_07_all_rankings_history",
+      "spec_file": "chart_spec.json",
+      "required_outputs": [
+        "chart_data.csv",
+        "chart_spec.json",
+        "chart.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/dim_subject.csv",
+        "processed/dim_subject_alias.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 13,
+        "sources": [
+          "QS",
+          "THE",
+          "US News",
+          "软科"
+        ],
+        "notes": "alias 去重前 37 行，去重后 13 个年度绘图点。"
+      }
+    },
+    {
+      "artifact_id": "figure_09_arwu_peer_indicator_relative_rank",
+      "artifact_type": "chart",
+      "priority": "P1",
+      "status": "verified",
+      "section": "五、对标高校分指标分析/软科",
+      "reference_caption": "图8、软科排名前200位内地高校分项指标相对排名",
+      "purpose": "比较软科前200内地高校在分项指标上的相对排名，并将同济作为外部参照点展示优势和短板。",
+      "script_path": "scripts/build_artifact_figure_09.py",
+      "output_dir": "outputs/artifacts/figure_09_arwu_peer_indicator_relative_rank",
+      "spec_file": "chart_spec.json",
+      "required_outputs": [
+        "chart_data.csv",
+        "chart_spec.json",
+        "chart.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "peer_indicator_long.csv",
+        "tongji_indicator_check.csv",
+        "indicator_weight_summary.csv",
+        "chart_table.md"
+      ],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/fact_ranking_indicator.csv",
+        "processed/fact_indicator_weight.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 5,
+        "peer_scope_size": 21,
+        "comparison_scope_size": 22,
+        "sources": [
+          "软科"
+        ],
+        "notes": "软科2025数学前200内地高校21所；同济最新排名401-500，不在peer样本内，因此作为外部参照点加入分项指标相对排名。"
+      }
+    },
+    {
+      "artifact_id": "figure_11_usnews_peer_indicator_relative_rank",
+      "artifact_type": "chart",
+      "priority": "P1",
+      "status": "verified",
+      "section": "五、对标高校分指标分析/US News",
+      "reference_caption": "图7、U.S.News排名前200位内地高校分项指标相对排名",
+      "purpose": "比较US News前200内地高校在声誉、论文、引用、高被引、国际合作等指标排名上的表现，并将同济作为外部参照点展示相对位置。",
+      "script_path": "scripts/build_artifact_figure_11.py",
+      "output_dir": "outputs/artifacts/figure_11_usnews_peer_indicator_relative_rank",
+      "spec_file": "chart_spec.json",
+      "required_outputs": [
+        "chart_data.csv",
+        "chart_spec.json",
+        "chart.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "peer_indicator_long.csv",
+        "tongji_indicator_check.csv",
+        "indicator_weight_coverage.csv",
+        "chart_table.md"
+      ],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/fact_ranking_indicator.csv",
+        "processed/fact_indicator_weight.csv",
+        "outputs/artifacts/table_06_usnews_mainland_peer_ranking/latest_peer_records.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 11,
+        "peer_scope_size": 43,
+        "comparison_scope_size": 44,
+        "sources": [
+          "US News"
+        ],
+        "notes": "US News 2026数学前200内地高校43所；同济最新排名261，不在peer样本内，因此作为外部参照点加入分项指标相对排名；当前权重事实表无US News数学权重行。"
+      }
+    },
+    {
+      "artifact_id": "figure_12_the_peer_indicator_relative_rank",
+      "artifact_type": "chart",
+      "priority": "P1",
+      "status": "verified",
+      "section": "五、对标高校分指标分析/THE",
+      "reference_caption": "图9、THE排名前200位内地高校分项指标相对排名",
+      "purpose": "比较THE前200内地高校在教学、科研环境、科研质量、商业收入、国际化视野等指标排名上的表现。",
+      "script_path": "scripts/build_artifact_figure_12.py",
+      "output_dir": "outputs/artifacts/figure_12_the_peer_indicator_relative_rank",
+      "spec_file": "chart_spec.json",
+      "required_outputs": [
+        "chart_data.csv",
+        "chart_spec.json",
+        "chart.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "peer_indicator_long.csv",
+        "tongji_indicator_check.csv",
+        "indicator_weight_summary.csv",
+        "chart_table.md"
+      ],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/fact_ranking_indicator.csv",
+        "processed/fact_indicator_weight.csv",
+        "outputs/artifacts/table_08_the_mainland_peer_ranking/latest_peer_records.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 5,
+        "peer_scope_size": 18,
+        "sources": [
+          "THE"
+        ],
+        "notes": "THE 2026理学/Physical Sciences前200内地高校18所；同济已在peer样本内；分项指标使用THE排名字段，权重使用自然科学一级指标。"
+      }
+    },
+    {
+      "artifact_id": "table_04_mainland_rank_band_distribution",
+      "artifact_type": "table",
+      "priority": "P1",
+      "status": "verified",
+      "section": "四、对标高校整体分析",
+      "reference_caption": "表5、四大国际排名中内地高校位次分布",
+      "purpose": "统计目标学科四大榜单最新年份中，中国内地高校在前50、51-100、101-200等区间的数量。",
+      "script_path": "scripts/build_artifact_table_04.py",
+      "output_dir": "outputs/artifacts/table_04_mainland_rank_band_distribution",
+      "spec_file": "table_spec.json",
+      "required_outputs": [
+        "table_data.csv",
+        "table_spec.json",
+        "table.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "table_matrix.csv",
+        "table.md",
+        "peer_records_top200.csv"
+      ],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/dim_subject.csv",
+        "processed/dim_subject_alias.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 16,
+        "peer_records_top200_rows": 98,
+        "sources": [
+          "软科",
+          "QS",
+          "US News",
+          "THE"
+        ],
+        "notes": "前200分布：软科21、QS16、US News43、THE18；分档合计全部通过。"
+      }
+    },
+    {
+      "artifact_id": "table_05_arwu_mainland_peer_ranking",
+      "artifact_type": "table",
+      "priority": "P2",
+      "status": "verified",
+      "section": "四、对标高校整体分析/软科",
+      "reference_caption": "表7、软科排名中内地高校位于前列的比较",
+      "purpose": "列出软科目标学科中国内地高校前列排名，并展示多年度变化。",
+      "script_path": "scripts/build_artifact_table_05.py",
+      "output_dir": "outputs/artifacts/table_05_arwu_mainland_peer_ranking",
+      "spec_file": "table_spec.json",
+      "required_outputs": [
+        "table_data.csv",
+        "table_spec.json",
+        "table.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "table_matrix.csv",
+        "table.md",
+        "latest_peer_records.csv",
+        "tongji_scope_check.csv"
+      ],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/dim_subject.csv",
+        "processed/dim_subject_alias.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 21,
+        "latest_peer_records_rows": 21,
+        "sources": [
+          "软科"
+        ],
+        "notes": "软科2025数学前200内地高校21所；同济2025排名401-500，不在前200样本内。"
+      }
+    },
+    {
+      "artifact_id": "table_06_usnews_mainland_peer_ranking",
+      "artifact_type": "table",
+      "priority": "P2",
+      "status": "verified",
+      "section": "四、对标高校整体分析/US News",
+      "reference_caption": "表6、U.S.News排名中内地高校位于前列的比较",
+      "purpose": "列出US News目标学科中国内地高校前列排名，并展示多年度变化。",
+      "script_path": "scripts/build_artifact_table_06.py",
+      "output_dir": "outputs/artifacts/table_06_usnews_mainland_peer_ranking",
+      "spec_file": "table_spec.json",
+      "required_outputs": [
+        "table_data.csv",
+        "table_spec.json",
+        "table.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "table_matrix.csv",
+        "table.md",
+        "latest_peer_records.csv",
+        "tongji_scope_check.csv"
+      ],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/dim_subject.csv",
+        "processed/dim_subject_alias.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 43,
+        "latest_peer_records_rows": 43,
+        "sources": [
+          "US News"
+        ],
+        "notes": "US News 2026排名年度数学前200内地高校43所；同济2026排名年度为261，不在前200样本内；早期country_or_region='china'按中国内地处理。"
+      }
+    },
+    {
+      "artifact_id": "table_07_qs_mainland_peer_ranking",
+      "artifact_type": "table",
+      "priority": "P2",
+      "status": "verified",
+      "section": "四、对标高校整体分析/QS",
+      "reference_caption": "表：QS排名中内地高校位于前列的比较",
+      "purpose": "列出QS目标学科中国内地高校前列排名，并展示多年度变化。",
+      "script_path": "scripts/build_artifact_table_07.py",
+      "output_dir": "outputs/artifacts/table_07_qs_mainland_peer_ranking",
+      "spec_file": "table_spec.json",
+      "required_outputs": [
+        "table_data.csv",
+        "table_spec.json",
+        "table.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "table_matrix.csv",
+        "table.md",
+        "latest_peer_records.csv",
+        "tongji_scope_check.csv"
+      ],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/dim_subject.csv",
+        "processed/dim_subject_alias.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 16,
+        "latest_peer_records_rows": 16,
+        "sources": [
+          "QS"
+        ],
+        "notes": "QS 2026数学前200内地高校16所；同济2026排名为201-250，不在前200样本内；早期country_or_region='China (Mainland)'按中国内地处理。"
+      }
+    },
+    {
+      "artifact_id": "table_08_the_mainland_peer_ranking",
+      "artifact_type": "table",
+      "priority": "P2",
+      "status": "verified",
+      "section": "四、对标高校整体分析/THE",
+      "reference_caption": "表：THE排名中内地高校位于前列的比较",
+      "purpose": "列出THE目标领域中国内地高校前列排名，并展示多年度变化。",
+      "script_path": "scripts/build_artifact_table_08.py",
+      "output_dir": "outputs/artifacts/table_08_the_mainland_peer_ranking",
+      "spec_file": "table_spec.json",
+      "required_outputs": [
+        "table_data.csv",
+        "table_spec.json",
+        "table.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "table_matrix.csv",
+        "table.md",
+        "latest_peer_records.csv",
+        "tongji_scope_check.csv"
+      ],
+      "data_dependencies": [
+        "processed/ranking.sqlite",
+        "processed/dim_subject.csv",
+        "processed/dim_subject_alias.csv"
+      ],
+      "current_subject": "数学",
+      "last_verified_summary": {
+        "rows": 18,
+        "latest_peer_records_rows": 18,
+        "sources": [
+          "THE"
+        ],
+        "notes": "THE 2026理学/Physical Sciences前200内地高校18所；同济2026排名为176-200，在前200样本内；早期country_or_region='china'或'China'按中国内地处理。"
+      }
+    },
+    {
+      "artifact_id": "figure_02_ranking_indicator_commonality",
+      "artifact_type": "chart",
+      "priority": "P1",
+      "status": "verified",
+      "section": "按 Word 槽位映射",
+      "reference_caption": "图2、XX学科在世界学科排名中指标共性",
+      "purpose": "根据已治理排名数据生成可插入 Word 的正式图表产物。",
+      "script_path": "scripts/build_artifact_figure_02.py",
+      "output_dir": "outputs/artifacts/figure_02_ranking_indicator_commonality",
+      "spec_file": "chart_spec.json",
+      "required_outputs": [
+        "chart_data.csv",
+        "chart_spec.json",
+        "chart.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [],
+      "data_dependencies": [
+        "processed/fact_indicator_weight.csv",
+        "processed/fact_ranking_indicator.csv"
+      ],
+      "current_subject": "数学"
+    },
+    {
+      "artifact_id": "figure_03_arwu_indicator_weight",
+      "artifact_type": "chart",
+      "priority": "P1",
+      "status": "verified",
+      "section": "按 Word 槽位映射",
+      "reference_caption": "图3、软科世界一流学科数学指标权重",
+      "purpose": "根据已治理排名数据生成可插入 Word 的正式图表产物。",
+      "script_path": "scripts/build_artifact_figure_03.py",
+      "output_dir": "outputs/artifacts/figure_03_arwu_indicator_weight",
+      "spec_file": "chart_spec.json",
+      "required_outputs": [
+        "chart_data.csv",
+        "chart_spec.json",
+        "chart.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [],
+      "data_dependencies": [
+        "processed/fact_indicator_weight.csv"
+      ],
+      "current_subject": "数学"
+    },
+    {
+      "artifact_id": "figure_04_qs_indicator_weight",
+      "artifact_type": "chart",
+      "priority": "P1",
+      "status": "verified",
+      "section": "按 Word 槽位映射",
+      "reference_caption": "图4、QS学科排名数学指标权重",
+      "purpose": "根据已治理排名数据生成可插入 Word 的正式图表产物。",
+      "script_path": "scripts/build_artifact_figure_04.py",
+      "output_dir": "outputs/artifacts/figure_04_qs_indicator_weight",
+      "spec_file": "chart_spec.json",
+      "required_outputs": [
+        "chart_data.csv",
+        "chart_spec.json",
+        "chart.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [],
+      "data_dependencies": [
+        "processed/fact_indicator_weight.csv"
+      ],
+      "current_subject": "数学"
+    },
+    {
+      "artifact_id": "figure_06_the_indicator_weight",
+      "artifact_type": "chart",
+      "priority": "P1",
+      "status": "verified",
+      "section": "按 Word 槽位映射",
+      "reference_caption": "图4、THE世界学科排名自然科学领域指标权重",
+      "purpose": "根据已治理排名数据生成可插入 Word 的正式图表产物。",
+      "script_path": "scripts/build_artifact_figure_06.py",
+      "output_dir": "outputs/artifacts/figure_06_the_indicator_weight",
+      "spec_file": "chart_spec.json",
+      "required_outputs": [
+        "chart_data.csv",
+        "chart_spec.json",
+        "chart.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [],
+      "data_dependencies": [
+        "processed/fact_indicator_weight.csv"
+      ],
+      "current_subject": "数学"
+    },
+    {
+      "artifact_id": "table_03_the_tongji_indicator_history",
+      "artifact_type": "table",
+      "priority": "P2",
+      "status": "verified",
+      "section": "按 Word 槽位映射",
+      "reference_caption": "表4、xx学科在THE排名中的细分指标排名历史",
+      "purpose": "根据已治理排名数据生成可插入 Word 的正式图表产物。",
+      "script_path": "scripts/build_artifact_table_03.py",
+      "output_dir": "outputs/artifacts/table_03_the_tongji_indicator_history",
+      "spec_file": "table_spec.json",
+      "required_outputs": [
+        "table_data.csv",
+        "table_spec.json",
+        "table.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "table_matrix.csv",
+        "table.md"
+      ],
+      "data_dependencies": [
+        "processed/fact_ranking_indicator.csv"
+      ],
+      "current_subject": "数学"
+    },
+    {
+      "artifact_id": "table_09_peer_full_ranking_history_appendix",
+      "artifact_type": "table",
+      "priority": "P2",
+      "status": "verified",
+      "section": "按 Word 槽位映射",
+      "reference_caption": "附表：XX学科对标高校学科排名历史",
+      "purpose": "根据已治理排名数据生成可插入 Word 的正式图表产物。",
+      "script_path": "scripts/build_artifact_table_09.py",
+      "output_dir": "outputs/artifacts/table_09_peer_full_ranking_history_appendix",
+      "spec_file": "table_spec.json",
+      "required_outputs": [
+        "table_data.csv",
+        "table_spec.json",
+        "table.png",
+        "source_trace.csv",
+        "narrative.md",
+        "run_log.md"
+      ],
+      "optional_outputs": [
+        "table_matrix.csv",
+        "table.md"
+      ],
+      "data_dependencies": [
+        "outputs/artifacts/table_05_arwu_mainland_peer_ranking/table_matrix.csv",
+        "outputs/artifacts/table_06_usnews_mainland_peer_ranking/table_matrix.csv",
+        "outputs/artifacts/table_07_qs_mainland_peer_ranking/table_matrix.csv",
+        "outputs/artifacts/table_08_the_mainland_peer_ranking/table_matrix.csv"
+      ],
+      "current_subject": "数学"
+    }
+  ],
+  "last_updated": "2026-05-10T21:38:22"
+}

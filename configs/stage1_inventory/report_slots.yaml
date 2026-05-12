@@ -1,0 +1,93 @@
+version: 1
+purpose: "把理科学科分析报告模板拆成可由数据分析 agent 执行的报告位置。"
+target_template: "【标黄】同济大学学科分析报告——理科（2026年）.docx"
+reference_report: "同济大学XX学科的国际排名发展分析-2026年5月.docx"
+global_context:
+  target_university: "同济大学"
+  default_subject_family: "理科"
+  default_year: 2026
+  reference_subject: "数学"
+slots:
+  -
+    id: "overview_competitive_summary"
+    section: "一、总述"
+    output_types:
+      - "text"
+    goal: "概述同济理科学科的竞争格局、优势、挑战与机会。"
+    reference_style: "参考报告“一、概述”的长段落叙述。"
+    verification: "文字中的排名、数量、年份必须可追溯到后续明细数据。"
+  -
+    id: "ranking_indicator_system"
+    section: "二、国际排名/1、四大学科排名指标体系分析"
+    output_types:
+      - "text"
+      - "chart"
+    goal: "比较 QS、THE、US News、软科四大排名指标体系及权重共性。"
+    reference_style: "参考报告图2-图4及对应说明。"
+    verification: "各指标权重加总与权重表一致。"
+  -
+    id: "tongji_ranking_history"
+    section: "二、国际排名/2、同济理科在四大国际学科排名历史分析"
+    output_types:
+      - "text"
+      - "table"
+      - "chart"
+    goal: "展示同济对应学科近年四大国际排名变化趋势。"
+    reference_style: "参考报告图5、表1-表3的历史趋势表达。"
+    verification: "每条趋势至少保留来源榜单、发布年度、排名年度、原始排名字段。"
+  -
+    id: "indicator_detail_comparison"
+    section: "二、国际排名/3、国际学科排名的细分指标数据对比"
+    output_types:
+      - "text"
+      - "table"
+      - "chart"
+    goal: "比较同济与对标高校在细分指标上的得分和相对排名。"
+    reference_style: "参考报告图7-图9的分项指标相对排名图。"
+    verification: "分项指标名称需与对应榜单原始字段及指标权重表对齐。"
+  -
+    id: "double_first_class_peer_comparison"
+    section: "二、国际排名/4、双一流高校学科排名对比分析"
+    output_types:
+      - "text"
+      - "table"
+      - "chart"
+    goal: "筛选双一流或国内主要对标高校，比较整体排名和分项表现。"
+    reference_style: "参考报告表4-表8及对标高校整体分析段落。"
+    verification: "对标高校范围需由双一流表、国内评估表或用户确认列表确定。"
+  -
+    id: "domestic_evaluation_comparison"
+    section: "三、国内评估/1、双一流高校第五轮学科评估结果对比"
+    output_types:
+      - "text"
+      - "table"
+    goal: "比较同济与双一流高校在第五轮学科评估、双一流、高峰高原等国内评价中的位置。"
+    reference_style: "采用简洁表格与结论段落。"
+    verification: "第五轮评估数据标记“不完全”时，结论需说明数据边界。"
+  -
+    id: "paper_strength_analysis"
+    section: "四、论文实力"
+    output_types:
+      - "text"
+      - "table"
+      - "chart"
+    goal: "从论文数量、被引、高质量论文、国际合作等角度分析论文实力。"
+    reference_style: "参考报告图10-图13的论文指标分析。"
+    verification: "若当前数据目录缺少独立论文库，优先使用 US News/软科/THE 中可代理的论文指标，并标记口径。"
+  -
+    id: "research_frontier_interdiscipline"
+    section: "五、国内外高校研究前沿及学科交叉"
+    output_types:
+      - "text"
+      - "table"
+    goal: "根据顶尖教师方向、排名指标或外部补充数据判断研究前沿和交叉方向。"
+    reference_style: "目标模板中该段落被标黄，说明需要重点补全。"
+    verification: "如果现有 Excel 不含教师方向数据，需标记为待补数据或转为基于榜单指标的弱分析。"
+  -
+    id: "opportunities_challenges"
+    section: "六、机会挑战"
+    output_types:
+      - "text"
+    goal: "综合前述排名、评估、论文与对标分析，给出机会、挑战和建议。"
+    reference_style: "参考报告“同济发展潜力及建议”。"
+    verification: "建议必须由前文数据结论支撑，不单独凭空生成。"

@@ -1,0 +1,26 @@
+id,file,tier,role,status,exists,sheet_count,purpose
+map_ministry_rankings,教育部学科与四大国际学科排名映射关系.xlsx,core,subject_crosswalk,use,True,2,教育部一级学科到软科、QS、US News、THE榜单学科的主映射表。
+map_tongji_college_subject,同济大学学院+学科映射关系20260509.xlsx,core,tongji_subject_crosswalk,use,True,2,同济学院、学位点、一级学科、第五轮评估、双一流、高峰高原、四大榜单名称之间的映射。
+directory_postgraduate_subjects,1.研究生教育学科专业目录（2022年）.xlsx,support,official_subject_directory,use_when_needed,True,1,官方学科门类、一级学科代码和名称校验。
+weights_four_rankings_2025,四大世界学科2025指标权重.xlsx,core,indicator_weight,use,True,4,四大榜单指标体系和权重的主数据源。
+weights_four_rankings_legacy,世界大学学科排名2025指标权重.xlsx,support,indicator_weight,validate_or_fallback,True,4,指标权重备份/旧版来源。
+rank_arwu_2023,2023年软科世界一流学科排名-20231030.xlsx,historical,ranking_detail,use,True,1,软科 2023 发布年度学科排名明细。
+rank_arwu_2024,2024年软科世界一流学科排名-20241111.xlsx,historical,ranking_detail,use,True,1,软科 2024 发布年度学科排名明细。
+rank_arwu_2025,2025年软科世界一流学科排名20251118.xlsx,current,ranking_detail,use,True,1,软科最新可用学科排名明细。
+rank_qs_2023,2023年QS世界学科排名.xlsx,historical,ranking_detail,use,True,1,QS 2023 学科排名明细。
+rank_qs_2024,2024年QS世界学科排名-20240412.xlsx,historical,ranking_detail,use,True,1,QS 2024 学科排名明细。
+rank_qs_2025,2025年QS世界大学学科排名20250313.xlsx,historical,ranking_detail,use,True,1,QS 2025 学科排名明细。
+rank_qs_2026,2026年QS世界学科排名20260326.xlsx,current,ranking_detail,use,True,1,QS 最新可用学科排名明细。
+rank_the_2022_2026_history,世界大学学科排名THE（2022-2026年）20260123.xlsx,core,ranking_detail_history,use,True,4,THE 2022-2026 学科排名总库，含同济、同济历史、排名方法。
+rank_the_2026,2026年THE世界学科排名20260123.xlsx,current,ranking_detail,use,True,1,THE 2026 学科排名明细。
+rank_usnews_2021,2021US News世界学科排名2020年发布.xlsx,historical,ranking_detail,use,True,1,US News 2021/2020发布口径历史数据。
+rank_usnews_2022,2022US News世界学科排名20211026.xlsx,historical,ranking_detail,use,True,2,US News 2022 学科排名历史数据。
+rank_usnews_2023,2023US News世界学科排名20221026.xlsx,historical,ranking_detail,use,True,1,US News 2023 学科排名历史数据。
+rank_usnews_2024_2025,2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx,historical,ranking_detail,use,True,1,US News 2024-2025 学科排名明细。
+rank_usnews_2025_2026,2025-2026年度US News世界学科排名20251124.xlsx,current,ranking_detail,use,True,1,US News 最新可用学科排名明细。
+domestic_double_first_class,全国双一流学科明细表2022&2017.v2.xlsx,core,peer_scope,use,True,1,确定双一流高校和学科范围，用于对标高校筛选。
+domestic_eval_rounds_3_4,全国高校第四轮&第三轮学科评估结果.xlsx,support,domestic_evaluation,use,True,1,第三轮、第四轮学科评估对比。
+domestic_eval_round5_incomplete,第五轮评估结果（不完全）20260508.xlsx,core,domestic_evaluation,use_with_caveat,True,1,第五轮评估结果主表，但数据不完全。
+domestic_eval_round5_analysis_copy,副本第五轮评估结果（不完全）20260508(分析).xlsx,support,domestic_evaluation_enriched,validate_or_fallback,True,1,第五轮评估分析副本，含第四轮、第三轮、省份、层次等扩展字段。
+tongji_domestic_status,同济大学第五轮学科评估结果+双一流+高峰高原.xlsx,core,tongji_domestic_status,use,True,1,同济各学科第五轮评估、双一流、高峰高原状态。
+tongji_15th_five_year_targets,同济大学学院十五五学科建设目标-指标X7学科国际排名.xlsx,optional,planning_target,use_when_needed,True,1,学院十五五建设目标与指标名称。

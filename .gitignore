@@ -1,0 +1,18 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local/generated runtime artifacts
+/processed/
+/outputs/
+/external_data/
+/logs/
+
+# Office temporary files
+~$*
+
+# Local scratch files
+*.tmp
+*.bak
+*.log
+

@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-05-12T00:00:00",
+  "generator": "llm_name_or_manual",
+  "notes": [
+    "每个 segment_texts 项对应一个原模板段落。",
+    "不要漏掉多段槽位，例如 L020 会出现两条记录。"
+  ],
+  "segment_texts": [
+    {
+      "logical_slot_id": "L001",
+      "artifact_id": "figure_01_tongji_subject_ranking_overview",
+      "segment_key": "overview_main",
+      "text": "这里填写最终正文。"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "reference_docx": "E:\\projects\\water\\word_tool\\data\\同济大学XX学科的国际排名发展分析-2026年5月.docx",
+  "target_template_docx": "E:\\projects\\water\\word_tool\\data\\【标黄】同济大学学科分析报告——理科（2026年）.docx",
+  "reference_blocks": 131,
+  "reference_slots": 44,
+  "reference_images": 14,
+  "reference_tables": 8,
+  "reference_caption_or_heading_slots": 22,
+  "target_blocks": 37,
+  "target_slots": 0,
+  "covered_reference_slots": 17,
+  "uncovered_reference_slots": 27
+}

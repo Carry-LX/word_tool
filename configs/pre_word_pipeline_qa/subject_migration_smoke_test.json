@@ -1,0 +1,70 @@
+{
+  "generated_at": "2026-05-11T12:55:16",
+  "rows": [
+    {
+      "subject_code": "0701",
+      "subject_name": "数学",
+      "subject_id": "subject_0701",
+      "alias_count": 21,
+      "tongji_sources": "QS;THE;US News;软科",
+      "peer_sources": "QS;THE;US News;软科",
+      "indicator_sources": "QS;THE;US News;软科",
+      "weight_available_sources": "QS;THE;US News;软科",
+      "weight_missing": "",
+      "ready_like_for_agent": true,
+      "status": "ok"
+    },
+    {
+      "subject_code": "0702",
+      "subject_name": "物理学",
+      "subject_id": "subject_0702",
+      "alias_count": 27,
+      "tongji_sources": "QS;THE;US News;软科",
+      "peer_sources": "QS;THE;US News;软科",
+      "indicator_sources": "QS;THE;US News;软科",
+      "weight_available_sources": "QS;THE;US News;软科",
+      "weight_missing": "",
+      "ready_like_for_agent": true,
+      "status": "ok"
+    },
+    {
+      "subject_code": "0703",
+      "subject_name": "化学",
+      "subject_id": "subject_0703",
+      "alias_count": 31,
+      "tongji_sources": "QS;THE;US News;软科",
+      "peer_sources": "QS;THE;US News;软科",
+      "indicator_sources": "QS;THE;US News;软科",
+      "weight_available_sources": "QS;THE;US News;软科",
+      "weight_missing": "",
+      "ready_like_for_agent": true,
+      "status": "ok"
+    },
+    {
+      "subject_code": "0814",
+      "subject_name": "土木工程",
+      "subject_id": "subject_0814",
+      "alias_count": 23,
+      "tongji_sources": "QS;THE;US News;软科",
+      "peer_sources": "QS;THE;US News;软科",
+      "indicator_sources": "QS;THE;US News;软科",
+      "weight_available_sources": "QS;THE;US News;软科",
+      "weight_missing": "",
+      "ready_like_for_agent": true,
+      "status": "ok"
+    },
+    {
+      "subject_code": "0831",
+      "subject_name": "生物医学工程",
+      "subject_id": "subject_0831",
+      "alias_count": 13,
+      "tongji_sources": "THE;US News;软科",
+      "peer_sources": "THE;US News;软科",
+      "indicator_sources": "THE;US News;软科",
+      "weight_available_sources": "THE;软科",
+      "weight_missing": "QS:无;US News:生物医学工程",
+      "ready_like_for_agent": true,
+      "status": "ok"
+    }
+  ]
+}

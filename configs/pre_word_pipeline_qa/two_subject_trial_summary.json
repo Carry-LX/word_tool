@@ -1,0 +1,34 @@
+[
+  {
+    "subject_code": "0812",
+    "subject_name": "计算机科学与技术",
+    "run_dir": "E:\\projects\\water\\word_tool\\outputs\\subject_agent_runs\\20260511_093228_0812_subject",
+    "ready_artifact_count": 20,
+    "artifact_count": 24,
+    "generated_count": 20,
+    "skipped_count": 4,
+    "artifact_audit_pass_count": 20,
+    "artifact_audit_fail_count": 0,
+    "pre_word_issue_count": 0,
+    "pre_word_known_blocker_count": 3,
+    "pre_word_p1_count": 0,
+    "pre_word_p2_count": 0,
+    "pre_word_p3_count": 0
+  },
+  {
+    "subject_code": "0814",
+    "subject_name": "土木工程",
+    "run_dir": "E:\\projects\\water\\word_tool\\outputs\\subject_agent_runs\\20260511_093314_0814_subject",
+    "ready_artifact_count": 16,
+    "artifact_count": 24,
+    "generated_count": 16,
+    "skipped_count": 8,
+    "artifact_audit_pass_count": 16,
+    "artifact_audit_fail_count": 0,
+    "pre_word_issue_count": 0,
+    "pre_word_known_blocker_count": 3,
+    "pre_word_p1_count": 0,
+    "pre_word_p2_count": 0,
+    "pre_word_p3_count": 0
+  }
+]

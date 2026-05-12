@@ -1,0 +1,67 @@
+version: 1
+purpose: "定义后续报告生成 agent 的目标学科请求格式，避免脚本写死数学或某个学院。"
+
+required:
+  target_university:
+    type: string
+    default: "同济大学"
+    description: "报告分析对象。当前数据层主要围绕同济大学。"
+  target_subject:
+    type: string
+    description: "优先使用教育部一级学科名称，例如 数学、物理学、土木工程。"
+
+optional:
+  target_college:
+    type: string
+    description: "如果用户只给学院，可通过同济学院+学科映射关系反查一级学科。"
+  target_subject_code:
+    type: string
+    description: "教育部一级学科代码。如果提供，优先级高于名称。"
+  report_year:
+    type: integer
+    default: 2026
+    description: "报告年份，不等同于所有榜单的发布年度或排名年度。"
+  peer_scope:
+    type: enum
+    default: "mainland_top200_by_ranking"
+    values:
+      - "mainland_top200_by_ranking"
+      - "double_first_class_subject"
+      - "round5_same_or_better"
+      - "user_defined"
+    description: "对标高校范围。"
+  peer_universities:
+    type: list
+    default: []
+    description: "当 peer_scope=user_defined 时使用。"
+  ranking_sources:
+    type: list
+    default:
+      - "软科"
+      - "QS"
+      - "US News"
+      - "THE"
+    description: "需要分析的榜单。"
+  allow_area_mapping:
+    type: boolean
+    default: true
+    description: "是否允许 THE 等领域榜单的一对多映射。通常必须开启。"
+  proxy_policy:
+    type: enum
+    default: "allow_with_disclosure"
+    values:
+      - "allow_with_disclosure"
+      - "disallow"
+    description: "论文实力等缺少独立数据时，是否允许使用榜单代理指标。"
+
+example:
+  target_university: "同济大学"
+  target_subject: "数学"
+  target_college: "数学科学学院"
+  report_year: 2026
+  peer_scope: "mainland_top200_by_ranking"
+  ranking_sources:
+    - "软科"
+    - "QS"
+    - "US News"
+    - "THE"

@@ -1,0 +1,1683 @@
+{
+  "generated_at": "2026-05-10T21:38:42",
+  "registry_path": "E:\\projects\\water\\word_tool\\configs\\artifact_registry.yaml",
+  "artifact_count": 16,
+  "pass_count": 16,
+  "fail_count": 0,
+  "results": [
+    {
+      "artifact_id": "figure_01_tongji_subject_ranking_overview",
+      "artifact_type": "chart",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "chart_spec.json",
+      "primary_data_file": "chart_data.csv",
+      "primary_data_rows": 4,
+      "source_trace_rows": 31,
+      "file_status": [
+        {
+          "file": "chart_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 707,
+          "csv_rows": 4
+        },
+        {
+          "file": "chart_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1353,
+          "csv_rows": null
+        },
+        {
+          "file": "chart.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 76438,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 4101,
+          "csv_rows": 31
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1061,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 341,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/dim_subject.csv",
+          "exists": true,
+          "size_bytes": 21232
+        },
+        {
+          "path": "processed/dim_subject_alias.csv",
+          "exists": true,
+          "size_bytes": 103396
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T18:59:30",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": 37
+      }
+    },
+    {
+      "artifact_id": "figure_07_all_rankings_history",
+      "artifact_type": "chart",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "chart_spec.json",
+      "primary_data_file": "chart_data.csv",
+      "primary_data_rows": 13,
+      "source_trace_rows": 31,
+      "file_status": [
+        {
+          "file": "chart_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1723,
+          "csv_rows": 13
+        },
+        {
+          "file": "chart_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1327,
+          "csv_rows": null
+        },
+        {
+          "file": "chart.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 53485,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 4101,
+          "csv_rows": 31
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1201,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 331,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/dim_subject.csv",
+          "exists": true,
+          "size_bytes": 21232
+        },
+        {
+          "path": "processed/dim_subject_alias.csv",
+          "exists": true,
+          "size_bytes": 103396
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T18:44:48",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": 37
+      }
+    },
+    {
+      "artifact_id": "figure_09_arwu_peer_indicator_relative_rank",
+      "artifact_type": "chart",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "chart_spec.json",
+      "primary_data_file": "chart_data.csv",
+      "primary_data_rows": 5,
+      "source_trace_rows": 119,
+      "file_status": [
+        {
+          "file": "chart_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 566,
+          "csv_rows": 5
+        },
+        {
+          "file": "chart_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2752,
+          "csv_rows": null
+        },
+        {
+          "file": "chart.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 70563,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 23154,
+          "csv_rows": 119
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1223,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 539,
+          "csv_rows": null
+        },
+        {
+          "file": "peer_indicator_long.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 34675,
+          "csv_rows": 110
+        },
+        {
+          "file": "tongji_indicator_check.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2149,
+          "csv_rows": 5
+        },
+        {
+          "file": "indicator_weight_summary.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 564,
+          "csv_rows": 5
+        },
+        {
+          "file": "chart_table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 538,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/fact_ranking_indicator.csv",
+          "exists": true,
+          "size_bytes": 276997916
+        },
+        {
+          "path": "processed/fact_indicator_weight.csv",
+          "exists": true,
+          "size_bytes": 256834
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T20:16:53",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": ""
+      }
+    },
+    {
+      "artifact_id": "figure_11_usnews_peer_indicator_relative_rank",
+      "artifact_type": "chart",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "chart_spec.json",
+      "primary_data_file": "chart_data.csv",
+      "primary_data_rows": 11,
+      "source_trace_rows": 495,
+      "file_status": [
+        {
+          "file": "chart_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1431,
+          "csv_rows": 11
+        },
+        {
+          "file": "chart_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2643,
+          "csv_rows": null
+        },
+        {
+          "file": "chart.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 73948,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 116284,
+          "csv_rows": 495
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1114,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 583,
+          "csv_rows": null
+        },
+        {
+          "file": "peer_indicator_long.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 188648,
+          "csv_rows": 484
+        },
+        {
+          "file": "tongji_indicator_check.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 4575,
+          "csv_rows": 11
+        },
+        {
+          "file": "indicator_weight_coverage.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2929,
+          "csv_rows": 11
+        },
+        {
+          "file": "chart_table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 940,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/fact_ranking_indicator.csv",
+          "exists": true,
+          "size_bytes": 276997916
+        },
+        {
+          "path": "processed/fact_indicator_weight.csv",
+          "exists": true,
+          "size_bytes": 256834
+        },
+        {
+          "path": "outputs/artifacts/table_06_usnews_mainland_peer_ranking/latest_peer_records.csv",
+          "exists": true,
+          "size_bytes": 13074
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T20:29:01",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": ""
+      }
+    },
+    {
+      "artifact_id": "figure_12_the_peer_indicator_relative_rank",
+      "artifact_type": "chart",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "chart_spec.json",
+      "primary_data_file": "chart_data.csv",
+      "primary_data_rows": 5,
+      "source_trace_rows": 95,
+      "file_status": [
+        {
+          "file": "chart_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 790,
+          "csv_rows": 5
+        },
+        {
+          "file": "chart_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2620,
+          "csv_rows": null
+        },
+        {
+          "file": "chart.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 56473,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 22196,
+          "csv_rows": 95
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1111,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 683,
+          "csv_rows": null
+        },
+        {
+          "file": "peer_indicator_long.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 30938,
+          "csv_rows": 90
+        },
+        {
+          "file": "tongji_indicator_check.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2244,
+          "csv_rows": 5
+        },
+        {
+          "file": "indicator_weight_summary.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 615,
+          "csv_rows": 5
+        },
+        {
+          "file": "chart_table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 541,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/fact_ranking_indicator.csv",
+          "exists": true,
+          "size_bytes": 276997916
+        },
+        {
+          "path": "processed/fact_indicator_weight.csv",
+          "exists": true,
+          "size_bytes": 256834
+        },
+        {
+          "path": "outputs/artifacts/table_08_the_mainland_peer_ranking/latest_peer_records.csv",
+          "exists": true,
+          "size_bytes": 5778
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T20:37:21",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": ""
+      }
+    },
+    {
+      "artifact_id": "table_04_mainland_rank_band_distribution",
+      "artifact_type": "table",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "table_spec.json",
+      "primary_data_file": "table_data.csv",
+      "primary_data_rows": 16,
+      "source_trace_rows": 1259,
+      "file_status": [
+        {
+          "file": "table_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 902,
+          "csv_rows": 16
+        },
+        {
+          "file": "table_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2472,
+          "csv_rows": null
+        },
+        {
+          "file": "table.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 69622,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 210796,
+          "csv_rows": 1259
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 777,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 470,
+          "csv_rows": null
+        },
+        {
+          "file": "table_matrix.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 141,
+          "csv_rows": 4
+        },
+        {
+          "file": "table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 415,
+          "csv_rows": null
+        },
+        {
+          "file": "peer_records_top200.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 22616,
+          "csv_rows": 98
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/dim_subject.csv",
+          "exists": true,
+          "size_bytes": 21232
+        },
+        {
+          "path": "processed/dim_subject_alias.csv",
+          "exists": true,
+          "size_bytes": 103396
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T19:07:50",
+        "target_subject": "数学",
+        "target_university": "",
+        "raw_match_rows_before_alias_dedup": 1460
+      }
+    },
+    {
+      "artifact_id": "table_05_arwu_mainland_peer_ranking",
+      "artifact_type": "table",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "table_spec.json",
+      "primary_data_file": "table_data.csv",
+      "primary_data_rows": 63,
+      "source_trace_rows": 130,
+      "file_status": [
+        {
+          "file": "table_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 12872,
+          "csv_rows": 63
+        },
+        {
+          "file": "table_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2068,
+          "csv_rows": null
+        },
+        {
+          "file": "table.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 146712,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 20695,
+          "csv_rows": 130
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 881,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 519,
+          "csv_rows": null
+        },
+        {
+          "file": "table_matrix.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1069,
+          "csv_rows": 21
+        },
+        {
+          "file": "table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1594,
+          "csv_rows": null
+        },
+        {
+          "file": "latest_peer_records.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 4245,
+          "csv_rows": 21
+        },
+        {
+          "file": "tongji_scope_check.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 653,
+          "csv_rows": 2
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/dim_subject.csv",
+          "exists": true,
+          "size_bytes": 21232
+        },
+        {
+          "path": "processed/dim_subject_alias.csv",
+          "exists": true,
+          "size_bytes": 103396
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T19:32:23",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": 486
+      }
+    },
+    {
+      "artifact_id": "table_06_usnews_mainland_peer_ranking",
+      "artifact_type": "table",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "table_spec.json",
+      "primary_data_file": "table_data.csv",
+      "primary_data_rows": 154,
+      "source_trace_rows": 321,
+      "file_status": [
+        {
+          "file": "table_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 42222,
+          "csv_rows": 154
+        },
+        {
+          "file": "table_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2338,
+          "csv_rows": null
+        },
+        {
+          "file": "table.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 244005,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 69352,
+          "csv_rows": 321
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 993,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 694,
+          "csv_rows": null
+        },
+        {
+          "file": "table_matrix.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2034,
+          "csv_rows": 43
+        },
+        {
+          "file": "table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2998,
+          "csv_rows": null
+        },
+        {
+          "file": "latest_peer_records.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 13074,
+          "csv_rows": 43
+        },
+        {
+          "file": "tongji_scope_check.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1067,
+          "csv_rows": 3
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/dim_subject.csv",
+          "exists": true,
+          "size_bytes": 21232
+        },
+        {
+          "path": "processed/dim_subject_alias.csv",
+          "exists": true,
+          "size_bytes": 103396
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T19:44:08",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": 998
+      }
+    },
+    {
+      "artifact_id": "table_07_qs_mainland_peer_ranking",
+      "artifact_type": "table",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "table_spec.json",
+      "primary_data_file": "table_data.csv",
+      "primary_data_rows": 63,
+      "source_trace_rows": 201,
+      "file_status": [
+        {
+          "file": "table_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 16693,
+          "csv_rows": 63
+        },
+        {
+          "file": "table_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2371,
+          "csv_rows": null
+        },
+        {
+          "file": "table.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 120159,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 41890,
+          "csv_rows": 201
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 937,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 704,
+          "csv_rows": null
+        },
+        {
+          "file": "table_matrix.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 876,
+          "csv_rows": 16
+        },
+        {
+          "file": "table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1371,
+          "csv_rows": null
+        },
+        {
+          "file": "latest_peer_records.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 4925,
+          "csv_rows": 16
+        },
+        {
+          "file": "tongji_scope_check.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1297,
+          "csv_rows": 4
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/dim_subject.csv",
+          "exists": true,
+          "size_bytes": 21232
+        },
+        {
+          "path": "processed/dim_subject_alias.csv",
+          "exists": true,
+          "size_bytes": 103396
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T19:56:37",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": 696
+      }
+    },
+    {
+      "artifact_id": "table_08_the_mainland_peer_ranking",
+      "artifact_type": "table",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "table_spec.json",
+      "primary_data_file": "table_data.csv",
+      "primary_data_rows": 69,
+      "source_trace_rows": 138,
+      "file_status": [
+        {
+          "file": "table_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 20708,
+          "csv_rows": 69
+        },
+        {
+          "file": "table_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2435,
+          "csv_rows": null
+        },
+        {
+          "file": "table.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 125308,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 34907,
+          "csv_rows": 138
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1020,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 782,
+          "csv_rows": null
+        },
+        {
+          "file": "table_matrix.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1156,
+          "csv_rows": 18
+        },
+        {
+          "file": "table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1676,
+          "csv_rows": null
+        },
+        {
+          "file": "latest_peer_records.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 5778,
+          "csv_rows": 18
+        },
+        {
+          "file": "tongji_scope_check.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1446,
+          "csv_rows": 4
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/ranking.sqlite",
+          "exists": true,
+          "size_bytes": 474775552
+        },
+        {
+          "path": "processed/dim_subject.csv",
+          "exists": true,
+          "size_bytes": 21232
+        },
+        {
+          "path": "processed/dim_subject_alias.csv",
+          "exists": true,
+          "size_bytes": 103396
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T20:05:01",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": 630
+      }
+    },
+    {
+      "artifact_id": "figure_02_ranking_indicator_commonality",
+      "artifact_type": "chart",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "chart_spec.json",
+      "primary_data_file": "chart_data.csv",
+      "primary_data_rows": 18,
+      "source_trace_rows": 48,
+      "file_status": [
+        {
+          "file": "chart_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1111,
+          "csv_rows": 18
+        },
+        {
+          "file": "chart_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 524,
+          "csv_rows": null
+        },
+        {
+          "file": "chart.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 92642,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 6398,
+          "csv_rows": 48
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 282,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 98,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/fact_indicator_weight.csv",
+          "exists": true,
+          "size_bytes": 256834
+        },
+        {
+          "path": "processed/fact_ranking_indicator.csv",
+          "exists": true,
+          "size_bytes": 276997916
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T21:38:14",
+        "target_subject": "数学",
+        "target_university": "",
+        "raw_match_rows_before_alias_dedup": ""
+      }
+    },
+    {
+      "artifact_id": "figure_03_arwu_indicator_weight",
+      "artifact_type": "chart",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "chart_spec.json",
+      "primary_data_file": "chart_data.csv",
+      "primary_data_rows": 9,
+      "source_trace_rows": 9,
+      "file_status": [
+        {
+          "file": "chart_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2728,
+          "csv_rows": 9
+        },
+        {
+          "file": "chart_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 762,
+          "csv_rows": null
+        },
+        {
+          "file": "chart.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 94022,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 1028,
+          "csv_rows": 9
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 225,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 111,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/fact_indicator_weight.csv",
+          "exists": true,
+          "size_bytes": 256834
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T21:38:14",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": ""
+      }
+    },
+    {
+      "artifact_id": "figure_04_qs_indicator_weight",
+      "artifact_type": "chart",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "chart_spec.json",
+      "primary_data_file": "chart_data.csv",
+      "primary_data_rows": 5,
+      "source_trace_rows": 5,
+      "file_status": [
+        {
+          "file": "chart_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 953,
+          "csv_rows": 5
+        },
+        {
+          "file": "chart_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 738,
+          "csv_rows": null
+        },
+        {
+          "file": "chart.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 53901,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 470,
+          "csv_rows": 5
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 212,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 109,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/fact_indicator_weight.csv",
+          "exists": true,
+          "size_bytes": 256834
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T21:38:14",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": ""
+      }
+    },
+    {
+      "artifact_id": "figure_06_the_indicator_weight",
+      "artifact_type": "chart",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "chart_spec.json",
+      "primary_data_file": "chart_data.csv",
+      "primary_data_rows": 23,
+      "source_trace_rows": 23,
+      "file_status": [
+        {
+          "file": "chart_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 4586,
+          "csv_rows": 23
+        },
+        {
+          "file": "chart_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 751,
+          "csv_rows": null
+        },
+        {
+          "file": "chart.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 97039,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 2145,
+          "csv_rows": 23
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 239,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 111,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/fact_indicator_weight.csv",
+          "exists": true,
+          "size_bytes": 256834
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T21:38:14",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": ""
+      }
+    },
+    {
+      "artifact_id": "table_03_the_tongji_indicator_history",
+      "artifact_type": "table",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "table_spec.json",
+      "primary_data_file": "table_data.csv",
+      "primary_data_rows": 46,
+      "source_trace_rows": 46,
+      "file_status": [
+        {
+          "file": "table_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 11919,
+          "csv_rows": 46
+        },
+        {
+          "file": "table_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 376,
+          "csv_rows": null
+        },
+        {
+          "file": "table.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 67233,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 5440,
+          "csv_rows": 46
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 225,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 135,
+          "csv_rows": null
+        },
+        {
+          "file": "table_matrix.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 430,
+          "csv_rows": 11
+        },
+        {
+          "file": "table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 591,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "processed/fact_ranking_indicator.csv",
+          "exists": true,
+          "size_bytes": 276997916
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T21:38:21",
+        "target_subject": "数学",
+        "target_university": "同济大学",
+        "raw_match_rows_before_alias_dedup": ""
+      }
+    },
+    {
+      "artifact_id": "table_09_peer_full_ranking_history_appendix",
+      "artifact_type": "table",
+      "registry_status": "verified",
+      "audit_status": "pass",
+      "error_count": 0,
+      "warning_count": 0,
+      "errors": [],
+      "warnings": [],
+      "script_exists": true,
+      "output_dir_exists": true,
+      "spec_file": "table_spec.json",
+      "primary_data_file": "table_data.csv",
+      "primary_data_rows": 469,
+      "source_trace_rows": 98,
+      "file_status": [
+        {
+          "file": "table_data.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 32961,
+          "csv_rows": 469
+        },
+        {
+          "file": "table_spec.json",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 400,
+          "csv_rows": null
+        },
+        {
+          "file": "table.png",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 165820,
+          "csv_rows": null
+        },
+        {
+          "file": "source_trace.csv",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 31515,
+          "csv_rows": 98
+        },
+        {
+          "file": "narrative.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 215,
+          "csv_rows": null
+        },
+        {
+          "file": "run_log.md",
+          "required": true,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 126,
+          "csv_rows": null
+        },
+        {
+          "file": "table_matrix.csv",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 5842,
+          "csv_rows": 98
+        },
+        {
+          "file": "table.md",
+          "required": false,
+          "exists": true,
+          "nonempty": true,
+          "size_bytes": 8388,
+          "csv_rows": null
+        }
+      ],
+      "dependency_status": [
+        {
+          "path": "outputs/artifacts/table_05_arwu_mainland_peer_ranking/table_matrix.csv",
+          "exists": true,
+          "size_bytes": 1069
+        },
+        {
+          "path": "outputs/artifacts/table_06_usnews_mainland_peer_ranking/table_matrix.csv",
+          "exists": true,
+          "size_bytes": 2034
+        },
+        {
+          "path": "outputs/artifacts/table_07_qs_mainland_peer_ranking/table_matrix.csv",
+          "exists": true,
+          "size_bytes": 876
+        },
+        {
+          "path": "outputs/artifacts/table_08_the_mainland_peer_ranking/table_matrix.csv",
+          "exists": true,
+          "size_bytes": 1156
+        }
+      ],
+      "spec_summary": {
+        "generated_at": "2026-05-10T21:38:21",
+        "target_subject": "数学",
+        "target_university": "",
+        "raw_match_rows_before_alias_dedup": ""
+      }
+    }
+  ]
+}

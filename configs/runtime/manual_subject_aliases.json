@@ -1,0 +1,2360 @@
+{
+  "version": 1,
+  "purpose": "人工维护的榜单学科 alias 和排除规则。用于处理自动映射无法覆盖的领域口径、历史名称、无对应学科等情况。",
+  "invalid_alias_values": [
+    "",
+    "无",
+    "暂无",
+    "无对应",
+    "-",
+    "None",
+    "nan"
+  ],
+  "area_alias_rules": [
+    {
+      "ranking_source": "THE",
+      "dim_subject_column": "the_subject_area",
+      "dim_subject_value": "工程",
+      "aliases": [
+        "工学",
+        "工程",
+        "工程学",
+        "Engineering"
+      ],
+      "note": "THE历史总库中工程领域中文名实际为“工学”，同济映射表中写作“工程”。"
+    },
+    {
+      "ranking_source": "THE",
+      "dim_subject_column": "the_subject_area",
+      "dim_subject_value": "物理学",
+      "aliases": [
+        "理学",
+        "自然科学",
+        "物理学",
+        "Physical Sciences"
+      ],
+      "note": "THE理学/自然科学领域口径，一对多覆盖数学、物理学、化学等。"
+    },
+    {
+      "ranking_source": "THE",
+      "dim_subject_column": "the_subject_area",
+      "dim_subject_value": "临床健康",
+      "aliases": [
+        "医学与健康",
+        "临床与健康",
+        "Clinical and Health",
+        "Medical and Health"
+      ],
+      "note": "THE医学健康领域存在多个中文名称。"
+    },
+    {
+      "ranking_source": "THE",
+      "dim_subject_column": "the_subject_area",
+      "dim_subject_value": "商业与经济",
+      "aliases": [
+        "商业与经济学",
+        "商业和经济学",
+        "Business and Economics"
+      ],
+      "note": "THE商业经济领域名称归一。"
+    }
+  ],
+  "confirmed_no_mapping": [
+    {
+      "subject_name": "马克思主义理论",
+      "ranking_source": "QS",
+      "reason": "当前QS学科排名无明确对应学科；原表中同济映射为“无”。"
+    },
+    {
+      "subject_name": "公共管理",
+      "ranking_source": "QS",
+      "reason": "当前QS学科排名无明确对应学科。"
+    },
+    {
+      "subject_name": "集成电路科学与工程",
+      "ranking_source": "QS",
+      "reason": "当前QS学科排名无明确对应一级学科，可能需按电子电气/材料等方向人工确认。"
+    }
+  ],
+  "subject_alias_rules": [
+    {
+      "rule_id": "QS_BUSINESS_MANAGEMENT_TO_BUSINESS_ADMIN",
+      "ranking_source": "QS",
+      "subject_id": "subject_1202",
+      "aliases": [
+        "商业与管理研究",
+        "商务与管理研究",
+        "Business & Management Studies"
+      ],
+      "mapping_class": "deterministic",
+      "note": "QS Business & Management Studies 对应工商管理学/工商管理口径。"
+    },
+    {
+      "rule_id": "QS_BUSINESS_MANAGEMENT_TO_BUSINESS_ADMIN",
+      "ranking_source": "QS",
+      "subject_id": "subject_1251",
+      "aliases": [
+        "商业与管理研究",
+        "商务与管理研究",
+        "Business & Management Studies"
+      ],
+      "mapping_class": "deterministic",
+      "note": "QS Business & Management Studies 对应工商管理学/工商管理口径。"
+    },
+    {
+      "rule_id": "QS_ACCOUNTING_FINANCE_TO_ECON_BUSINESS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0202",
+      "aliases": [
+        "会计与金融",
+        "会计与金融学",
+        "Accounting & Finance"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Accounting & Finance 跨应用经济学、金融、工商管理学与会计，不强行单学科化。"
+    },
+    {
+      "rule_id": "QS_ACCOUNTING_FINANCE_TO_ECON_BUSINESS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0251",
+      "aliases": [
+        "会计与金融",
+        "会计与金融学",
+        "Accounting & Finance"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Accounting & Finance 跨应用经济学、金融、工商管理学与会计，不强行单学科化。"
+    },
+    {
+      "rule_id": "QS_ACCOUNTING_FINANCE_TO_ECON_BUSINESS",
+      "ranking_source": "QS",
+      "subject_id": "subject_1202",
+      "aliases": [
+        "会计与金融",
+        "会计与金融学",
+        "Accounting & Finance"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Accounting & Finance 跨应用经济学、金融、工商管理学与会计，不强行单学科化。"
+    },
+    {
+      "rule_id": "QS_ACCOUNTING_FINANCE_TO_ECON_BUSINESS",
+      "ranking_source": "QS",
+      "subject_id": "subject_1253",
+      "aliases": [
+        "会计与金融",
+        "会计与金融学",
+        "Accounting & Finance"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Accounting & Finance 跨应用经济学、金融、工商管理学与会计，不强行单学科化。"
+    },
+    {
+      "rule_id": "QS_ENGLISH_LANGUAGE_LITERATURE_TO_LANGUAGE_SUBJECTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0501",
+      "aliases": [
+        "英语语言和文学",
+        "英语语言与文学",
+        "English Language and Literature"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "英语语言文学在中文/外国语言文学口径间存在交叉，保留多学科连接。"
+    },
+    {
+      "rule_id": "QS_ENGLISH_LANGUAGE_LITERATURE_TO_LANGUAGE_SUBJECTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0502",
+      "aliases": [
+        "英语语言和文学",
+        "英语语言与文学",
+        "English Language and Literature"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "英语语言文学在中文/外国语言文学口径间存在交叉，保留多学科连接。"
+    },
+    {
+      "rule_id": "QS_PHYSICS_ASTRONOMY_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0702",
+      "aliases": [
+        "物理学&天文学",
+        "物理学天文学",
+        "物理与天文学",
+        "Physics & Astronomy"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Physics & Astronomy 覆盖物理学与天文学。"
+    },
+    {
+      "rule_id": "QS_PHYSICS_ASTRONOMY_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0704",
+      "aliases": [
+        "物理学&天文学",
+        "物理学天文学",
+        "物理与天文学",
+        "Physics & Astronomy"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Physics & Astronomy 覆盖物理学与天文学。"
+    },
+    {
+      "rule_id": "QS_MEDIA_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0503",
+      "aliases": [
+        "传媒学",
+        "传播学",
+        "传播与媒体研究",
+        "Communication and Media Studies"
+      ],
+      "mapping_class": "deterministic",
+      "note": "QS Communication and Media Studies 对应新闻传播学/新闻与传播。"
+    },
+    {
+      "rule_id": "QS_MEDIA_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0552",
+      "aliases": [
+        "传媒学",
+        "传播学",
+        "传播与媒体研究",
+        "Communication and Media Studies"
+      ],
+      "mapping_class": "deterministic",
+      "note": "QS Communication and Media Studies 对应新闻传播学/新闻与传播。"
+    },
+    {
+      "rule_id": "QS_EARTH_OCEAN_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0707",
+      "aliases": [
+        "地球和海洋科学",
+        "地球与海洋科学",
+        "Earth and Marine Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Earth and Marine Sciences 横跨海洋、地球物理和地质方向。"
+    },
+    {
+      "rule_id": "QS_EARTH_OCEAN_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0708",
+      "aliases": [
+        "地球和海洋科学",
+        "地球与海洋科学",
+        "Earth and Marine Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Earth and Marine Sciences 横跨海洋、地球物理和地质方向。"
+    },
+    {
+      "rule_id": "QS_EARTH_OCEAN_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0709",
+      "aliases": [
+        "地球和海洋科学",
+        "地球与海洋科学",
+        "Earth and Marine Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Earth and Marine Sciences 横跨海洋、地球物理和地质方向。"
+    },
+    {
+      "rule_id": "QS_ARCHITECTURE_BUILT_ENVIRONMENT_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0813",
+      "aliases": [
+        "建筑与建造环境",
+        "建筑与建筑环境",
+        "Architecture & Built Environment"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Architecture & Built Environment 覆盖建筑学和城乡规划相关口径。"
+    },
+    {
+      "rule_id": "QS_ARCHITECTURE_BUILT_ENVIRONMENT_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0833",
+      "aliases": [
+        "建筑与建造环境",
+        "建筑与建筑环境",
+        "Architecture & Built Environment"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Architecture & Built Environment 覆盖建筑学和城乡规划相关口径。"
+    },
+    {
+      "rule_id": "QS_ARCHITECTURE_BUILT_ENVIRONMENT_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0851",
+      "aliases": [
+        "建筑与建造环境",
+        "建筑与建筑环境",
+        "Architecture & Built Environment"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Architecture & Built Environment 覆盖建筑学和城乡规划相关口径。"
+    },
+    {
+      "rule_id": "QS_ARCHITECTURE_BUILT_ENVIRONMENT_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0853",
+      "aliases": [
+        "建筑与建造环境",
+        "建筑与建筑环境",
+        "Architecture & Built Environment"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Architecture & Built Environment 覆盖建筑学和城乡规划相关口径。"
+    },
+    {
+      "rule_id": "QS_ART_DESIGN_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_1357",
+      "aliases": [
+        "艺术&设计",
+        "艺术设计",
+        "艺术与设计",
+        "Art & Design"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Art & Design 对应设计/设计学。"
+    },
+    {
+      "rule_id": "QS_ART_DESIGN_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_1403",
+      "aliases": [
+        "艺术&设计",
+        "艺术设计",
+        "艺术与设计",
+        "Art & Design"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Art & Design 对应设计/设计学。"
+    },
+    {
+      "rule_id": "QS_LIBRARY_INFORMATION_MANAGEMENT_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_1205",
+      "aliases": [
+        "图书馆及信息管理",
+        "图书馆信息管理",
+        "Library & Information Management"
+      ],
+      "mapping_class": "deterministic",
+      "note": "QS Library & Information Management 对应信息资源管理/图书情报。"
+    },
+    {
+      "rule_id": "QS_LIBRARY_INFORMATION_MANAGEMENT_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_1255",
+      "aliases": [
+        "图书馆及信息管理",
+        "图书馆信息管理",
+        "Library & Information Management"
+      ],
+      "mapping_class": "deterministic",
+      "note": "QS Library & Information Management 对应信息资源管理/图书情报。"
+    },
+    {
+      "rule_id": "QS_MARKETING_TO_BUSINESS_ADMIN",
+      "ranking_source": "QS",
+      "subject_id": "subject_1202",
+      "aliases": [
+        "市场营销",
+        "Marketing"
+      ],
+      "mapping_class": "deterministic",
+      "note": "市场营销归入工商管理学/工商管理。"
+    },
+    {
+      "rule_id": "QS_MARKETING_TO_BUSINESS_ADMIN",
+      "ranking_source": "QS",
+      "subject_id": "subject_1251",
+      "aliases": [
+        "市场营销",
+        "Marketing"
+      ],
+      "mapping_class": "deterministic",
+      "note": "市场营销归入工商管理学/工商管理。"
+    },
+    {
+      "rule_id": "QS_DATA_SCIENCE_AI_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0811",
+      "aliases": [
+        "DataScience",
+        "Data Science",
+        "数据科学与人工智能"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Data Science / AI 横跨控制、计算机和智能科学。"
+    },
+    {
+      "rule_id": "QS_DATA_SCIENCE_AI_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0812",
+      "aliases": [
+        "DataScience",
+        "Data Science",
+        "数据科学与人工智能"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Data Science / AI 横跨控制、计算机和智能科学。"
+    },
+    {
+      "rule_id": "QS_DATA_SCIENCE_AI_VARIANTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_1405",
+      "aliases": [
+        "DataScience",
+        "Data Science",
+        "数据科学与人工智能"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Data Science / AI 横跨控制、计算机和智能科学。"
+    },
+    {
+      "rule_id": "QS_ANATOMY_PHYSIOLOGY_TO_BASIC_MEDICINE",
+      "ranking_source": "QS",
+      "subject_id": "subject_1001",
+      "aliases": [
+        "解剖和生理学",
+        "解剖与生理学",
+        "Anatomy & Physiology"
+      ],
+      "mapping_class": "deterministic",
+      "note": "解剖与生理学归入基础医学。"
+    },
+    {
+      "rule_id": "QS_HISTORY_BROAD_TO_HISTORY_SUBJECTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0602",
+      "aliases": [
+        "历史学",
+        "History"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS History 不是教育部单一一级学科，连接中国史与世界史。"
+    },
+    {
+      "rule_id": "QS_HISTORY_BROAD_TO_HISTORY_SUBJECTS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0603",
+      "aliases": [
+        "历史学",
+        "History"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS History 不是教育部单一一级学科，连接中国史与世界史。"
+    },
+    {
+      "rule_id": "QS_CLASSICS_ANCIENT_HISTORY_TO_LITERATURE_HISTORY",
+      "ranking_source": "QS",
+      "subject_id": "subject_0501",
+      "aliases": [
+        "古典文学与古代史",
+        "Classics & Ancient History"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "古典文学与古代史跨文学与世界史，保留多学科连接。"
+    },
+    {
+      "rule_id": "QS_CLASSICS_ANCIENT_HISTORY_TO_LITERATURE_HISTORY",
+      "ranking_source": "QS",
+      "subject_id": "subject_0603",
+      "aliases": [
+        "古典文学与古代史",
+        "Classics & Ancient History"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "古典文学与古代史跨文学与世界史，保留多学科连接。"
+    },
+    {
+      "rule_id": "QS_ANTHROPOLOGY_TO_SOCIOLOGY",
+      "ranking_source": "QS",
+      "subject_id": "subject_0303",
+      "aliases": [
+        "人类学",
+        "Anthropology"
+      ],
+      "mapping_class": "approximate",
+      "note": "教育部目录无独立人类学一级学科，暂挂社会学，报告中标记为近似映射。"
+    },
+    {
+      "rule_id": "QS_THEOLOGY_RELIGION_TO_PHILOSOPHY",
+      "ranking_source": "QS",
+      "subject_id": "subject_0101",
+      "aliases": [
+        "神学、神学与宗教研究",
+        "神学神学与宗教研究",
+        "Theology, Divinity & Religious Studies"
+      ],
+      "mapping_class": "approximate",
+      "note": "教育部目录无独立神学一级学科，宗教学方向暂归哲学近似口径。"
+    },
+    {
+      "rule_id": "QS_MUSIC_TO_MUSIC",
+      "ranking_source": "QS",
+      "subject_id": "subject_1352",
+      "aliases": [
+        "Music",
+        "音乐"
+      ],
+      "mapping_class": "deterministic",
+      "note": "QS Music 对应音乐。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0901",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0902",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0903",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0904",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0905",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0907",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0908",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0909",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0951",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "QS_AGRI_FORESTRY_BROAD",
+      "ranking_source": "QS",
+      "subject_id": "subject_0954",
+      "aliases": [
+        "农学与林学",
+        "农业&林业",
+        "农业林业",
+        "Agriculture & Forestry"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "QS Agriculture & Forestry 是农学/林学大领域，作为多学科领域映射使用。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0801",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0802",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0803",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0804",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0805",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0806",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0807",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0808",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0809",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0810",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0811",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0812",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0813",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0814",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0815",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0816",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0817",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0818",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0819",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0820",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0821",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0822",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0823",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0824",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0825",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0828",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0829",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0830",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0831",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0832",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0833",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0835",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0836",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0837",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0839",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_1401",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_1404",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_1405",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ENGINEERING_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_1406",
+      "aliases": [
+        "engineering",
+        "工程学",
+        "Engineering"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News engineering 为大工程领域，不落到单一一级学科。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0101",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0501",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0502",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0601",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0602",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0603",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0813",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0833",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_1301",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_1357",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_ARTS_HUMANITIES_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_1403",
+      "aliases": [
+        "arts and humanities",
+        "艺术与人文"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Arts and Humanities 为大领域口径。"
+    },
+    {
+      "rule_id": "USNEWS_SOCIAL_PUBLIC_HEALTH_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0302",
+      "aliases": [
+        "社会科学与公共卫生",
+        "social sciences and public health"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Social Sciences and Public Health 横跨社科与公共卫生。"
+    },
+    {
+      "rule_id": "USNEWS_SOCIAL_PUBLIC_HEALTH_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0303",
+      "aliases": [
+        "社会科学与公共卫生",
+        "social sciences and public health"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Social Sciences and Public Health 横跨社科与公共卫生。"
+    },
+    {
+      "rule_id": "USNEWS_SOCIAL_PUBLIC_HEALTH_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0401",
+      "aliases": [
+        "社会科学与公共卫生",
+        "social sciences and public health"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Social Sciences and Public Health 横跨社科与公共卫生。"
+    },
+    {
+      "rule_id": "USNEWS_SOCIAL_PUBLIC_HEALTH_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_0402",
+      "aliases": [
+        "社会科学与公共卫生",
+        "social sciences and public health"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Social Sciences and Public Health 横跨社科与公共卫生。"
+    },
+    {
+      "rule_id": "USNEWS_SOCIAL_PUBLIC_HEALTH_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_1004",
+      "aliases": [
+        "社会科学与公共卫生",
+        "social sciences and public health"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Social Sciences and Public Health 横跨社科与公共卫生。"
+    },
+    {
+      "rule_id": "USNEWS_SOCIAL_PUBLIC_HEALTH_BROAD",
+      "ranking_source": "US News",
+      "subject_id": "subject_1204",
+      "aliases": [
+        "社会科学与公共卫生",
+        "social sciences and public health"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Social Sciences and Public Health 横跨社科与公共卫生。"
+    },
+    {
+      "rule_id": "USNEWS_ENVIRONMENT_ECOLOGY",
+      "ranking_source": "US News",
+      "subject_id": "subject_0713",
+      "aliases": [
+        "环境与生态学",
+        "environment/ecology",
+        "environmentecology"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Environment/Ecology 连接生态学与环境科学与工程。"
+    },
+    {
+      "rule_id": "USNEWS_ENVIRONMENT_ECOLOGY",
+      "ranking_source": "US News",
+      "subject_id": "subject_0830",
+      "aliases": [
+        "环境与生态学",
+        "environment/ecology",
+        "environmentecology"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "US News Environment/Ecology 连接生态学与环境科学与工程。"
+    },
+    {
+      "rule_id": "USNEWS_ELECTRICAL_ELECTRONIC_ENGINEERING",
+      "ranking_source": "US News",
+      "subject_id": "subject_0808",
+      "aliases": [
+        "electrical and electronic engineering",
+        "电气与电子工程"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "电气与电子工程覆盖电气、电子科学、信息通信。"
+    },
+    {
+      "rule_id": "USNEWS_ELECTRICAL_ELECTRONIC_ENGINEERING",
+      "ranking_source": "US News",
+      "subject_id": "subject_0809",
+      "aliases": [
+        "electrical and electronic engineering",
+        "电气与电子工程"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "电气与电子工程覆盖电气、电子科学、信息通信。"
+    },
+    {
+      "rule_id": "USNEWS_ELECTRICAL_ELECTRONIC_ENGINEERING",
+      "ranking_source": "US News",
+      "subject_id": "subject_0810",
+      "aliases": [
+        "electrical and electronic engineering",
+        "电气与电子工程"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "电气与电子工程覆盖电气、电子科学、信息通信。"
+    },
+    {
+      "rule_id": "USNEWS_COMPUTER_SCIENCE",
+      "ranking_source": "US News",
+      "subject_id": "subject_0812",
+      "aliases": [
+        "computer science",
+        "Computer Science",
+        "计算机科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "计算机科学连接计算机科学与技术、软件工程和网络空间安全。"
+    },
+    {
+      "rule_id": "USNEWS_COMPUTER_SCIENCE",
+      "ranking_source": "US News",
+      "subject_id": "subject_0835",
+      "aliases": [
+        "computer science",
+        "Computer Science",
+        "计算机科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "计算机科学连接计算机科学与技术、软件工程和网络空间安全。"
+    },
+    {
+      "rule_id": "USNEWS_COMPUTER_SCIENCE",
+      "ranking_source": "US News",
+      "subject_id": "subject_0839",
+      "aliases": [
+        "computer science",
+        "Computer Science",
+        "计算机科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "计算机科学连接计算机科学与技术、软件工程和网络空间安全。"
+    },
+    {
+      "rule_id": "USNEWS_AI",
+      "ranking_source": "US News",
+      "subject_id": "subject_0811",
+      "aliases": [
+        "artificial intelligence",
+        "人工智能"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "人工智能横跨控制、计算机和智能科学。"
+    },
+    {
+      "rule_id": "USNEWS_AI",
+      "ranking_source": "US News",
+      "subject_id": "subject_0812",
+      "aliases": [
+        "artificial intelligence",
+        "人工智能"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "人工智能横跨控制、计算机和智能科学。"
+    },
+    {
+      "rule_id": "USNEWS_AI",
+      "ranking_source": "US News",
+      "subject_id": "subject_1405",
+      "aliases": [
+        "artificial intelligence",
+        "人工智能"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "人工智能横跨控制、计算机和智能科学。"
+    },
+    {
+      "rule_id": "USNEWS_MATERIALS",
+      "ranking_source": "US News",
+      "subject_id": "subject_0805",
+      "aliases": [
+        "materials science",
+        "polymer science",
+        "材料科学",
+        "高分子科学"
+      ],
+      "mapping_class": "deterministic",
+      "note": "材料科学/高分子科学归入材料科学与工程。"
+    },
+    {
+      "rule_id": "USNEWS_PHYSICS",
+      "ranking_source": "US News",
+      "subject_id": "subject_0702",
+      "aliases": [
+        "condensed matter physics",
+        "凝聚态物理学"
+      ],
+      "mapping_class": "deterministic",
+      "note": "凝聚态物理学归入物理学。"
+    },
+    {
+      "rule_id": "USNEWS_BIOLOGY",
+      "ranking_source": "US News",
+      "subject_id": "subject_0710",
+      "aliases": [
+        "biology and biochemistry",
+        "plant and animal science",
+        "molecular biology and genetics",
+        "cell biology",
+        "microbiology",
+        "biotechnology and applied microbiology",
+        "生物学与生物化学",
+        "植物与动物科学",
+        "分子生物与遗传",
+        "细胞生物学",
+        "微生物学",
+        "生物技术应用微生物学"
+      ],
+      "mapping_class": "deterministic",
+      "note": "US News 生物相关细分学科归入生物学主口径。"
+    },
+    {
+      "rule_id": "USNEWS_MEDICAL_CLINICAL",
+      "ranking_source": "US News",
+      "subject_id": "subject_1002",
+      "aliases": [
+        "oncology",
+        "endocrinology and metabolism",
+        "cardiac and cardiovascular systems",
+        "surgery",
+        "radiology, nuclear medicine and medical imaging",
+        "radiology nuclear medicine and medical imaging",
+        "gastroenterology and hepatology",
+        "肿瘤学",
+        "内分泌代谢",
+        "心脏及心血管系统",
+        "外科学",
+        "放射核医学医学影像学",
+        "肠胃病学肝病学"
+      ],
+      "mapping_class": "deterministic",
+      "note": "US News 临床医学相关细分项归入临床医学。"
+    },
+    {
+      "rule_id": "USNEWS_PUBLIC_HEALTH",
+      "ranking_source": "US News",
+      "subject_id": "subject_1004",
+      "aliases": [
+        "public, environmental and occupational health",
+        "public environmental and occupational health",
+        "公共、环境和职业健康",
+        "infectious diseases",
+        "传染性疾病"
+      ],
+      "mapping_class": "deterministic",
+      "note": "公共、环境和职业健康及传染性疾病归入公共卫生与预防医学。"
+    },
+    {
+      "rule_id": "USNEWS_BASIC_MEDICINE",
+      "ranking_source": "US News",
+      "subject_id": "subject_1001",
+      "aliases": [
+        "immunology",
+        "免疫学"
+      ],
+      "mapping_class": "deterministic",
+      "note": "免疫学归入基础医学。"
+    },
+    {
+      "rule_id": "USNEWS_NEUROSCIENCE",
+      "ranking_source": "US News",
+      "subject_id": "subject_0710",
+      "aliases": [
+        "neuroscience and behavior",
+        "神经科学与行为"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "神经科学与行为跨生物学与基础医学。"
+    },
+    {
+      "rule_id": "USNEWS_NEUROSCIENCE",
+      "ranking_source": "US News",
+      "subject_id": "subject_1001",
+      "aliases": [
+        "neuroscience and behavior",
+        "神经科学与行为"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "神经科学与行为跨生物学与基础医学。"
+    },
+    {
+      "rule_id": "USNEWS_PSYCHIATRY_PSYCHOLOGY",
+      "ranking_source": "US News",
+      "subject_id": "subject_0402",
+      "aliases": [
+        "psychiatry/psychology",
+        "psychiatrypsychology",
+        "精神病学与心理学"
+      ],
+      "mapping_class": "deterministic",
+      "note": "精神病学与心理学归入心理学分析口径。"
+    },
+    {
+      "rule_id": "USNEWS_CHEMISTRY_CHEMICAL_ENGINEERING",
+      "ranking_source": "US News",
+      "subject_id": "subject_0703",
+      "aliases": [
+        "physical chemistry",
+        "chemical engineering",
+        "物理化学",
+        "化学工程"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "物理化学归化学，化学工程归化学工程；保留双连接以覆盖榜单混合项。"
+    },
+    {
+      "rule_id": "USNEWS_CHEMISTRY_CHEMICAL_ENGINEERING",
+      "ranking_source": "US News",
+      "subject_id": "subject_0817",
+      "aliases": [
+        "physical chemistry",
+        "chemical engineering",
+        "物理化学",
+        "化学工程"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "物理化学归化学，化学工程归化学工程；保留双连接以覆盖榜单混合项。"
+    },
+    {
+      "rule_id": "USNEWS_BUSINESS_ECONOMICS",
+      "ranking_source": "US News",
+      "subject_id": "subject_0201",
+      "aliases": [
+        "economics and business",
+        "商业与经济"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "商业与经济横跨理论经济学、应用经济学与工商管理。"
+    },
+    {
+      "rule_id": "USNEWS_BUSINESS_ECONOMICS",
+      "ranking_source": "US News",
+      "subject_id": "subject_0202",
+      "aliases": [
+        "economics and business",
+        "商业与经济"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "商业与经济横跨理论经济学、应用经济学与工商管理。"
+    },
+    {
+      "rule_id": "USNEWS_BUSINESS_ECONOMICS",
+      "ranking_source": "US News",
+      "subject_id": "subject_1202",
+      "aliases": [
+        "economics and business",
+        "商业与经济"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "商业与经济横跨理论经济学、应用经济学与工商管理。"
+    },
+    {
+      "rule_id": "USNEWS_ENERGY_FUELS",
+      "ranking_source": "US News",
+      "subject_id": "subject_0807",
+      "aliases": [
+        "energy and fuels",
+        "能源和燃料"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "能源与燃料连接动力工程及工程热物理/能源动力。"
+    },
+    {
+      "rule_id": "USNEWS_ENERGY_FUELS",
+      "ranking_source": "US News",
+      "subject_id": "subject_0858",
+      "aliases": [
+        "energy and fuels",
+        "能源和燃料"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "能源与燃料连接动力工程及工程热物理/能源动力。"
+    },
+    {
+      "rule_id": "USNEWS_NANO",
+      "ranking_source": "US News",
+      "subject_id": "subject_1406",
+      "aliases": [
+        "nanoscience and nanotechnology",
+        "纳米科学与纳米技术"
+      ],
+      "mapping_class": "deterministic",
+      "note": "纳米科学与纳米技术归入纳米科学与工程。"
+    },
+    {
+      "rule_id": "USNEWS_EARTH_ATMOS_WATER",
+      "ranking_source": "US News",
+      "subject_id": "subject_0706",
+      "aliases": [
+        "geosciences",
+        "meteorology and atmospheric sciences",
+        "water resources",
+        "地球科学",
+        "气象学和大气科学",
+        "水资源"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "地球/大气/水资源为跨一级学科口径。"
+    },
+    {
+      "rule_id": "USNEWS_EARTH_ATMOS_WATER",
+      "ranking_source": "US News",
+      "subject_id": "subject_0708",
+      "aliases": [
+        "geosciences",
+        "meteorology and atmospheric sciences",
+        "water resources",
+        "地球科学",
+        "气象学和大气科学",
+        "水资源"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "地球/大气/水资源为跨一级学科口径。"
+    },
+    {
+      "rule_id": "USNEWS_EARTH_ATMOS_WATER",
+      "ranking_source": "US News",
+      "subject_id": "subject_0709",
+      "aliases": [
+        "geosciences",
+        "meteorology and atmospheric sciences",
+        "water resources",
+        "地球科学",
+        "气象学和大气科学",
+        "水资源"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "地球/大气/水资源为跨一级学科口径。"
+    },
+    {
+      "rule_id": "USNEWS_EARTH_ATMOS_WATER",
+      "ranking_source": "US News",
+      "subject_id": "subject_0815",
+      "aliases": [
+        "geosciences",
+        "meteorology and atmospheric sciences",
+        "water resources",
+        "地球科学",
+        "气象学和大气科学",
+        "水资源"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "地球/大气/水资源为跨一级学科口径。"
+    },
+    {
+      "rule_id": "USNEWS_SPACE",
+      "ranking_source": "US News",
+      "subject_id": "subject_0704",
+      "aliases": [
+        "space science",
+        "空间科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "空间科学连接天文学和航空宇航。"
+    },
+    {
+      "rule_id": "USNEWS_SPACE",
+      "ranking_source": "US News",
+      "subject_id": "subject_0825",
+      "aliases": [
+        "space science",
+        "空间科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "空间科学连接天文学和航空宇航。"
+    },
+    {
+      "rule_id": "USNEWS_OPTICS",
+      "ranking_source": "US News",
+      "subject_id": "subject_0803",
+      "aliases": [
+        "optics",
+        "光学"
+      ],
+      "mapping_class": "deterministic",
+      "note": "光学归入光学工程。"
+    },
+    {
+      "rule_id": "USNEWS_FOOD_SCIENCE",
+      "ranking_source": "US News",
+      "subject_id": "subject_0832",
+      "aliases": [
+        "food science and technology",
+        "食品科学与技术"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "食品科学与技术连接食品科学与工程/食品与营养。"
+    },
+    {
+      "rule_id": "USNEWS_FOOD_SCIENCE",
+      "ranking_source": "US News",
+      "subject_id": "subject_0955",
+      "aliases": [
+        "food science and technology",
+        "食品科学与技术"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "食品科学与技术连接食品科学与工程/食品与营养。"
+    },
+    {
+      "rule_id": "USNEWS_PHARMACOLOGY",
+      "ranking_source": "US News",
+      "subject_id": "subject_1007",
+      "aliases": [
+        "pharmacology and toxicology",
+        "药理学与毒理学"
+      ],
+      "mapping_class": "deterministic",
+      "note": "药理学与毒理学归入药学。"
+    },
+    {
+      "rule_id": "USNEWS_GREEN_SUSTAINABLE_TECH",
+      "ranking_source": "US News",
+      "subject_id": "subject_0830",
+      "aliases": [
+        "绿色可持续科技",
+        "绿色与可持续的科学技术"
+      ],
+      "mapping_class": "deterministic",
+      "note": "绿色/可持续科学技术暂归环境科学与工程。"
+    },
+    {
+      "rule_id": "USNEWS_AGRICULTURAL_SCIENCES",
+      "ranking_source": "US News",
+      "subject_id": "subject_0901",
+      "aliases": [
+        "agricultural sciences",
+        "农业科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "农业科学为农学大领域。"
+    },
+    {
+      "rule_id": "USNEWS_AGRICULTURAL_SCIENCES",
+      "ranking_source": "US News",
+      "subject_id": "subject_0902",
+      "aliases": [
+        "agricultural sciences",
+        "农业科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "农业科学为农学大领域。"
+    },
+    {
+      "rule_id": "USNEWS_AGRICULTURAL_SCIENCES",
+      "ranking_source": "US News",
+      "subject_id": "subject_0903",
+      "aliases": [
+        "agricultural sciences",
+        "农业科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "农业科学为农学大领域。"
+    },
+    {
+      "rule_id": "USNEWS_AGRICULTURAL_SCIENCES",
+      "ranking_source": "US News",
+      "subject_id": "subject_0904",
+      "aliases": [
+        "agricultural sciences",
+        "农业科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "农业科学为农学大领域。"
+    },
+    {
+      "rule_id": "USNEWS_AGRICULTURAL_SCIENCES",
+      "ranking_source": "US News",
+      "subject_id": "subject_0905",
+      "aliases": [
+        "agricultural sciences",
+        "农业科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "农业科学为农学大领域。"
+    },
+    {
+      "rule_id": "USNEWS_AGRICULTURAL_SCIENCES",
+      "ranking_source": "US News",
+      "subject_id": "subject_0908",
+      "aliases": [
+        "agricultural sciences",
+        "农业科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "农业科学为农学大领域。"
+    },
+    {
+      "rule_id": "USNEWS_AGRICULTURAL_SCIENCES",
+      "ranking_source": "US News",
+      "subject_id": "subject_0909",
+      "aliases": [
+        "agricultural sciences",
+        "农业科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "农业科学为农学大领域。"
+    },
+    {
+      "rule_id": "USNEWS_AGRICULTURAL_SCIENCES",
+      "ranking_source": "US News",
+      "subject_id": "subject_0951",
+      "aliases": [
+        "agricultural sciences",
+        "农业科学"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "农业科学为农学大领域。"
+    },
+    {
+      "rule_id": "USNEWS_EDUCATION",
+      "ranking_source": "US News",
+      "subject_id": "subject_0401",
+      "aliases": [
+        "education and educational research",
+        "教育学和教育研究"
+      ],
+      "mapping_class": "deterministic",
+      "note": "教育学和教育研究归入教育学/教育。"
+    },
+    {
+      "rule_id": "USNEWS_EDUCATION",
+      "ranking_source": "US News",
+      "subject_id": "subject_0451",
+      "aliases": [
+        "education and educational research",
+        "教育学和教育研究"
+      ],
+      "mapping_class": "deterministic",
+      "note": "教育学和教育研究归入教育学/教育。"
+    },
+    {
+      "rule_id": "ARWU_AGRICULTURE_BROAD",
+      "ranking_source": "软科",
+      "subject_id": "subject_0901",
+      "aliases": [
+        "农学",
+        "Agricultural Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科农学为农学大领域，不强行单学科化。"
+    },
+    {
+      "rule_id": "ARWU_AGRICULTURE_BROAD",
+      "ranking_source": "软科",
+      "subject_id": "subject_0902",
+      "aliases": [
+        "农学",
+        "Agricultural Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科农学为农学大领域，不强行单学科化。"
+    },
+    {
+      "rule_id": "ARWU_AGRICULTURE_BROAD",
+      "ranking_source": "软科",
+      "subject_id": "subject_0903",
+      "aliases": [
+        "农学",
+        "Agricultural Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科农学为农学大领域，不强行单学科化。"
+    },
+    {
+      "rule_id": "ARWU_AGRICULTURE_BROAD",
+      "ranking_source": "软科",
+      "subject_id": "subject_0904",
+      "aliases": [
+        "农学",
+        "Agricultural Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科农学为农学大领域，不强行单学科化。"
+    },
+    {
+      "rule_id": "ARWU_AGRICULTURE_BROAD",
+      "ranking_source": "软科",
+      "subject_id": "subject_0905",
+      "aliases": [
+        "农学",
+        "Agricultural Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科农学为农学大领域，不强行单学科化。"
+    },
+    {
+      "rule_id": "ARWU_AGRICULTURE_BROAD",
+      "ranking_source": "软科",
+      "subject_id": "subject_0908",
+      "aliases": [
+        "农学",
+        "Agricultural Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科农学为农学大领域，不强行单学科化。"
+    },
+    {
+      "rule_id": "ARWU_AGRICULTURE_BROAD",
+      "ranking_source": "软科",
+      "subject_id": "subject_0909",
+      "aliases": [
+        "农学",
+        "Agricultural Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科农学为农学大领域，不强行单学科化。"
+    },
+    {
+      "rule_id": "ARWU_AGRICULTURE_BROAD",
+      "ranking_source": "软科",
+      "subject_id": "subject_0951",
+      "aliases": [
+        "农学",
+        "Agricultural Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科农学为农学大领域，不强行单学科化。"
+    },
+    {
+      "rule_id": "ARWU_MEDICAL_TECHNOLOGY",
+      "ranking_source": "软科",
+      "subject_id": "subject_1058",
+      "aliases": [
+        "医学技术",
+        "Medical Technology"
+      ],
+      "mapping_class": "deterministic",
+      "note": "软科医学技术对应医学技术。"
+    },
+    {
+      "rule_id": "ARWU_AI",
+      "ranking_source": "软科",
+      "subject_id": "subject_0811",
+      "aliases": [
+        "人工智能",
+        "Artificial Intelligence"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科人工智能横跨控制、计算机与智能科学。"
+    },
+    {
+      "rule_id": "ARWU_AI",
+      "ranking_source": "软科",
+      "subject_id": "subject_0812",
+      "aliases": [
+        "人工智能",
+        "Artificial Intelligence"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科人工智能横跨控制、计算机与智能科学。"
+    },
+    {
+      "rule_id": "ARWU_AI",
+      "ranking_source": "软科",
+      "subject_id": "subject_1405",
+      "aliases": [
+        "人工智能",
+        "Artificial Intelligence"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "软科人工智能横跨控制、计算机与智能科学。"
+    },
+    {
+      "rule_id": "ARWU_ROBOTICS",
+      "ranking_source": "软科",
+      "subject_id": "subject_0802",
+      "aliases": [
+        "机器人科学与工程",
+        "Robotics"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "机器人科学与工程连接机械、控制与智能科学。"
+    },
+    {
+      "rule_id": "ARWU_ROBOTICS",
+      "ranking_source": "软科",
+      "subject_id": "subject_0811",
+      "aliases": [
+        "机器人科学与工程",
+        "Robotics"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "机器人科学与工程连接机械、控制与智能科学。"
+    },
+    {
+      "rule_id": "ARWU_ROBOTICS",
+      "ranking_source": "软科",
+      "subject_id": "subject_1405",
+      "aliases": [
+        "机器人科学与工程",
+        "Robotics"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "机器人科学与工程连接机械、控制与智能科学。"
+    },
+    {
+      "rule_id": "SUPP_IC_QS_EE_AI",
+      "ranking_source": "QS",
+      "subject_id": "subject_1401",
+      "aliases": [
+        "??????",
+        "Electrical and Electronic Engineering",
+        "Engineering - Electrical and Electronic",
+        "?????????",
+        "Data Science and Artificial Intelligence"
+      ],
+      "mapping_class": "approximate",
+      "note": "????????????????????????????/????????????????QS 2026??Electrical and Electronic?Data Science and Artificial Intelligence?"
+    },
+    {
+      "rule_id": "SUPP_IC_ARWU_EE_NANO_AI",
+      "ranking_source": "??",
+      "subject_id": "subject_1401",
+      "aliases": [
+        "??????",
+        "Electrical & Electronic Engineering",
+        "???????",
+        "Nanoscience & Nanotechnology",
+        "????",
+        "Artificial Intelligence"
+      ],
+      "mapping_class": "approximate",
+      "note": "?????????????????????????????????????????"
+    },
+    {
+      "rule_id": "SUPP_IC_USNEWS_EE_NANO_AI",
+      "ranking_source": "US News",
+      "subject_id": "subject_1401",
+      "aliases": [
+        "???????",
+        "electrical and electronic engineering",
+        "?????????",
+        "nanoscience and nanotechnology",
+        "????",
+        "artificial intelligence"
+      ],
+      "mapping_class": "approximate",
+      "note": "?????????????US News???????/?????????/???????????"
+    },
+    {
+      "rule_id": "SUPP_IC_THE_ENGINEERING",
+      "ranking_source": "THE",
+      "subject_id": "subject_1401",
+      "aliases": [
+        "??",
+        "??",
+        "???",
+        "Engineering",
+        "?????",
+        "Computer Science"
+      ],
+      "mapping_class": "approximate",
+      "note": "???THE??????????????/??????????????"
+    },
+    {
+      "rule_id": "SUPP_BUSINESS_ADMIN_ARWU",
+      "ranking_source": "??",
+      "subject_id": "subject_1251",
+      "aliases": [
+        "????",
+        "Business Administration",
+        "???",
+        "Management"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "??????????????/?????????????????????"
+    },
+    {
+      "rule_id": "SUPP_BUSINESS_ADMIN_USNEWS",
+      "ranking_source": "US News",
+      "subject_id": "subject_1251",
+      "aliases": [
+        "?????",
+        "Economics and Business",
+        "economics and business"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "???US News???????????Economics and Business???"
+    },
+    {
+      "rule_id": "SUPP_BUSINESS_ADMIN_THE",
+      "ranking_source": "THE",
+      "subject_id": "subject_1251",
+      "aliases": [
+        "??????",
+        "??????",
+        "Business and Economics"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "???THE Business and Economics?business and management?accounting and finance?economics and econometrics??????????"
+    },
+    {
+      "rule_id": "SUPP_PUBLIC_ADMIN_ARWU",
+      "ranking_source": "??",
+      "subject_id": "subject_1252",
+      "aliases": [
+        "????",
+        "Public Administration"
+      ],
+      "mapping_class": "deterministic",
+      "note": "?????GRAS??Public Administration?????????"
+    },
+    {
+      "rule_id": "SUPP_PUBLIC_ADMIN_QS",
+      "ranking_source": "QS",
+      "subject_id": "subject_1252",
+      "aliases": [
+        "?????????",
+        "Social Policy and Administration"
+      ],
+      "mapping_class": "approximate",
+      "note": "???QS??????????Social Policy and Administration???????"
+    },
+    {
+      "rule_id": "SUPP_PUBLIC_ADMIN_USNEWS",
+      "ranking_source": "US News",
+      "subject_id": "subject_1252",
+      "aliases": [
+        "?????????",
+        "social sciences and public health"
+      ],
+      "mapping_class": "approximate",
+      "note": "???US News???????????Social Sciences and Public Health?????"
+    },
+    {
+      "rule_id": "SUPP_PUBLIC_ADMIN_THE",
+      "ranking_source": "THE",
+      "subject_id": "subject_1252",
+      "aliases": [
+        "????",
+        "Social Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "???THE???????????Social Sciences?????"
+    },
+    {
+      "rule_id": "SUPP_AREA_STUDIES_QS",
+      "ranking_source": "QS",
+      "subject_id": "subject_1407",
+      "aliases": [
+        "???",
+        "Politics",
+        "?????",
+        "Modern Languages",
+        "????",
+        "Development Studies"
+      ],
+      "mapping_class": "approximate",
+      "note": "?????????????????????/????/???????????????????"
+    },
+    {
+      "rule_id": "SUPP_AREA_STUDIES_USNEWS",
+      "ranking_source": "US News",
+      "subject_id": "subject_1407",
+      "aliases": [
+        "?????????",
+        "social sciences and public health"
+      ],
+      "mapping_class": "approximate",
+      "note": "?????????US News??????????????????"
+    },
+    {
+      "rule_id": "SUPP_AREA_STUDIES_THE",
+      "ranking_source": "THE",
+      "subject_id": "subject_1407",
+      "aliases": [
+        "????",
+        "Social Sciences",
+        "??????",
+        "Arts and Humanities"
+      ],
+      "mapping_class": "approximate",
+      "note": "?????????THE????/??????????????"
+    },
+    {
+      "rule_id": "SUPP_MARXISM_QS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0305",
+      "aliases": [
+        "???",
+        "Politics",
+        "??",
+        "Philosophy"
+      ],
+      "mapping_class": "approximate",
+      "note": "???????????????????????/????????????????"
+    },
+    {
+      "rule_id": "SUPP_MARXISM_ARWU",
+      "ranking_source": "??",
+      "subject_id": "subject_0305",
+      "aliases": [
+        "???",
+        "Political Sciences"
+      ],
+      "mapping_class": "approximate",
+      "note": "??????????????????????????????"
+    },
+    {
+      "rule_id": "SUPP_MARXISM_USNEWS",
+      "ranking_source": "US News",
+      "subject_id": "subject_0305",
+      "aliases": [
+        "?????????",
+        "social sciences and public health"
+      ],
+      "mapping_class": "approximate",
+      "note": "???????????US News???????????????????????"
+    },
+    {
+      "rule_id": "SUPP_MARXISM_THE",
+      "ranking_source": "THE",
+      "subject_id": "subject_0305",
+      "aliases": [
+        "????",
+        "Social Sciences",
+        "??????",
+        "Arts and Humanities"
+      ],
+      "mapping_class": "approximate",
+      "note": "???????????THE????/???????????????????"
+    },
+    {
+      "rule_id": "SUPP_OPTICAL_QS",
+      "ranking_source": "QS",
+      "subject_id": "subject_0803",
+      "aliases": [
+        "??????",
+        "???&???",
+        "Physics & Astronomy"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "???????/????????QS?????????"
+    },
+    {
+      "rule_id": "SUPP_OPTICAL_ARWU",
+      "ranking_source": "??",
+      "subject_id": "subject_0803",
+      "aliases": [
+        "????",
+        "Instruments Science & Technology",
+        "???????",
+        "Nanoscience & Nanotechnology"
+      ],
+      "mapping_class": "approximate",
+      "note": "???????/?????????????????????????????"
+    },
+    {
+      "rule_id": "SUPP_OPTICAL_THE",
+      "ranking_source": "THE",
+      "subject_id": "subject_0803",
+      "aliases": [
+        "??",
+        "??",
+        "???",
+        "Engineering",
+        "??",
+        "????",
+        "Physical Sciences"
+      ],
+      "mapping_class": "broad_multi_subject",
+      "note": "???????/????????THE??/?????????"
+    },
+    {
+      "rule_id": "SUPP_IP_MINISTRY_ALIAS",
+      "ranking_source": "ministry",
+      "subject_id": "subject_0301",
+      "aliases": [
+        "?????"
+      ],
+      "mapping_class": "approximate",
+      "note": "???????????????????????49????????"
+    },
+    {
+      "rule_id": "SUPP_EV_MINISTRY_ALIAS",
+      "ranking_source": "ministry",
+      "subject_id": "subject_0802",
+      "aliases": [
+        "??????"
+      ],
+      "mapping_class": "approximate",
+      "note": "??????????????????????49????????"
+    },
+    {
+      "rule_id": "SUPP_LOW_ALTITUDE_MINISTRY_ALIAS",
+      "ranking_source": "ministry",
+      "subject_id": "subject_0825",
+      "aliases": [
+        "???????"
+      ],
+      "mapping_class": "approximate",
+      "note": "????????????????????????????49????????"
+    },
+    {
+      "rule_id": "SUPP_OPTO_MINISTRY_ALIAS",
+      "ranking_source": "ministry",
+      "subject_id": "subject_0803",
+      "aliases": [
+        "???????"
+      ],
+      "mapping_class": "approximate",
+      "note": "???????????????????????49????????"
+    }
+  ]
+}

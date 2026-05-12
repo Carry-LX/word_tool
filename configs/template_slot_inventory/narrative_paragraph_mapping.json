@@ -1,0 +1,432 @@
+{
+  "template_docx": "data/同济大学XX学科的国际排名发展分析-2026年5月.docx",
+  "mapping_version": "2026-05-11",
+  "notes": [
+    "本文件按原始模板正文段落逐段人工核对后整理。",
+    "template_paragraph_index 使用原始模板中的 1-based 段落号。",
+    "replace_decision=replace 表示后续正文生成应严格替换这些段落。",
+    "replace_decision=skip 表示当前逻辑槽位在原模板中没有独立说明段，不应强行替换。"
+  ],
+  "paragraph_mappings": [
+    {
+      "logical_slot_id": "L001",
+      "artifact_id": "figure_01_tongji_subject_ranking_overview",
+      "reference_caption": "图1、同济大学xx学科国际排名",
+      "caption_paragraph_index": 23,
+      "replace_decision": "replace",
+      "notes": "图1对应概述主段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 21,
+          "segment_key": "overview_main",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "概述四大榜单与同济当前学科最新位次。",
+          "template_text": "目前全球公认的四大国际排名机构是：QS（Quacquarelli Symonds公司）、THE（Times Higher Education公司）;U.S.News（美国知名媒体机构《美国新闻与世界报道》（U.S. News & World Report））、软科（上海软科教育信息咨询有限公司,简称ARWU）。每年四大排名机构会发布大学排名及学科排名。同济大学2025年在三大国际主流排名中已稳步进入前150位；排名最优的是U.S.News世界大学排名，位于第124；软科世界一流大学排名中位于101-150名，THE世界大学排名位于141名。XX学科在U.S.News学科排名中名称XX，排名位于XX位；在QS学科排名中对应名称XX，排名位于XX位；在软科学科排名中对应名称XX，排名位于XX位；在THE学科排名中属于XX领域，位于xx位。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L002",
+      "artifact_id": "figure_02_ranking_indicator_commonality",
+      "reference_caption": "图2、XX学科在世界学科排名中指标共性",
+      "caption_paragraph_index": 27,
+      "replace_decision": "replace",
+      "notes": "图2对应指标共性总述段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 25,
+          "segment_key": "commonality_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结四大排名指标共性、权重重心和指标类别。",
+          "template_text": "四大排名体系在评估指标、权重分配方面各有侧重，根据四大国际主流排名指标共性分析，主要聚焦在四个方面，一是科研方面，占比最高，四个排名中都有其指标，总权重达162.5%（总计是400%），其中包括了引文影响力，发表论文总数，顶刊论文数等，都属于客观数据。二是声誉，占比103%，在U.S.News、QS、THE三大排名中有权重，属于比较主观评价的数据。三是国际化，占比32.5%，这其中较大部分是国际研究占比17.5%，也属于论文客观数据的一部分。此外，教学占比37%，收入10%这部分数据源在各高校的采集数据。其他部分大部分属于软科排名中独有的，顶尖教师40%，师均表现10%。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L003",
+      "artifact_id": "figure_03_arwu_indicator_weight",
+      "reference_caption": "图3、软科世界一流学科数学指标权重",
+      "caption_paragraph_index": 31,
+      "replace_decision": "replace",
+      "notes": "软科权重图前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 29,
+          "segment_key": "arwu_weight_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结软科指标权重结构与数据来源。",
+          "template_text": "软科世界大学学术排名指标中，更多权重在教师质量和科研成果，占比达40%；教育质量（获奖校友）和师均表现分别占比10%。科研成果采用科睿唯安web of science的底层论文数据。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L004",
+      "artifact_id": "figure_04_qs_indicator_weight",
+      "reference_caption": "图4、QS学科排名数学指标权重",
+      "caption_paragraph_index": 35,
+      "replace_decision": "replace",
+      "notes": "原模板图题误写为软科，但正文段明确是 QS，后续生成文案应以正文语义为准。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 33,
+          "segment_key": "qs_weight_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结 QS 指标权重结构。",
+          "template_text": "QS学科排名指标中，学术声誉和雇主声誉占比较重，达60%。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L005",
+      "artifact_id": "figure_05_usnews_indicator_weight",
+      "reference_caption": "图3、U.S.News学科排名数学学科指标权重",
+      "caption_paragraph_index": 40,
+      "replace_decision": "replace",
+      "notes": "U.S.News 权重图前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 38,
+          "segment_key": "usnews_weight_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结 U.S.News 权重结构、论文指标占比与数据来源。",
+          "template_text": "从定量指标来分析，四大排名中U.S.News排名最看重科研产出，除了声誉指标占比25%外，其余75%均属于论文类相关指标，看中论文的质量及引用情况，与论文引用相关的指标达50%，其余与产出量有关的指标权重15%，国际化研究的权重占10%。论文相关指标采用科睿唯安web of science的底层论文数据。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L006",
+      "artifact_id": "figure_06_the_indicator_weight",
+      "reference_caption": "图4、THE世界学科排名自然科学领域指标权重",
+      "caption_paragraph_index": 43,
+      "replace_decision": "replace",
+      "notes": "THE 权重图的说明段位于图题之后。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 44,
+          "segment_key": "the_weight_summary",
+          "position_relative_to_caption": "after_caption",
+          "generation_hint": "总结 THE 权重结构、依赖学校填报的数据项与论文数据来源。",
+          "template_text": "THE在2023年调整了排名指标体系。权重占比较大的有三项“教学”“研究质量”“研究环境”。THE排名中依赖学校提供数据的指标项如“师生比”“博士学位数与学士学位数的比”“博士学位数与教职工数的比”“国际学生占比”“国际教师占比”及师均类指标共计占32.5%。此外由泰晤士组织声誉调查类指标占33%。论文相关指标权重占34.5%，论文采用爱思唯尔Scopus数据库论文表现。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L007",
+      "artifact_id": "figure_07_all_rankings_history",
+      "reference_caption": "图5、同济xx学科在世界学科排名中的历史（排名区间的取值中间位次）",
+      "caption_paragraph_index": 49,
+      "replace_decision": "replace",
+      "notes": "历史趋势总图的说明段位于图题之后。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 50,
+          "segment_key": "history_overview",
+          "position_relative_to_caption": "after_caption",
+          "generation_hint": "总结总体历史趋势、提升或波动情况。",
+          "template_text": "XX学科在国际学科排名中的历史趋势分析：xx学科排名中每年稳步提升（或有波动），近五年从xx位提升至xx位（或保持在xx位次附近）。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L008",
+      "artifact_id": "table_01_arwu_tongji_indicator_history",
+      "reference_caption": "表3、xx学科在软科排名中的细分指标排名历史",
+      "caption_paragraph_index": 54,
+      "replace_decision": "replace",
+      "notes": "软科分项历史表前的分析段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 52,
+          "segment_key": "arwu_history_analysis",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结软科分项指标的历史变化与可提升空间。",
+          "template_text": "软科学科排名中校友获奖、教师获奖排名得分为0，但是由于其他大部分学校也无此项得分，所有相对排名为200多位和150位左右。高被引学者、N&S论文不占优势，N&S论文相对排名逐年在下降。论文数量和各项师均表现相对排名每年在提升。短期看同济难有顶尖校友和教师的得分。可提升的空间是“N&S论文”“高被引学者”。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L009",
+      "artifact_id": "table_02_usnews_tongji_indicator_history",
+      "reference_caption": "表2、xx学科在U.S.News学科排名中的细分指标排名历史",
+      "caption_paragraph_index": 60,
+      "replace_decision": "replace",
+      "notes": "U.S.News 分项历史表对应图题前的第一段分析。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 59,
+          "segment_key": "usnews_history_trend_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结 U.S.News 分项指标总体变化趋势。",
+          "template_text": "U.S.News学科排名分项指标中，声誉排名、论文排名、总引用高被引论文的数量排名都是上升的；国际合作论文数量及占比排名一直在下降。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L010",
+      "artifact_id": "figure_10_usnews_indicator_history_trend",
+      "reference_caption": "图6、xx学科在U.S.News学科排名中的历史（趋势图分析）",
+      "caption_paragraph_index": 63,
+      "replace_decision": "replace",
+      "notes": "U.S.News 趋势图前的第二段分析。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 61,
+          "segment_key": "usnews_history_key_gap",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "指出 U.S.News 关键薄弱指标与改进方向。",
+          "template_text": "U.S.News学科排名指标中，标准化引文影响力排名（权重10%）、前10%高被引论文占比排名（权重10%）、ESI前1%高被引论文占比排名（权重5%）、国际合作论文占比排名（权重5%）、出版书籍排名（权重2.5%）四项指标远低于学科排名位次，急需进一步提升。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L011",
+      "artifact_id": "table_03_the_tongji_indicator_history",
+      "reference_caption": "表4、xx学科在THE排名中的细分指标排名历史",
+      "caption_paragraph_index": 66,
+      "replace_decision": "replace",
+      "notes": "THE 分项历史表前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 65,
+          "segment_key": "the_history_analysis",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结 THE 分项指标相对强弱。",
+          "template_text": "THE排名在2023年更新指标体系后研究质量、国际展望相对排名比较低。教学、研究环境、产业相对排名较靠前。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L012",
+      "artifact_id": "table_04_mainland_rank_band_distribution",
+      "reference_caption": "表5、2025年发布的四大国际排名中内地高校位次分布",
+      "caption_paragraph_index": 69,
+      "replace_decision": "replace",
+      "notes": "表5 前面的“如下”是过渡句，应保留；真正分析段在表题之后。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 70,
+          "segment_key": "mainland_distribution_analysis",
+          "position_relative_to_caption": "after_caption",
+          "generation_hint": "分析四大排名中内地高校数量分布与梯队情况。",
+          "template_text": "从数量上看，软科进入前200位的内地高校数量最多35所，其次是U.S.News，THE、QS相对数量较少。属于51-100位梯队上的数量也是软科和U.S.News最多，有7所高校。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L013",
+      "artifact_id": "table_05_arwu_mainland_peer_ranking",
+      "reference_caption": "表7、软科排名中内地高校位于前列的比较",
+      "caption_paragraph_index": 73,
+      "replace_decision": "replace",
+      "notes": "软科对标高校宽表前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 72,
+          "segment_key": "arwu_peer_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "概述软科前列内地高校数量与同济位置。",
+          "template_text": "2025年发布的世界排名中中国内地高校有35所进入前200位，同济大学位于101-150位，内地高校排第14-27位。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L014",
+      "artifact_id": "table_06_usnews_mainland_peer_ranking",
+      "reference_caption": "表6、U.S.News排名中内地高校位于前列的比较",
+      "caption_paragraph_index": 78,
+      "replace_decision": "replace",
+      "notes": "U.S.News 对标高校宽表前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 77,
+          "segment_key": "usnews_peer_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "概述 U.S.News 前列内地高校数量与同济位置。",
+          "template_text": "2025年发布的世界排名中中国内地高校有27所进入前200位，同济大学位于124位，内地高校排第14位。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L015",
+      "artifact_id": "table_08_the_mainland_peer_ranking",
+      "reference_caption": "表8、THE排名中内地高校位于前列的比较",
+      "caption_paragraph_index": 81,
+      "replace_decision": "replace",
+      "notes": "THE 对标高校宽表前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 80,
+          "segment_key": "the_peer_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "概述 THE 前列内地高校数量与同济位置。",
+          "template_text": "2025年发布的THE世界排名中中国内地高校有13所进入前200位，同济大学位于141位，内地高校排第11位。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L016",
+      "artifact_id": "figure_09_arwu_peer_indicator_relative_rank",
+      "reference_caption": "图8、软科排名前200位内地高校分项指标相对排名",
+      "caption_paragraph_index": 87,
+      "replace_decision": "replace",
+      "notes": "软科对标分指标图前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 85,
+          "segment_key": "arwu_peer_indicator_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结软科对标分指标短板与优势。",
+          "template_text": "2025年发布软科排名中中国内地高校进入200位的35所中大部分高校的校友获奖、教师获奖都是没有得分。同济大学高被引学者位于第218位，N&S论文位于第319位，在前列高校中相对较差。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L017",
+      "artifact_id": "figure_11_usnews_peer_indicator_relative_rank",
+      "reference_caption": "图7、U.S.News排名前200位内地高校分项指标相对排名",
+      "caption_paragraph_index": 93,
+      "replace_decision": "replace",
+      "notes": "U.S.News 对标分指标图前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 91,
+          "segment_key": "usnews_peer_indicator_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结 U.S.News 对标分指标的整体结构、薄弱项与对标对象。",
+          "template_text": "2025年U.S.News排名前200位的27所内地高校一级指标相对排名如下。同济大学全球学术声誉相对排名与学校整体排名差异较小，区域学术声誉排名较高，前50位。涉及总量指标的，论文总量、总引用量、高被引论文量等排名在50位左右。涉及论文质量或占比类的指标都排名较靠后，标准化引文影响力（868位）、前10%高被引论文占比（401位）、前1%高被引论文占比（745位）、国际化论文占比（1811位）。与国际排名第90位的武汉大学相比主要的主要落后的点在于标准化引文影响力、前10%高被引论文占比、前1%高被引论文占比。说明同济论文数量较大但是质量不高，建议学校减少低被引或零被引论文的发表。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L018",
+      "artifact_id": "figure_12_the_peer_indicator_relative_rank",
+      "reference_caption": "图9、THE排名前200位内地高校分项指标相对排名",
+      "caption_paragraph_index": 97,
+      "replace_decision": "replace",
+      "notes": "THE 对标分指标图前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 95,
+          "segment_key": "the_peer_indicator_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结 THE 对标分指标相对强弱。",
+          "template_text": "2025年THE排名前200位的3所内地高校，教学环境、研究环境、产业排名都相对较高。同济大学教学环境、研究环境略高于学校整体位次，产业得分较高，排名位于38位。研究质量和国际展望相对排名较差。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L019",
+      "artifact_id": "figure_13_paper_output_citation_relative_rank",
+      "reference_caption": "图10、37所内地高校论文及被引总量及相对排名",
+      "caption_paragraph_index": 102,
+      "replace_decision": "replace",
+      "notes": "论文整体图前的主说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 100,
+          "segment_key": "paper_overall_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结论文总量、总被引和内地位置。",
+          "template_text": "分析42所双一流高校的五年论文数据（2021-2025年web of science论文）。同济大学XX学科论文总数位于xx位，内地高校位于第xx位。同济大学XX学科总被引排名论文总数位于xx位，内地高校位于第xx位。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L020",
+      "artifact_id": "figure_14_paper_cnci_cpp_relative_rank",
+      "reference_caption": "图11、37所内地高校论文CNCI及篇均被引数及相对排名",
+      "caption_paragraph_index": 107,
+      "replace_decision": "replace",
+      "notes": "图11在原模板中对应两段正文，应同时替换。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 104,
+          "segment_key": "paper_quality_intro",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "说明比较维度：CNCI、篇均被引、TOP1%、TOP10%。",
+          "template_text": "下面从学科规范化引文影响力CNCI（Category Normalized Citation Impact）、篇均被引、被引TOP1%论文占比、被引TOP10%论文占比四个方面比较37所高校的数据。"
+        },
+        {
+          "template_paragraph_index": 105,
+          "segment_key": "paper_quality_values",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "给出同济在 CNCI 与篇均被引上的数值与位次结论。",
+          "template_text": "同济大学CNCI为1.35，世界位次5149位；篇均被引12.21，世界位次3397位。在内地高校中排名接近30名。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L021",
+      "artifact_id": "figure_15_paper_highly_cited_relative_rank",
+      "reference_caption": "图12、37所内地高校高被引TOP论文量及相对排名",
+      "caption_paragraph_index": 110,
+      "replace_decision": "replace",
+      "notes": "图12前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 108,
+          "segment_key": "paper_highly_cited_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结 TOP1% 与 TOP10% 高被引论文相对位置。",
+          "template_text": "同济在内地高校被引TOP1%论文占比、被引TOP10%论文相对排名都较靠后。同济大学在内地高校中排名30位以后。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L022",
+      "artifact_id": "figure_16_paper_international_collab_relative_rank",
+      "reference_caption": "图13、37所内地高校国际合著论文占比及相对排名",
+      "caption_paragraph_index": 114,
+      "replace_decision": "replace",
+      "notes": "国际合著图前的说明段。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 112,
+          "segment_key": "paper_collab_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结国际合著占比、内地位次与国际位次。",
+          "template_text": "同济的国际合著占比为24.29%，在内地高校排名22位，国际位次5714，较靠后。"
+        }
+      ]
+    },
+    {
+      "logical_slot_id": "L023",
+      "artifact_id": "table_09_peer_full_ranking_history_appendix",
+      "reference_caption": "附表：XX学科对标高校学科排名历史",
+      "caption_paragraph_index": 122,
+      "replace_decision": "skip",
+      "notes": "附表在原模板中只有标题，没有独立说明段，不应替换正文。",
+      "paragraphs": []
+    }
+  ],
+  "unmapped_template_paragraphs": [
+    {
+      "template_paragraph_index": 56,
+      "notes": "QS 历史分析段。当前逻辑槽位中没有对应 QS 历史表/图，不参与替换。"
+    },
+    {
+      "template_paragraph_index": 68,
+      "notes": "表5前的引导句“如下”，应保留，不作为生成段。"
+    },
+    {
+      "template_paragraph_index": 75,
+      "notes": "QS 对标高校整体分析段。当前模板中没有对应 QS 宽表槽位。"
+    },
+    {
+      "template_paragraph_index": 89,
+      "notes": "QS 对标分指标分析段。当前模板中没有对应 QS 分指标图槽位。"
+    },
+    {
+      "template_paragraph_index": 116,
+      "notes": "第七部分“发展潜力及建议”主结论，应保留。"
+    },
+    {
+      "template_paragraph_index": 117,
+      "notes": "第七部分 U.S.News 建议，应保留。"
+    },
+    {
+      "template_paragraph_index": 118,
+      "notes": "第七部分软科建议，应保留。"
+    }
+  ]
+}

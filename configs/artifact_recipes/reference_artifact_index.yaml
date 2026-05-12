@@ -1,0 +1,311 @@
+version: 1
+source_reference_report: "同济大学XX学科的国际排名发展分析-2026年5月.docx"
+caption_count: 22
+physical_table_count: 8
+physical_image_count: 14
+caption_artifacts:
+  -
+    artifact_id: "figure_01"
+    paragraph_index: 23
+    artifact_type: "chart"
+    caption: "图1、同济大学xx学科国际排名"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_02"
+    paragraph_index: 27
+    artifact_type: "chart"
+    caption: "图2、XX学科在世界学科排名中指标共性"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_03"
+    paragraph_index: 31
+    artifact_type: "chart"
+    caption: "图3、软科世界一流学科数学指标权重"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_04"
+    paragraph_index: 35
+    artifact_type: "chart"
+    caption: "图4、软科世界一流学科数学指标权重"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_05"
+    paragraph_index: 40
+    artifact_type: "chart"
+    caption: "图3、U.S.News学科排名数学学科指标权重"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_06"
+    paragraph_index: 43
+    artifact_type: "chart"
+    caption: "图4、THE世界学科排名自然科学领域指标权重"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_07"
+    paragraph_index: 49
+    artifact_type: "chart"
+    caption: "图5、同济xx学科在世界学科排名中的历史（排名区间的取值中间位次）（待更新）"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "table_caption_01"
+    paragraph_index: 54
+    artifact_type: "table"
+    caption: "表3、xx学科在软科排名中的细分指标排名历史（待更新）"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "table_caption_02"
+    paragraph_index: 60
+    artifact_type: "table"
+    caption: "表2、xx学科在U.S.News学科排名中的细分指标排名历史（待更新）"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_08"
+    paragraph_index: 63
+    artifact_type: "chart"
+    caption: "图6、xx学科在U.S.News学科排名中的历史（趋势图分析）"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "table_caption_03"
+    paragraph_index: 66
+    artifact_type: "table"
+    caption: "表4、xx学科在THE排名中的细分指标排名历史（待更新）"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "table_caption_04"
+    paragraph_index: 69
+    artifact_type: "table"
+    caption: "表5、2025年发布的四大国际排名中内地高校位次分布"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "table_caption_05"
+    paragraph_index: 73
+    artifact_type: "table"
+    caption: "表7、软科排名中内地高校位于前列的比较"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "table_caption_06"
+    paragraph_index: 78
+    artifact_type: "table"
+    caption: "表6、U.S.News排名中内地高校位于前列的比较"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "table_caption_07"
+    paragraph_index: 81
+    artifact_type: "table"
+    caption: "表8、THE排名中内地高校位于前列的比较"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_09"
+    paragraph_index: 87
+    artifact_type: "chart"
+    caption: "图8、软科排名前200位内地高校分项指标相对排名"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_10"
+    paragraph_index: 93
+    artifact_type: "chart"
+    caption: "图7、U.S.News排名前200位内地高校分项指标相对排名"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_11"
+    paragraph_index: 97
+    artifact_type: "chart"
+    caption: "图9、THE排名前200位内地高校分项指标相对排名"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_12"
+    paragraph_index: 102
+    artifact_type: "chart"
+    caption: "图10、37所内地高校论文及被引总量及相对排名"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_13"
+    paragraph_index: 107
+    artifact_type: "chart"
+    caption: "图11、37所内地高校论文CNCI及篇均被引数及相对排名"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_14"
+    paragraph_index: 110
+    artifact_type: "chart"
+    caption: "图12、37所内地高校高被引TOP论文量及相对排名"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+  -
+    artifact_id: "figure_15"
+    paragraph_index: 114
+    artifact_type: "chart"
+    caption: "图13、37所内地高校国际合著论文占比及相对排名"
+    notes: "参考报告存在图号/表号重复和待更新字样，artifact_id 按出现顺序编号。"
+physical_tables:
+  -
+    physical_table_id: "physical_table_01"
+    table_index: 1
+    rows: 16
+    columns: 6
+    sample_header:
+      - "发布年度"
+      - "2021"
+      - "2022"
+      - "2023"
+      - "2024"
+      - "2025"
+  -
+    physical_table_id: "physical_table_02"
+    table_index: 2
+    rows: 16
+    columns: 5
+    sample_header:
+      - "排名发布年度"
+      - "2021"
+      - "2022"
+      - "2023"
+      - "2025"
+  -
+    physical_table_id: "physical_table_03"
+    table_index: 3
+    rows: 14
+    columns: 4
+    sample_header:
+      - "发布年份"
+      - "2023"
+      - "2024"
+      - "2025"
+  -
+    physical_table_id: "physical_table_04"
+    table_index: 4
+    rows: 6
+    columns: 5
+    sample_header:
+      - "内地高校"
+      - "U.S.News"
+      - "软科"
+      - "THE"
+      - "QS"
+  -
+    physical_table_id: "physical_table_05"
+    table_index: 5
+    rows: 36
+    columns: 9
+    sample_header:
+      - "序号"
+      - "学校名称"
+      - "省份"
+      - "2020"
+      - "2021"
+      - "2022"
+      - "2023"
+      - "2024"
+      - "2025"
+  -
+    physical_table_id: "physical_table_06"
+    table_index: 6
+    rows: 28
+    columns: 8
+    sample_header:
+      - "序号"
+      - "学校名称"
+      - "省份"
+      - "2020-2021"
+      - "2021-2022"
+      - "2022-2023"
+      - "2024-2025"
+      - "2025-2026"
+  -
+    physical_table_id: "physical_table_07"
+    table_index: 7
+    rows: 19
+    columns: 6
+    sample_header:
+      - "序号"
+      - "中文名称"
+      - "省份"
+      - "2023年排名"
+      - "2024年排名"
+      - "2025年排名"
+  -
+    physical_table_id: "physical_table_08"
+    table_index: 8
+    rows: 39
+    columns: 27
+    sample_header:
+      - "序号"
+      - "学校名称"
+      - "省份"
+      - "US News学科排名"
+      - "US News学科排名"
+      - "US News学科排名"
+      - "US News学科排名"
+      - "US News学科排名"
+      - "软科世界一流学科排名"
+      - "软科世界一流学科排名"
+physical_images:
+  -
+    physical_image_id: "physical_image_01"
+    image_index: 1
+    width_cm: 14.6
+    height_cm: 6.23
+  -
+    physical_image_id: "physical_image_02"
+    image_index: 2
+    width_cm: 14.28
+    height_cm: 12.23
+  -
+    physical_image_id: "physical_image_03"
+    image_index: 3
+    width_cm: 12.15
+    height_cm: 7.72
+  -
+    physical_image_id: "physical_image_04"
+    image_index: 4
+    width_cm: 11.42
+    height_cm: 7.54
+  -
+    physical_image_id: "physical_image_05"
+    image_index: 5
+    width_cm: 13.38
+    height_cm: 11.0
+  -
+    physical_image_id: "physical_image_06"
+    image_index: 6
+    width_cm: 13.82
+    height_cm: 10.99
+  -
+    physical_image_id: "physical_image_07"
+    image_index: 7
+    width_cm: 15.05
+    height_cm: 7.31
+  -
+    physical_image_id: "physical_image_08"
+    image_index: 8
+    width_cm: 17.23
+    height_cm: 8.41
+  -
+    physical_image_id: "physical_image_09"
+    image_index: 9
+    width_cm: 18.06
+    height_cm: 8.74
+  -
+    physical_image_id: "physical_image_10"
+    image_index: 10
+    width_cm: 17.31
+    height_cm: 8.32
+  -
+    physical_image_id: "physical_image_11"
+    image_index: 11
+    width_cm: 17.12
+    height_cm: 8.7
+  -
+    physical_image_id: "physical_image_12"
+    image_index: 12
+    width_cm: 15.83
+    height_cm: 7.62
+  -
+    physical_image_id: "physical_image_13"
+    image_index: 13
+    width_cm: 16.32
+    height_cm: 7.94
+  -
+    physical_image_id: "physical_image_14"
+    image_index: 14
+    width_cm: 17.97
+    height_cm: 8.49

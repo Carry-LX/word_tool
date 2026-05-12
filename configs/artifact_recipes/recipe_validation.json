@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "recipe_count": 27,
+  "readiness_counts": {
+    "ready_after_fact_ranking": 9,
+    "partial_needs_indicator_grouping": 1,
+    "ready_after_weight_cleaning": 4,
+    "ready_after_fact_ranking_indicator": 7,
+    "partial_proxy_only": 4,
+    "ready_with_caveat": 1,
+    "data_gap": 1
+  },
+  "priority_counts": {
+    "P1": 11,
+    "P2": 10,
+    "P3": 5,
+    "P4": 1
+  },
+  "missing_file_count": 0,
+  "missing_sheet_count": 0,
+  "missing_field_count": 0,
+  "missing_files": [],
+  "missing_sheets": [],
+  "missing_fields": [],
+  "recipe_results": [
+    {
+      "artifact_id": "figure_01_tongji_subject_ranking_overview",
+      "readiness": "ready_after_fact_ranking",
+      "priority": "P1",
+      "source_count": 6,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_02_indicator_commonality",
+      "readiness": "partial_needs_indicator_grouping",
+      "priority": "P1",
+      "source_count": 5,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_03_arwu_indicator_weight",
+      "readiness": "ready_after_weight_cleaning",
+      "priority": "P1",
+      "source_count": 2,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_04_qs_indicator_weight",
+      "readiness": "ready_after_weight_cleaning",
+      "priority": "P1",
+      "source_count": 2,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_05_usnews_indicator_weight",
+      "readiness": "ready_after_weight_cleaning",
+      "priority": "P1",
+      "source_count": 2,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_06_the_indicator_weight",
+      "readiness": "ready_after_weight_cleaning",
+      "priority": "P1",
+      "source_count": 2,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_07_all_rankings_history",
+      "readiness": "ready_after_fact_ranking",
+      "priority": "P1",
+      "source_count": 15,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_01_arwu_history_detail",
+      "readiness": "ready_after_fact_ranking_indicator",
+      "priority": "P2",
+      "source_count": 4,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_02_usnews_history_detail",
+      "readiness": "ready_after_fact_ranking_indicator",
+      "priority": "P2",
+      "source_count": 6,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_08_usnews_history_trend",
+      "readiness": "ready_after_fact_ranking",
+      "priority": "P2",
+      "source_count": 6,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_03_the_history_detail",
+      "readiness": "ready_after_fact_ranking_indicator",
+      "priority": "P2",
+      "source_count": 2,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_04_mainland_rank_band_distribution",
+      "readiness": "ready_after_fact_ranking",
+      "priority": "P1",
+      "source_count": 5,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_05_arwu_mainland_peer_ranking",
+      "readiness": "ready_after_fact_ranking",
+      "priority": "P2",
+      "source_count": 4,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_06_usnews_mainland_peer_ranking",
+      "readiness": "ready_after_fact_ranking",
+      "priority": "P2",
+      "source_count": 6,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_07_qs_mainland_peer_ranking",
+      "readiness": "ready_after_fact_ranking",
+      "priority": "P2",
+      "source_count": 5,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_08_the_mainland_peer_ranking",
+      "readiness": "ready_after_fact_ranking",
+      "priority": "P2",
+      "source_count": 2,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_09_combined_peer_ranking_matrix",
+      "readiness": "ready_after_fact_ranking",
+      "priority": "P3",
+      "source_count": 16,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_09_arwu_peer_indicator_relative_rank",
+      "readiness": "ready_after_fact_ranking_indicator",
+      "priority": "P1",
+      "source_count": 3,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_10_qs_peer_indicator_relative_rank",
+      "readiness": "ready_after_fact_ranking_indicator",
+      "priority": "P2",
+      "source_count": 3,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_11_usnews_peer_indicator_relative_rank",
+      "readiness": "ready_after_fact_ranking_indicator",
+      "priority": "P1",
+      "source_count": 3,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_12_the_peer_indicator_relative_rank",
+      "readiness": "ready_after_fact_ranking_indicator",
+      "priority": "P1",
+      "source_count": 4,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_13_paper_quantity_citation_proxy",
+      "readiness": "partial_proxy_only",
+      "priority": "P3",
+      "source_count": 4,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_14_paper_quality_proxy",
+      "readiness": "partial_proxy_only",
+      "priority": "P3",
+      "source_count": 4,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_15_highly_cited_proxy",
+      "readiness": "partial_proxy_only",
+      "priority": "P3",
+      "source_count": 3,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "figure_16_international_collaboration_proxy",
+      "readiness": "partial_proxy_only",
+      "priority": "P3",
+      "source_count": 5,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "table_10_domestic_evaluation_peer_comparison",
+      "readiness": "ready_with_caveat",
+      "priority": "P2",
+      "source_count": 5,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    },
+    {
+      "artifact_id": "text_or_table_11_research_frontier_gap",
+      "readiness": "data_gap",
+      "priority": "P4",
+      "source_count": 2,
+      "missing_files": [],
+      "missing_sheets": [],
+      "missing_fields": []
+    }
+  ],
+  "notes": [
+    "missing_field_count 包含多级表头或历史表字段别名导致的预期差异，需在清洗器中处理。",
+    "如果字段在第二行才是真实表头，data_catalog第一行表头校验会提示缺失，这是权重表的正常风险。"
+  ]
+}
