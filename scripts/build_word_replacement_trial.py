@@ -278,11 +278,11 @@ def mark_repeat_header(row: Any) -> None:
 
 def native_table_font_size(column_count: int) -> float:
     if column_count >= 18:
-        return 5.2
+        return 5.8
     if column_count >= 12:
-        return 6.0
+        return 6.4
     if column_count >= 8:
-        return 6.8
+        return 7.0
     if column_count >= 5:
         return 7.5
     return 8.5
@@ -660,7 +660,7 @@ def summarize_weight(artifact_id: str) -> str:
         return ""
     group_text = "、".join(f"{name}{value:.1f}%" for name, value in top_groups)
     if artifact_id == "figure_06_the_indicator_weight":
-        return f"{source}在{subject or read_target_subject_name()}口径下权重最高的是{group_text}。"
+        return f"{source}权重前三：{group_text}。"
     return f"{source}在{subject or read_target_subject_name()}口径下的权重主要集中在{group_text}。这些维度决定了该榜单更看重科研产出、声誉评价还是国际合作等方面，应与同济大学对应分项表现联动解读。"
 
 
@@ -1433,7 +1433,7 @@ def compact_cover_main_spacing(document: Document) -> int:
         for index in range(subtitle_index + 1, department_index)
         if is_empty_paragraph_element(children[index])
     ]
-    keep_blank_count = 4
+    keep_blank_count = 5
     remove_indices = blank_indices[: max(0, len(blank_indices) - keep_blank_count)]
 
     leading_blank_indices = [
@@ -1471,6 +1471,29 @@ def remove_empty_page_breaks_before_heading1(document: Document) -> int:
         body.remove(paragraph._p)
         removed += 1
     return removed
+
+
+def ensure_page_break_before_first_body_heading(document: Document) -> int:
+    body = document._body._element
+    for paragraph in document.paragraphs:
+        text = paragraph_text(paragraph).strip()
+        style_id = getattr(paragraph.style, "style_id", "")
+        if style_id != "1" and not text.startswith("一、"):
+            continue
+        previous = paragraph._p.getprevious()
+        if previous is not None and previous.tag == qn("w:p"):
+            previous_paragraph = Paragraph(previous, paragraph._parent)
+            if paragraph_has_page_break(previous_paragraph):
+                return 0
+        page_break_paragraph = OxmlElement("w:p")
+        run = OxmlElement("w:r")
+        br = OxmlElement("w:br")
+        br.set(qn("w:type"), "page")
+        run.append(br)
+        page_break_paragraph.append(run)
+        paragraph._p.addprevious(page_break_paragraph)
+        return 1
+    return 0
 
 
 def replace_residual_template_paragraphs(document: Document) -> int:
@@ -1673,6 +1696,7 @@ def postprocess_final_document(rows: list[dict[str, str]]) -> list[dict[str, Any
     placeholder_changes = replace_subject_placeholders(document, subject_name, the_subject_area)
     residual_paragraph_changes = replace_residual_template_paragraphs(document)
     removed_heading_page_breaks = remove_empty_page_breaks_before_heading1(document)
+    inserted_toc_page_breaks = ensure_page_break_before_first_body_heading(document)
     cover_main_spacing_changes = compact_cover_main_spacing(document)
     cover_spacing_changes = compact_cover_section_break(document)
     doc_content_width = content_width_emu(document)
@@ -1719,6 +1743,13 @@ def postprocess_final_document(rows: list[dict[str, str]]) -> list[dict[str, Any
             "operation": "remove_empty_page_breaks_before_heading1",
             "status": "ok",
             "removed_page_breaks": removed_heading_page_breaks,
+        },
+        {
+            "slot": "toc_page_break",
+            "artifact_id": "",
+            "operation": "ensure_page_break_before_first_body_heading",
+            "status": "ok",
+            "inserted_page_breaks": inserted_toc_page_breaks,
         },
         {
             "slot": "document_xml_subject_placeholders",

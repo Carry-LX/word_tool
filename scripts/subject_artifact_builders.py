@@ -36,6 +36,10 @@ UNIVERSITY_PROVINCE_CSV = PROCESSED_DIR / "dim_university_province.csv"
 
 RANKING_SOURCES = ["软科", "QS", "US News", "THE"]
 TOP_RANK_MIDPOINT = 200
+MAIN_WORD_PEER_TABLE_MAX_ROWS = 24
+APPENDIX_WORD_MAX_ROWS = 36
+WEIGHT_TREE_MAX_PARENTS = 5
+WEIGHT_TREE_MAX_LEAVES_PER_PARENT = 5
 SOURCE_COLORS = {
     "软科": "#C64B46",
     "QS": "#315D9C",
@@ -827,24 +831,24 @@ def render_weight_tree(tree_df: pd.DataFrame, title: str, out_path: Path) -> Non
         .sort_values(ascending=False)
         .index.tolist()
     )
-    parent_order = parent_order[:6]
+    parent_order = parent_order[:WEIGHT_TREE_MAX_PARENTS]
     work = work[work["parent_indicator"].isin(parent_order)].copy()
 
-    leaf_count = sum(min(8, len(work[work["parent_indicator"] == parent])) for parent in parent_order)
-    row_h = 48
-    group_gap = 30
+    leaf_count = sum(min(WEIGHT_TREE_MAX_LEAVES_PER_PARENT, len(work[work["parent_indicator"] == parent])) for parent in parent_order)
+    row_h = 58
+    group_gap = 34
     top = 164
     bottom = 64
     height = max(980, top + leaf_count * row_h + max(0, len(parent_order) - 1) * group_gap + bottom)
-    image = Image.new("RGB", (1680, height), "#FFFFFF")
+    image = Image.new("RGB", (1800, height), "#FFFFFF")
     draw = ImageDraw.Draw(image)
-    font_title = load_font(40, True)
-    font_sub = load_font(22)
-    font_root = load_font(26, True)
-    font_parent = load_font(23, True)
-    font_leaf = load_font(23)
-    font_pct = load_font(22, True)
-    font_note = load_font(17)
+    font_title = load_font(42, True)
+    font_sub = load_font(23)
+    font_root = load_font(28, True)
+    font_parent = load_font(25, True)
+    font_leaf = load_font(25)
+    font_pct = load_font(24, True)
+    font_note = load_font(18)
     draw.text((54, 36), title, font=font_title, fill="#16202A")
     draw.text((54, 88), "按一级维度展开到二级指标；左侧为一级权重，右侧为具体指标权重", font=font_sub, fill="#5A6573")
 
@@ -860,10 +864,10 @@ def render_weight_tree(tree_df: pd.DataFrame, title: str, out_path: Path) -> Non
     current_y = top
     parent_boxes: dict[str, tuple[float, float, float, float]] = {}
     for idx, parent in enumerate(parent_order):
-        parent_rows = work[work["parent_indicator"] == parent].sort_values("weight_percent", ascending=False).head(8)
+        parent_rows = work[work["parent_indicator"] == parent].sort_values("weight_percent", ascending=False).head(WEIGHT_TREE_MAX_LEAVES_PER_PARENT)
         weight = float(work[work["parent_indicator"] == parent]["parent_weight_percent"].max())
         block_h = max(72, len(parent_rows) * row_h)
-        box = (316, current_y + max(0, (block_h - 78) / 2), 650, current_y + max(0, (block_h - 78) / 2) + 78)
+        box = (316, current_y + max(0, (block_h - 82) / 2), 668, current_y + max(0, (block_h - 82) / 2) + 82)
         color = palette[idx % len(palette)]
         parent_boxes[parent] = box
         width = max(2, min(12, int(weight / max(root_total, 1) * 22)))
@@ -872,20 +876,20 @@ def render_weight_tree(tree_df: pd.DataFrame, title: str, out_path: Path) -> Non
         draw_text_box(draw, (box[0] + 12, box[1] + 8, box[2] - 92, box[3] - 8), parent, font_parent, color, "left", max_lines=2)
         draw_center(draw, (box[2] - 88, box[1], box[2] - 8, box[3]), f"{weight:.1f}%", font_pct, color)
 
-        leaf_x0 = 742
-        leaf_x1 = 1530
-        parent_rows = work[work["parent_indicator"] == parent].sort_values("weight_percent", ascending=False).head(8)
+        leaf_x0 = 760
+        leaf_x1 = 1650
+        parent_rows = work[work["parent_indicator"] == parent].sort_values("weight_percent", ascending=False).head(WEIGHT_TREE_MAX_LEAVES_PER_PARENT)
         block_top = current_y
         for leaf_idx, (_, leaf) in enumerate(parent_rows.iterrows()):
             y = block_top + leaf_idx * row_h
             weight = float(leaf["weight_percent"])
             line_w = max(1, min(8, int(weight / max(root_total, 1) * 22)))
             draw.line((box[2], (box[1] + box[3]) / 2, leaf_x0 - 22, y + row_h / 2), fill=color, width=line_w)
-            draw.rounded_rectangle((leaf_x0 - 24, y + 11, leaf_x1, y + 39), radius=10, fill="#FFFFFF", outline="#E1E7EF", width=1)
-            draw.ellipse((leaf_x0 - 32, y + 18, leaf_x0 - 18, y + 32), fill=color)
+            draw.rounded_rectangle((leaf_x0 - 24, y + 10, leaf_x1, y + 48), radius=10, fill="#FFFFFF", outline="#E1E7EF", width=1)
+            draw.ellipse((leaf_x0 - 34, y + 20, leaf_x0 - 18, y + 36), fill=color)
             label = clean_text(leaf["indicator_name"])
-            draw_text_box(draw, (leaf_x0 - 4, y + 4, leaf_x1 - 110, y + 46), label, font_leaf, "#1F2933", "left", max_lines=2)
-            draw_text_right(draw, leaf_x1 - 14, y + 10, f"{weight:.1f}%", font_pct, "#52606D")
+            draw_text_box(draw, (leaf_x0 - 2, y + 4, leaf_x1 - 120, y + 54), label, font_leaf, "#1F2933", "left", max_lines=2)
+            draw_text_right(draw, leaf_x1 - 14, y + 13, f"{weight:.1f}%", font_pct, "#52606D")
         current_y += block_h + group_gap
     if len(work) > leaf_count:
         draw.text((54, height - 38), "注：图中展示主要一级维度下权重较高的二级指标，完整权重明细保留在数据文件中。", font=font_note, fill="#697586")
@@ -1418,6 +1422,19 @@ def build_peer_history_matrix(
     return pd.DataFrame(rows), history
 
 
+def compact_peer_scope_for_word(latest_peers: pd.DataFrame, max_rows: int = MAIN_WORD_PEER_TABLE_MAX_ROWS) -> pd.DataFrame:
+    if latest_peers.empty or len(latest_peers) <= max_rows:
+        return latest_peers.copy()
+    compact = latest_peers.head(max_rows).copy()
+    is_tongji = latest_peers.get("is_tongji", pd.Series([""] * len(latest_peers), index=latest_peers.index)).astype(str).str.lower().isin(["true", "1"])
+    tongji_rows = latest_peers[is_tongji | latest_peers.get("university_name_cn", pd.Series(dtype=str)).astype(str).str.contains("同济", na=False)].copy()
+    if not tongji_rows.empty:
+        compact_has_tongji = compact.get("is_tongji", pd.Series([""] * len(compact), index=compact.index)).astype(str).str.lower().isin(["true", "1"]).any() or compact.get("university_name_cn", pd.Series(dtype=str)).astype(str).str.contains("同济", na=False).any()
+        if not compact_has_tongji:
+            compact = pd.concat([compact.head(max_rows - 1), tongji_rows.head(1)], ignore_index=True)
+    return compact.reset_index(drop=True)
+
+
 def build_peer_indicator_figure(
     run_dir: Path,
     subject: dict[str, Any],
@@ -1702,6 +1719,8 @@ def build_peer_table(run_dir: Path, subject: dict[str, Any], records: pd.DataFra
     top = top.sort_values(["rank_midpoint", "university_name_cn", "university_name_en"]).reset_index(drop=True)
     if top.empty:
         return {"artifact_id": artifact_id, "status": "skipped", "reason": f"no {source} top200 mainland peers"}
+    full_top = top.copy()
+    top = compact_peer_scope_for_word(top)
     source_records = records[records["ranking_source"] == source].copy()
     table, history = build_peer_history_matrix(source_records, top, source)
     if table.empty:
@@ -1709,9 +1728,10 @@ def build_peer_table(run_dir: Path, subject: dict[str, Any], records: pd.DataFra
     history.to_csv(out / "table_data.csv", index=False, encoding="utf-8-sig")
     table.to_csv(out / "table_matrix.csv", index=False, encoding="utf-8-sig")
     top.to_csv(out / "latest_peer_records.csv", index=False, encoding="utf-8-sig")
+    full_top.to_csv(out / "latest_peer_records_full_top200.csv", index=False, encoding="utf-8-sig")
     duplicate_rows.to_csv(out / "deduped_duplicate_records.csv", index=False, encoding="utf-8-sig")
     history.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
-    render_table(table, f"{source}{clean_text(subject['target_subject'])}内地高校排名历史（前32项）", out / "table.png", max_rows=32)
+    render_table(table, f"{source}{clean_text(subject['target_subject'])}内地高校排名历史（前{MAIN_WORD_PEER_TABLE_MAX_ROWS}项）", out / "table.png", max_rows=MAIN_WORD_PEER_TABLE_MAX_ROWS)
     (out / "table.md").write_text(dataframe_to_markdown(table), encoding="utf-8", newline="\n")
     write_common_outputs(
         out,
@@ -1719,7 +1739,13 @@ def build_peer_table(run_dir: Path, subject: dict[str, Any], records: pd.DataFra
         "table",
         len(table),
         len(history) + len(duplicate_rows),
-        {"ranking_source": source, "table_shape": "peer multi-year history", "deduped_duplicate_rows": len(duplicate_rows)},
+        {
+            "ranking_source": source,
+            "table_shape": "compact peer multi-year history",
+            "word_rows": len(table),
+            "full_top200_rows": len(full_top),
+            "deduped_duplicate_rows": len(duplicate_rows),
+        },
     )
     return {"artifact_id": artifact_id, "status": "generated", "rows": len(table), "output_dir": str(out)}
 
@@ -2537,7 +2563,7 @@ def build_appendix(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
     avg_sort = pd.to_numeric(matrix["排名平均位次"], errors="coerce")
     matrix = matrix.assign(_avg_sort=avg_sort).sort_values(["_avg_sort", "学校名称"], na_position="last").drop(columns=["_avg_sort"])
     # Word 版附表控制在模板接近的篇幅内；完整长表仍保留在 table_data/source_trace 中。
-    max_word_rows = 50
+    max_word_rows = APPENDIX_WORD_MAX_ROWS
     if len(matrix) > max_word_rows:
         tongji_rows = matrix[matrix["学校名称"].astype(str).str.contains("同济", na=False)].copy()
         compact_matrix = matrix.head(max_word_rows).copy()
