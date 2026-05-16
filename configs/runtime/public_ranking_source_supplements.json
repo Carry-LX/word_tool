@@ -1,0 +1,718 @@
+{
+  "version": "2026-05-14",
+  "purpose": "49个学科共性数据缺口的公开来源补源与代理口径登记。direct/close_proxy/broad_faculty_proxy 必须在 Word 中按 requires_disclosure 披露。",
+  "public_sources": {
+    "qs_subject_methodology": {
+      "url": "https://support.qs.com/hc/en-gb/articles/4410488025106-QS-World-University-Rankings-by-Subject",
+      "evidence": "QS subject rankings contain 50+ narrow subjects across five broad faculty areas; faculty-area rankings are separate ranking tables and have their own indicator weights."
+    },
+    "qs_methodology_pdf": {
+      "url": "https://content.qs.com/wur/qs-world-university-rankings-by-subject-methodology.pdf",
+      "evidence": "QS subject methodology uses Academic Reputation, Employer Reputation, Citations per Paper, H-index, and International Research Network, with weights varying by subject or broad area."
+    },
+    "qs_engineering_technology_2026": {
+      "url": "https://www.topuniversities.com/university-subject-rankings/engineering-technology",
+      "evidence": "QS Engineering & Technology is a broad subject area covering computer science and several engineering disciplines, published 25 March 2026 with downloadable table."
+    },
+    "usnews_best_global_2025_2026": {
+      "url": "https://www.prnewswire.com/news-releases/us-news-releases-2025-2026-best-global-universities-rankings-302482820.html",
+      "evidence": "U.S. News 2025-2026 Best Global Universities includes 51 subject rankings; subject analysis can use the actual matched U.S. News subject when the Chinese first-level discipline has no direct one-to-one label."
+    },
+    "arwu_gras_2025": {
+      "url": "https://www.shanghairanking.com/rankings/gras/2025",
+      "evidence": "ShanghaiRanking GRAS public subject pages provide English subject names and institution records usable for ARWU public history supplements."
+    }
+  },
+  "qs_proxy_subject_names": {
+    "智能电动车辆": {
+      "proxy_subject_or_area": "机械工程",
+      "proxy_subject_en": "Mechanical, Aeronautical & Manufacturing Engineering",
+      "proxy_level": "close_subject_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无智能电动车辆直接学科；按车辆工程所属机械、航空与制造工程近邻口径代理，不能写作目标学科直接排名。",
+      "source_key": "qs_subject_methodology"
+    }
+  },
+  "qs_proxy_subjects": {
+    "0807": {
+      "proxy_subject_or_area": "工程与技术领域",
+      "proxy_subject_en": "Engineering & Technology",
+      "proxy_level": "broad_faculty_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无动力工程及工程热物理直接学科；按工程技术宽领域代理。",
+      "source_key": "qs_engineering_technology_2026"
+    },
+    "0816": {
+      "proxy_subject_or_area": "工程与技术领域",
+      "proxy_subject_en": "Engineering & Technology",
+      "proxy_level": "broad_faculty_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无测绘科学与技术直接学科；按工程技术宽领域代理。",
+      "source_key": "qs_engineering_technology_2026"
+    },
+    "0831": {
+      "proxy_subject_or_area": "工程与技术领域",
+      "proxy_subject_en": "Engineering & Technology",
+      "proxy_level": "broad_faculty_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无生物医学工程直接学科；本项目按工程技术宽领域代理，不写作直接学科排名。",
+      "source_key": "qs_engineering_technology_2026"
+    },
+    "1003": {
+      "proxy_subject_or_area": "牙科学",
+      "proxy_subject_en": "Dentistry",
+      "proxy_level": "direct_subject_proxy",
+      "requires_disclosure": false,
+      "reason": "QS独立发布 Dentistry，作为口腔医学的直接英文口径补充。",
+      "source_key": "qs_subject_methodology"
+    },
+    "1004": {
+      "proxy_subject_or_area": "生命科学与医学领域",
+      "proxy_subject_en": "Life Sciences & Medicine",
+      "proxy_level": "broad_faculty_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无公共卫生与预防医学直接学科；按生命科学与医学宽领域代理。",
+      "source_key": "qs_subject_methodology"
+    },
+    "0503": {
+      "proxy_subject_or_area": "传播与媒体研究",
+      "proxy_subject_en": "Communication & Media Studies",
+      "proxy_level": "direct_subject_proxy",
+      "requires_disclosure": false,
+      "reason": "QS独立发布 Communication & Media Studies，作为新闻传播学的直接英文口径补充。",
+      "source_key": "qs_subject_methodology"
+    },
+    "0301": {
+      "proxy_subject_or_area": "法律",
+      "proxy_subject_en": "Law & Legal Studies",
+      "proxy_level": "close_subject_proxy",
+      "requires_disclosure": true,
+      "reason": "QS独立发布 Law & Legal Studies；知识产权学可按法学近邻口径参考，进入报告时需披露。",
+      "source_key": "qs_subject_methodology"
+    },
+    "0401": {
+      "proxy_subject_or_area": "教育",
+      "proxy_subject_en": "Education",
+      "proxy_level": "direct_subject_proxy",
+      "requires_disclosure": false,
+      "reason": "QS独立发布 Education，作为教育学直接口径补充。",
+      "source_key": "qs_subject_methodology"
+    },
+    "1401": {
+      "proxy_subject_or_area": "电子与电气工程",
+      "proxy_subject_en": "Electrical & Electronic Engineering",
+      "proxy_level": "close_subject_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无集成电路科学与工程直接学科；电子与电气工程可作为近邻工程口径。",
+      "source_key": "qs_subject_methodology"
+    },
+    "0823": {
+      "proxy_subject_or_area": "工程与技术领域",
+      "proxy_subject_en": "Engineering & Technology",
+      "proxy_level": "broad_faculty_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无交通运输工程直接学科；按工程技术宽领域代理。",
+      "source_key": "qs_engineering_technology_2026"
+    },
+    "0825": {
+      "proxy_subject_or_area": "机械工程",
+      "proxy_subject_en": "Mechanical, Aeronautical & Manufacturing Engineering",
+      "proxy_level": "close_subject_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无航空宇航科学与技术直接学科；机械、航空与制造工程可作为近邻工程口径。",
+      "source_key": "qs_subject_methodology"
+    },
+    "0803": {
+      "proxy_subject_or_area": "物理与天文学",
+      "proxy_subject_en": "Physics & Astronomy",
+      "proxy_level": "close_subject_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无光电科学与技术直接学科；物理与天文学可作为光学相关近邻口径。",
+      "source_key": "qs_subject_methodology"
+    },
+    "0801": {
+      "proxy_subject_or_area": "工程与技术领域",
+      "proxy_subject_en": "Engineering & Technology",
+      "proxy_level": "broad_faculty_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无力学直接学科；按工程技术宽领域代理。",
+      "source_key": "qs_engineering_technology_2026"
+    },
+    "1407": {
+      "proxy_subject_or_area": "社会科学与管理领域",
+      "proxy_subject_en": "Social Sciences & Management",
+      "proxy_level": "broad_faculty_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无区域国别学直接学科；按社会科学与管理宽领域代理。",
+      "source_key": "qs_subject_methodology"
+    },
+    "1252": {
+      "proxy_subject_or_area": "社会科学与管理领域",
+      "proxy_subject_en": "Social Sciences & Management",
+      "proxy_level": "broad_faculty_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无公共管理直接学科；按社会科学与管理宽领域代理。",
+      "source_key": "qs_subject_methodology"
+    },
+    "0305": {
+      "proxy_subject_or_area": "社会科学与管理领域",
+      "proxy_subject_en": "Social Sciences & Management",
+      "proxy_level": "broad_faculty_proxy",
+      "requires_disclosure": true,
+      "reason": "QS无马克思主义理论直接学科；按社会科学与管理宽领域代理，仅用于宽领域参考。",
+      "source_key": "qs_subject_methodology"
+    }
+  },
+  "arwu_public_aliases": {
+    "0831": {
+      "aliases": [
+        "Biomedical Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "软科GRAS公开页英文名为 Biomedical Engineering，可用于ARWU公开历史补源。",
+      "source_key": "arwu_gras_2025"
+    },
+    "1004": {
+      "aliases": [
+        "Public Health"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "软科GRAS公开页英文名为 Public Health，可用于公共卫生方向公开历史补源。",
+      "source_key": "arwu_gras_2025"
+    },
+    "0823": {
+      "aliases": [
+        "Transportation Science & Technology"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "软科GRAS公开页英文名为 Transportation Science & Technology，可用于交通运输工程公开历史补源。",
+      "source_key": "arwu_gras_2025"
+    },
+    "0807": {
+      "aliases": [
+        "Energy Science & Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0825": {
+      "aliases": [
+        "Aerospace Engineering"
+      ],
+      "proxy_level": "candidate_alias",
+      "requires_disclosure": true,
+      "reason": "若软科公开源缺少严格航空宇航科学与技术，可保留候选英文名，进入Word前需核验。",
+      "source_key": "arwu_gras_2025"
+    },
+    "0802": {
+      "aliases": [
+        "Mechanical Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0816": {
+      "aliases": [
+        "Remote Sensing"
+      ],
+      "proxy_level": "close_subject_proxy",
+      "requires_disclosure": true,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0812": {
+      "aliases": [
+        "Computer Science & Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0835": {
+      "aliases": [
+        "Computer Science & Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0805": {
+      "aliases": [
+        "Materials Science & Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "1001": {
+      "aliases": [
+        "Human Biological Sciences"
+      ],
+      "proxy_level": "close_subject_proxy",
+      "requires_disclosure": true,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "1002": {
+      "aliases": [
+        "Clinical Medicine"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "1007": {
+      "aliases": [
+        "Pharmacy & Pharmaceutical Sciences"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0811": {
+      "aliases": [
+        "Automation & Control"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0808": {
+      "aliases": [
+        "Electrical & Electronic Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0810": {
+      "aliases": [
+        "Telecommunication Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0830": {
+      "aliases": [
+        "Environmental Science & Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0814": {
+      "aliases": [
+        "Civil Engineering"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0818": {
+      "aliases": [
+        "Earth Sciences"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0707": {
+      "aliases": [
+        "Oceanography"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0708": {
+      "aliases": [
+        "Earth Sciences"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0702": {
+      "aliases": [
+        "Physics"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0701": {
+      "aliases": [
+        "Mathematics"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0710": {
+      "aliases": [
+        "Biological Sciences"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "1003": {
+      "aliases": [
+        "Dentistry & Oral Sciences"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0703": {
+      "aliases": [
+        "Chemistry"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "1201": {
+      "aliases": [
+        "Management"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "1251": {
+      "aliases": [
+        "Business Administration"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "0202": {
+      "aliases": [
+        "Economics"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    },
+    "1405": {
+      "aliases": [
+        "Artificial Intelligence"
+      ],
+      "proxy_level": "direct_public_alias",
+      "requires_disclosure": false,
+      "reason": "??GRAS???????????ARWU?????????????????????????",
+      "source_key": "arwu_gras_2025"
+    }
+  },
+  "usnews_weight_strategy": {
+    "prefer_actual_ranking_subject": true,
+    "requires_disclosure_when_inferred": true,
+    "reason": "U.S. News部分中国一级学科无一对一配置名，但本地排名事实表已匹配到实际U.S. News subject；权重图应优先回退到该实际subject。"
+  },
+  "source_alias_supplements": {
+    "QS": {
+      "1007": {
+        "aliases": [
+          "药学与药理学",
+          "Pharmacy & Pharmacology"
+        ],
+        "proxy_level": "direct_subject_alias",
+        "requires_disclosure": false,
+        "reason": "QS权重表使用“药学与药理学/Pharmacy & Pharmacology”，与映射表“药剂与药理学”是同一QS学科口径。",
+        "source_key": "qs_subject_methodology"
+      },
+      "0811": {
+        "aliases": [
+          "数据科学（2024新增）",
+          "Data Science"
+        ],
+        "proxy_level": "close_subject_proxy",
+        "requires_disclosure": true,
+        "reason": "QS无控制科学与工程直接学科；本地已按数据科学与人工智能近邻口径入库，权重表对应“数据科学（2024新增）”。",
+        "source_key": "qs_subject_methodology"
+      },
+      "1405": {
+        "aliases": [
+          "数据科学（2024新增）",
+          "Data Science"
+        ],
+        "proxy_level": "close_subject_proxy",
+        "requires_disclosure": true,
+        "reason": "QS无智能科学与技术直接学科；按数据科学与人工智能/数据科学近邻口径补充。",
+        "source_key": "qs_subject_methodology"
+      },
+      "0808": {
+        "aliases": [
+          "电子与电气工程",
+          "Electrical & Electronic Engineering"
+        ],
+        "proxy_level": "direct_subject_alias",
+        "requires_disclosure": false,
+        "reason": "QS权重表使用“电子与电气工程”，与映射表“电子电气工程”是同一学科口径。",
+        "source_key": "qs_subject_methodology"
+      },
+      "0810": {
+        "aliases": [
+          "电子与电气工程",
+          "Electrical & Electronic Engineering"
+        ],
+        "proxy_level": "close_subject_proxy",
+        "requires_disclosure": true,
+        "reason": "信息与通信工程无QS直接学科；按电子与电气工程近邻口径参考，需披露。",
+        "source_key": "qs_subject_methodology"
+      },
+      "1251": {
+        "aliases": [
+          "工商管理",
+          "商业与管理研究",
+          "Business & Management Studies"
+        ],
+        "proxy_level": "direct_subject_alias",
+        "requires_disclosure": false,
+        "reason": "QS权重表使用“工商管理”，与Business & Management Studies/商务与管理研究为同一QS口径。",
+        "source_key": "qs_subject_methodology"
+      },
+      "0302": {
+        "aliases": [
+          "政治与国际研究",
+          "Politics & International Studies"
+        ],
+        "proxy_level": "direct_subject_alias",
+        "requires_disclosure": false,
+        "reason": "QS权重表使用“政治与国际研究”，与政治学映射口径一致。",
+        "source_key": "qs_subject_methodology"
+      },
+      "1401": {
+        "aliases": [
+          "数据科学与人工智能",
+          "Data Science and Artificial Intelligence",
+          "Data Science",
+          "电子电气工程",
+          "电子与电气工程",
+          "Engineering - Electrical and Electronic",
+          "Electrical and Electronic Engineering",
+          "Electrical & Electronic Engineering"
+        ],
+        "proxy_level": "close_subject_proxy",
+        "requires_disclosure": true,
+        "reason": "QS无集成电路科学与工程直接学科；本地原始QS文件中同济在数据科学与人工智能、电子电气工程均有记录，可作为近邻口径并披露。",
+        "source_key": "local_qs_raw_excel_verified"
+      },
+      "0501": {
+        "aliases": [
+          "现代语言学",
+          "现代语言",
+          "语言学",
+          "Modern Languages",
+          "Linguistics",
+          "英语语言文学",
+          "English Language and Literature"
+        ],
+        "proxy_level": "close_subject_proxy",
+        "requires_disclosure": true,
+        "reason": "QS无中国语言文学直接学科；原始QS文件中同济在现代语言学/语言学等语言类口径有记录，作为近邻口径需披露。",
+        "source_key": "local_qs_raw_excel_verified"
+      },
+      "1407": {
+        "aliases": [
+          "政治学",
+          "Politics",
+          "政治与国际研究",
+          "Politics & International Studies",
+          "Development Studies",
+          "Modern Languages"
+        ],
+        "proxy_level": "close_subject_proxy",
+        "requires_disclosure": true,
+        "reason": "QS无区域国别学直接学科；原始QS文件中同济在Politics/政治学口径有记录，可作为近邻参考并披露。",
+        "source_key": "local_qs_raw_excel_verified"
+      },
+      "0305": {
+        "aliases": [
+          "政治学",
+          "Politics",
+          "哲学",
+          "Philosophy"
+        ],
+        "proxy_level": "close_subject_proxy",
+        "requires_disclosure": true,
+        "reason": "QS无马克思主义理论直接学科；原始QS文件中同济在Politics/政治学口径有记录，只能作为近邻参考并披露。",
+        "source_key": "local_qs_raw_excel_verified"
+      }
+    },
+    "US News": {
+      "1201": {
+        "aliases": [
+          "商业与经济",
+          "Economics and Business",
+          "economics and business"
+        ],
+        "proxy_level": "close_subject_proxy",
+        "requires_disclosure": true,
+        "reason": "U.S. News无管理科学与工程直接学科；同济在商业与经济有实际排名，可作为管理类近邻口径并披露。",
+        "source_key": "usnews_best_global_2025_2026"
+      },
+      "1251": {
+        "aliases": [
+          "商业与经济",
+          "Economics and Business",
+          "economics and business"
+        ],
+        "proxy_level": "close_subject_proxy",
+        "requires_disclosure": true,
+        "reason": "U.S. News无工商管理直接学科；同济在商业与经济有实际排名，可作为经营管理类近邻口径并披露。",
+        "source_key": "usnews_best_global_2025_2026"
+      },
+      "1252": {
+        "aliases": [
+          "社会科学与公共卫生",
+          "Social Sciences and Public Health",
+          "social sciences and public health"
+        ],
+        "proxy_level": "broad_field_proxy",
+        "requires_disclosure": true,
+        "reason": "U.S. News无公共管理直接学科；可按社会科学与公共卫生宽领域参考，并在报告中披露。",
+        "source_key": "usnews_best_global_2025_2026"
+      },
+      "0503": {
+        "aliases": [
+          "社会科学与公共卫生",
+          "Social Sciences and Public Health",
+          "social sciences and public health"
+        ],
+        "proxy_level": "broad_field_proxy",
+        "requires_disclosure": true,
+        "reason": "U.S. News无新闻传播学直接学科；只可按社会科学与公共卫生宽领域参考，不写作直接学科排名。",
+        "source_key": "usnews_best_global_2025_2026"
+      },
+      "0305": {
+        "aliases": [
+          "社会科学与公共卫生",
+          "Social Sciences and Public Health",
+          "social sciences and public health"
+        ],
+        "proxy_level": "broad_field_proxy",
+        "requires_disclosure": true,
+        "reason": "U.S. News无马克思主义理论直接学科；只可按社会科学与公共卫生宽领域参考。",
+        "source_key": "usnews_best_global_2025_2026"
+      },
+      "1407": {
+        "aliases": [
+          "社会科学与公共卫生",
+          "Social Sciences and Public Health",
+          "social sciences and public health"
+        ],
+        "proxy_level": "broad_field_proxy",
+        "requires_disclosure": true,
+        "reason": "U.S. News无区域国别学直接学科；只可按社会科学与公共卫生宽领域参考。",
+        "source_key": "usnews_best_global_2025_2026"
+      }
+    },
+    "THE": {
+      "1401": {
+        "aliases": [
+          "工学",
+          "工程学",
+          "Engineering"
+        ],
+        "proxy_level": "broad_field_proxy",
+        "requires_disclosure": true,
+        "reason": "THE无集成电路科学与工程直接学科；按工程学宽领域参考。",
+        "source_key": "the_subject_public_fields"
+      },
+      "1201": {
+        "aliases": [
+          "商业和经济学",
+          "商业与经济学",
+          "Business and Economics"
+        ],
+        "proxy_level": "close_field_proxy",
+        "requires_disclosure": true,
+        "reason": "THE无管理科学与工程直接学科；按商业与经济学近邻领域参考。",
+        "source_key": "the_subject_public_fields"
+      },
+      "1251": {
+        "aliases": [
+          "商业和经济学",
+          "商业与经济学",
+          "Business and Economics"
+        ],
+        "proxy_level": "close_field_proxy",
+        "requires_disclosure": true,
+        "reason": "THE无工商管理直接学科；按商业与经济学近邻领域参考。",
+        "source_key": "the_subject_public_fields"
+      },
+      "1252": {
+        "aliases": [
+          "社会科学",
+          "Social Sciences"
+        ],
+        "proxy_level": "broad_field_proxy",
+        "requires_disclosure": true,
+        "reason": "THE无公共管理直接学科；按社会科学宽领域参考。",
+        "source_key": "the_subject_public_fields"
+      },
+      "1407": {
+        "aliases": [
+          "社会科学",
+          "Social Sciences"
+        ],
+        "proxy_level": "broad_field_proxy",
+        "requires_disclosure": true,
+        "reason": "THE无区域国别学直接学科；按社会科学宽领域参考。",
+        "source_key": "the_subject_public_fields"
+      },
+      "0305": {
+        "aliases": [
+          "社会科学",
+          "Social Sciences"
+        ],
+        "proxy_level": "broad_field_proxy",
+        "requires_disclosure": true,
+        "reason": "THE无马克思主义理论直接学科；按社会科学宽领域参考。",
+        "source_key": "the_subject_public_fields"
+      },
+      "1405": {
+        "aliases": [
+          "计算机科学",
+          "Computer Science"
+        ],
+        "proxy_level": "close_field_proxy",
+        "requires_disclosure": true,
+        "reason": "THE无智能科学与技术直接学科；按计算机科学近邻领域参考。",
+        "source_key": "the_subject_public_fields"
+      }
+    }
+  }
+}

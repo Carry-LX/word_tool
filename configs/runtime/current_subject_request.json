@@ -1,55 +1,44 @@
 {
-  "generated_at": "2026-05-12T10:56:46",
+  "generated_at": "2026-05-14T00:00:00",
   "request": {
     "target_university": "同济大学",
-    "target_subject": "计算机科学与技术",
-    "target_subject_code": "0812",
+    "target_subject": "生物医学工程",
+    "target_subject_code": "0831",
     "report_year": 2026
   },
   "resolved_subject": {
     "target_university": "同济大学",
-    "target_subject": "计算机科学与技术",
-    "target_subject_code": "0812",
+    "target_subject": "生物医学工程",
+    "target_subject_code": "0831",
     "report_year": 2026,
-    "subject_id": "subject_0812",
-    "ministry_subject_name": "计算机科学与技术",
-    "subject_short_name": "计算机科学",
-    "tongji_college": "计算机科学与技术学院",
-    "arwu_subject_name": "计算机科学与工程",
-    "qs_subject_name": "计算机科学与信息系统",
-    "usnews_subject_name": "人工智能",
-    "the_subject_area": "计算机科学",
+    "subject_id": "subject_0831",
+    "ministry_subject_name": "生物医学工程",
+    "subject_short_name": "生物医学工程",
+    "tongji_college": "医学院",
+    "arwu_subject_name": "生物医学工程",
+    "qs_subject_name": "无",
+    "usnews_subject_name": "",
+    "the_subject_area": "工程",
     "alias_summary": {
-      "QS": [
-        "Data Science",
-        "DataScience",
-        "数据科学与人工智能",
-        "计算机科学与信息系统"
-      ],
       "THE": [
-        "Computer Science",
-        "计算机科学"
+        "Engineering",
+        "工学",
+        "工程",
+        "工程学"
       ],
       "US News": [
-        "Computer Science",
         "Engineering",
-        "artificial intelligence",
-        "computer science",
         "engineering",
-        "人工智能",
-        "工程学",
-        "计算机科学"
+        "工程学"
       ],
       "ministry": [
-        "计算机科学与技术"
+        "生物医学工程"
       ],
       "软科": [
-        "Artificial Intelligence",
-        "人工智能",
-        "计算机科学与工程"
+        "生物医学工程"
       ]
     },
-    "alias_row_count": 20
+    "alias_row_count": 13
   },
   "agent_contract": {
     "single_entrypoint": "scripts/run_subject_agent.py",

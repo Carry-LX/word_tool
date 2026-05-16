@@ -13,6 +13,8 @@ from typing import Any, Callable
 import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 
+import ranking_public_supplements as public_supplements
+
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 PROCESSED_DIR = PROJECT_DIR / "processed"
@@ -102,6 +104,22 @@ def clean_text(value: Any) -> str:
         return ""
     text = str(value).strip()
     return "" if text.lower() == "nan" else text
+
+
+def ordered_unique(values: list[Any]) -> list[str]:
+    seen = set()
+    rows: list[str] = []
+    for value in values:
+        text = clean_text(value)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        rows.append(text)
+    return rows
+
+
+def valid_mapping_value(value: Any) -> str:
+    return public_supplements.valid_mapping_value(value)
 
 
 def display_missing_label(value: str = "missing") -> str:
@@ -488,13 +506,21 @@ def is_tongji_name(value: Any) -> bool:
 
 
 def expected_weight_area(subject: dict[str, Any], source: str) -> str:
+    override = subject.get("source_runtime_overrides", {}).get(source, {})
+    override_area = valid_mapping_value(override.get("weight_subject_or_area"))
+    if override_area:
+        return override_area
     if source == "软科":
-        return clean_text(subject.get("arwu_subject_name")) or clean_text(subject.get("target_subject"))
+        return valid_mapping_value(subject.get("arwu_subject_name")) or clean_text(subject.get("target_subject"))
     if source == "QS":
-        return clean_text(subject.get("qs_subject_name")) or clean_text(subject.get("target_subject"))
+        return (
+            valid_mapping_value(subject.get("qs_subject_name"))
+            or valid_mapping_value(public_supplements.qs_proxy(subject).get("proxy_subject_or_area"))
+            or clean_text(subject.get("target_subject"))
+        )
     if source == "US News":
-        return clean_text(subject.get("usnews_subject_name")) or clean_text(subject.get("target_subject"))
-    area = clean_text(subject.get("the_subject_area"))
+        return valid_mapping_value(subject.get("usnews_subject_name")) or clean_text(subject.get("target_subject"))
+    area = valid_mapping_value(subject.get("the_subject_area"))
     if THE_WEIGHT_AREA_CROSSWALK_JSON.exists():
         crosswalk = json.loads(THE_WEIGHT_AREA_CROSSWALK_JSON.read_text(encoding="utf-8"))
         if area in crosswalk:
@@ -512,11 +538,48 @@ def candidate_subject_areas(value: Any) -> list[str]:
 
 
 def subject_alias_values(subject: dict[str, Any], source: str) -> set[str]:
-    values = {clean_text(value) for value in subject.get("alias_summary", {}).get(source, []) if clean_text(value)}
+    values = {valid_mapping_value(value) for value in subject.get("alias_summary", {}).get(source, []) if valid_mapping_value(value)}
+    override = subject.get("source_runtime_overrides", {}).get(source, {})
+    for field in ["weight_subject_or_area", "ranking_subject_or_area", "proxy_subject_en"]:
+        value = valid_mapping_value(override.get(field))
+        if value:
+            values.add(value)
+    if source == "QS":
+        values.update(public_supplements.qs_proxy_aliases(subject))
+    if source == "软科":
+        values.update(public_supplements.arwu_public_aliases(subject))
+    values.update(public_supplements.source_aliases(subject, source))
     target = clean_text(subject.get("target_subject"))
     if target:
         values.add(target)
     return values
+
+
+def candidate_weight_areas(subject: dict[str, Any], source: str) -> list[str]:
+    values: list[Any] = [expected_weight_area(subject, source)]
+    values.extend(subject_alias_values(subject, source))
+    candidates: list[str] = []
+    for value in ordered_unique([valid_mapping_value(value) for value in values]):
+        candidates.extend(candidate_subject_areas(value))
+    return ordered_unique(candidates)
+
+
+def find_weight_subset(weights: pd.DataFrame, source: str, candidates: list[str]) -> tuple[pd.DataFrame, str]:
+    weight_keys = {
+        normalize_text_key(area): area
+        for area in weights[weights["ranking_source"] == source]["ranking_subject_or_area"].drop_duplicates().tolist()
+        if clean_text(area)
+    }
+    for candidate in candidates:
+        subset = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == candidate)].copy()
+        if not subset.empty:
+            return subset, candidate
+        mapped_area = weight_keys.get(normalize_text_key(candidate), "")
+        if mapped_area:
+            subset = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == mapped_area)].copy()
+            if not subset.empty:
+                return subset, mapped_area
+    return pd.DataFrame(), candidates[0] if candidates else ""
 
 
 def normalize_commonality_group(value: Any) -> str:
@@ -610,18 +673,23 @@ def render_cards(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
     font_rank = load_font(56, True)
     font_meta = load_font(19)
     draw.text((85, 52), f"同济大学{subject_name}学科国际排名概览", font=font_title, fill="#16202A")
-    draw.text((85, 102), "四大国际排名最新发布年份口径，排名区间保留原始表达", font=font_sub, fill="#5A6573")
+    available_sources = [source for source in RANKING_SOURCES if not df[df["ranking_source"] == source].empty]
+    subtitle = "四大国际排名最新发布年份口径，排名区间保留原始表达" if len(available_sources) >= 4 else "按当前可核验来源展示，缺失榜单不强行补齐"
+    draw.text((85, 102), subtitle, font=font_sub, fill="#5A6573")
     card_w, card_h, gap = 330, 420, 42
-    for idx, source in enumerate(RANKING_SOURCES):
+    total_w = len(available_sources) * card_w + max(0, len(available_sources) - 1) * gap
+    start_x = max(85, int((1600 - total_w) / 2))
+    for idx, source in enumerate(available_sources):
         row = df[df["ranking_source"] == source]
         if row.empty:
             continue
         item = row.iloc[0]
-        x, y = 85 + idx * (card_w + gap), 185
+        x, y = start_x + idx * (card_w + gap), 185
         color = SOURCE_COLORS[source]
         draw.rounded_rectangle((x, y, x + card_w, y + card_h), radius=18, fill="#F8FAFC", outline="#D8DEE8", width=2)
         draw.rectangle((x, y, x + card_w, y + 12), fill=color)
-        draw.text((x + 30, y + 42), source, font=font_source, fill=color)
+        source_label = "U.S. News" if source == "US News" else source
+        draw.text((x + 30, y + 42), source_label, font=font_source, fill=color)
         draw.text((x + 30, y + 118), clean_text(item["rank_raw"]), font=font_rank, fill="#111827")
         draw.text((x + 30, y + 214), f"发布年份：{int(item['release_year'])}", font=font_meta, fill="#374151")
         draw.text((x + 30, y + 252), f"排名年份：{int(item['ranking_year'])}", font=font_meta, fill="#374151")
@@ -721,31 +789,86 @@ def build_figure_07(run_dir: Path, subject: dict[str, Any], records: pd.DataFram
 
 
 def render_weight(df: pd.DataFrame, title: str, out_path: Path) -> None:
-    image = Image.new("RGB", (1500, 900), "#FFFFFF")
+    image = Image.new("RGB", (1700, 980), "#F7F3EC")
     draw = ImageDraw.Draw(image)
-    font_title = load_font(36, True)
-    font_sub = load_font(20)
-    font_label = load_font(18)
-    draw.text((72, 42), title, font=font_title, fill="#16202A")
-    draw.text((72, 88), "按一级指标权重汇总展示，环形图中心为权重合计", font=font_sub, fill="#5A6573")
-    rows = df.sort_values("weight_percent", ascending=False).to_dict("records")
+    font_title = load_font(42, True)
+    font_sub = load_font(22)
+    font_label = load_font(23)
+    font_label_bold = load_font(24, True)
+    font_small = load_font(18)
+    font_tiny = load_font(16)
+
+    work = df.copy()
+    work["weight_percent"] = pd.to_numeric(work["weight_percent"], errors="coerce").fillna(0.0)
+    rows_all = work.sort_values("weight_percent", ascending=False).to_dict("records")
+    rows = [row for row in rows_all if to_float(row["weight_percent"]) > 0]
     total = sum(to_float(row["weight_percent"]) for row in rows) or 100.0
-    palette = ["#4C72B0", "#55A868", "#C44E52", "#8172B2", "#CCB974", "#64B5CD", "#E17C05", "#937860", "#8C8C8C"]
-    box = (92, 170, 732, 810)
+    max_pct = max([to_float(row["weight_percent"]) for row in rows] or [1.0])
+    zero_rows = [row for row in rows_all if to_float(row["weight_percent"]) <= 0]
+
+    palette = [
+        "#214E6F",
+        "#D9824B",
+        "#4F8A6D",
+        "#B55C5D",
+        "#8773A8",
+        "#D2B45F",
+        "#58A6B8",
+        "#A08168",
+        "#6B7280",
+        "#9A6B86",
+    ]
+
+    draw.rounded_rectangle((38, 28, 1662, 942), radius=34, fill="#FFFCF6", outline="#E6DED2", width=2)
+    draw_text_box(draw, (70, 40, 1180, 92), title, font_title, "#15212E", "left", max_lines=1)
+    subtitle = "按权重降序展示：左侧为构成圆环，右侧为可复核的比例条"
+    draw.text((78, 105), subtitle, font=font_sub, fill="#667085")
+
+    box = (118, 218, 758, 858)
+    draw.ellipse((box[0] + 12, box[1] + 18, box[2] + 12, box[3] + 18), fill="#E7DED0")
     start = -90.0
     for idx, row in enumerate(rows):
         pct = to_float(row["weight_percent"])
         extent = 360.0 * pct / total
-        draw.pieslice(box, start, start + extent, fill=palette[idx % len(palette)], outline="#FFFFFF", width=2)
+        draw.pieslice(box, start, start + extent, fill=palette[idx % len(palette)], outline="#FFFCF6", width=5)
         start += extent
-    draw.ellipse((255, 333, 569, 647), fill="#FFFFFF")
-    draw_center(draw, (270, 405, 554, 455), f"{total:.0f}%", load_font(30, True), "#16202A")
-    x0, y0 = 820, 175
+    draw.ellipse((292, 392, 584, 684), fill="#FFFCF6", outline="#EFE7DB", width=2)
+    draw_center(draw, (310, 452, 566, 510), f"{total:.0f}%", load_font(50, True), "#15212E")
+    draw_center(draw, (310, 516, 566, 548), "权重合计", font_small, "#667085")
+    draw_center(draw, (310, 552, 566, 584), f"{len(rows)} 个有效指标", font_tiny, "#8A7665")
+
+    legend_x, legend_y = 840, 188
+    legend_w, legend_h = 760, 676
+    draw.rounded_rectangle((legend_x, legend_y, legend_x + legend_w, legend_y + legend_h), radius=28, fill="#FFFFFF", outline="#E8DFD3", width=2)
+    draw.text((legend_x + 34, legend_y + 28), "权重构成", font=load_font(30, True), fill="#15212E")
+    draw.text((legend_x + 34, legend_y + 70), "比例条长度与当前图内最大权重对齐", font=font_small, fill="#667085")
+
+    row_top = legend_y + 120
+    row_h = 58 if len(rows) > 8 else 68
+    bar_x = legend_x + 462
+    bar_w = 180
     for idx, row in enumerate(rows[:10]):
-        y = y0 + idx * 64
-        draw.rounded_rectangle((x0, y, x0 + 28, y + 28), radius=6, fill=palette[idx % len(palette)])
-        draw_text_box(draw, (x0 + 46, y - 10, x0 + 485, y + 42), row["indicator_name"], font_label, "#1F2933", "left", max_lines=2)
-        draw.text((x0 + 510, y - 2), f"{to_float(row['weight_percent']):.1f}%", font=font_label, fill="#374151")
+        y = row_top + idx * row_h
+        color = palette[idx % len(palette)]
+        pct = to_float(row["weight_percent"])
+        if idx % 2 == 0:
+            draw.rounded_rectangle((legend_x + 20, y - 10, legend_x + legend_w - 20, y + row_h - 14), radius=14, fill="#FAF7F1")
+        draw.rounded_rectangle((legend_x + 36, y + 7, legend_x + 60, y + 31), radius=7, fill=color)
+        draw_text_box(draw, (legend_x + 76, y - 8, legend_x + 440, y + 44), row["indicator_name"], font_label, "#1F2933", "left", max_lines=2)
+        draw.rounded_rectangle((bar_x, y + 14, bar_x + bar_w, y + 26), radius=6, fill="#ECE6DD")
+        fill_w = max(4, int(bar_w * pct / max_pct))
+        draw.rounded_rectangle((bar_x, y + 14, bar_x + fill_w, y + 26), radius=6, fill=color)
+        draw_text_right(draw, legend_x + legend_w - 38, y + 2, f"{pct:.1f}%", font_label_bold, "#263241")
+
+    note_y = legend_y + legend_h - 46
+    if len(rows) > 10:
+        draw.text((legend_x + 34, note_y), "注：右侧仅展示前 10 项，完整数据见 chart_plot_data.csv。", font=font_tiny, fill="#8A7665")
+    elif zero_rows:
+        zero_names = "、".join(clean_text(row.get("indicator_name")) for row in zero_rows[:3] if clean_text(row.get("indicator_name")))
+        suffix = "等" if len(zero_rows) > 3 else ""
+        draw.text((legend_x + 34, note_y), f"注：{zero_names}{suffix} 0% 指标不进入圆环面积。", font=font_tiny, fill="#8A7665")
+    else:
+        draw.text((legend_x + 34, note_y), "注：圆环面积与右侧比例均来自同一份 chart_plot_data.csv。", font=font_tiny, fill="#8A7665")
     save_png(image, out_path)
 
 
@@ -834,81 +957,150 @@ def render_weight_tree(tree_df: pd.DataFrame, title: str, out_path: Path) -> Non
     parent_order = parent_order[:WEIGHT_TREE_MAX_PARENTS]
     work = work[work["parent_indicator"].isin(parent_order)].copy()
 
-    leaf_count = sum(min(WEIGHT_TREE_MAX_LEAVES_PER_PARENT, len(work[work["parent_indicator"] == parent])) for parent in parent_order)
+    leaf_rows_by_parent = {
+        parent: work[work["parent_indicator"] == parent]
+        .sort_values("weight_percent", ascending=False)
+        .head(WEIGHT_TREE_MAX_LEAVES_PER_PARENT)
+        for parent in parent_order
+    }
+    leaf_count = sum(len(rows) for rows in leaf_rows_by_parent.values())
     row_h = 58
-    group_gap = 34
-    top = 164
-    bottom = 64
-    height = max(980, top + leaf_count * row_h + max(0, len(parent_order) - 1) * group_gap + bottom)
-    image = Image.new("RGB", (1800, height), "#FFFFFF")
-    draw = ImageDraw.Draw(image)
-    font_title = load_font(42, True)
-    font_sub = load_font(23)
-    font_root = load_font(28, True)
-    font_parent = load_font(25, True)
-    font_leaf = load_font(25)
-    font_pct = load_font(24, True)
-    font_note = load_font(18)
-    draw.text((54, 36), title, font=font_title, fill="#16202A")
-    draw.text((54, 88), "按一级维度展开到二级指标；左侧为一级权重，右侧为具体指标权重", font=font_sub, fill="#5A6573")
+    group_gap = 28
+    top = 180
+    bottom = 78
+    width = 2200
+    height = max(940, top + leaf_count * row_h + len(parent_order) * 22 + max(0, len(parent_order) - 1) * group_gap + bottom)
 
-    root_box = (54, top + 44, 256, top + 156)
+    scale = 2
+    image = Image.new("RGB", (width * scale, height * scale), "#F7F3EC")
+    draw = ImageDraw.Draw(image)
+
+    def p(value: float) -> int:
+        return int(round(value * scale))
+
+    def box(values: tuple[float, float, float, float]) -> tuple[int, int, int, int]:
+        return tuple(p(value) for value in values)
+
+    def font(size: int, bold: bool = False) -> ImageFont.ImageFont:
+        return load_font(size * scale, bold)
+
+    def line(points: tuple[float, float, float, float], fill: str, width_px: int = 1) -> None:
+        draw.line(tuple(p(value) for value in points), fill=fill, width=max(1, p(width_px)))
+
+    def rounded(values: tuple[float, float, float, float], radius: int, fill: str, outline: str | None = None, width_px: int = 1) -> None:
+        draw.rounded_rectangle(box(values), radius=p(radius), fill=fill, outline=outline, width=max(1, p(width_px)))
+
+    def text(x: float, y: float, value: str, font_obj: ImageFont.ImageFont, fill: str) -> None:
+        draw.text((p(x), p(y)), value, font=font_obj, fill=fill)
+
+    def text_box(values: tuple[float, float, float, float], value: Any, font_obj: ImageFont.ImageFont, fill: str, align: str = "left", max_lines: int = 2) -> None:
+        draw_text_box(draw, box(values), value, font_obj, fill, align, max_lines=max_lines)
+
+    def text_right(x: float, y: float, value: str, font_obj: ImageFont.ImageFont, fill: str) -> None:
+        draw_text_right(draw, p(x), p(y), value, font_obj, fill)
+
+    font_title = font(44, True)
+    font_sub = font(21)
+    font_root = font(28, True)
+    font_root_pct = font(30, True)
+    font_parent = font(24, True)
+    font_parent_pct = font(26, True)
+    font_leaf = font(21)
+    font_leaf_pct = font(22, True)
+    font_note = font(16)
+
+    rounded((42, 30, width - 42, height - 34), 34, "#FFFCF6", "#E5DCCE", 2)
+    text_box((72, 48, 1220, 104), title, font_title, "#15212E", "left", max_lines=1)
+    text(76, 112, "左侧展示评价体系总量，中间展示一级维度，右侧用比例条展示二级指标权重", font_sub, "#667085")
+
     root_total = work.groupby("parent_indicator")["parent_weight_percent"].max().sum()
     if root_total <= 0:
         root_total = work["weight_percent"].sum()
-    draw.rounded_rectangle(root_box, radius=14, fill="#F8FAFC", outline="#16202A", width=3)
-    draw_text_box(draw, (root_box[0] + 8, root_box[1] + 12, root_box[2] - 8, root_box[3] - 42), "指标体系", font_root, "#16202A", max_lines=2)
-    draw_center(draw, (root_box[0], root_box[3] - 44, root_box[2], root_box[3] - 8), f"{root_total:.1f}%", font_pct, "#52606D")
+    max_leaf_weight = max(float(work["weight_percent"].max()), 1.0)
 
-    palette = ["#315D9C", "#C64B46", "#3C8D5A", "#7B5CA8", "#D68A35", "#6B7280"]
+    root_box = (80, top + 26, 292, top + 156)
+    rounded(root_box, 20, "#FFFFFF", "#263241", 3)
+    text_box((root_box[0] + 18, root_box[1] + 20, root_box[2] - 18, root_box[1] + 68), "指标体系", font_root, "#15212E", "center", max_lines=1)
+    draw_center(draw, box((root_box[0], root_box[1] + 72, root_box[2], root_box[3] - 18)), f"{root_total:.1f}%", font_root_pct, "#52606D")
+
+    parent_x0, parent_x1 = 382, 752
+    leaf_x0, leaf_x1 = 880, 2058
+    leaf_name_x = leaf_x0 + 54
+    leaf_bar_x = leaf_x1 - 382
+    leaf_bar_w = 250
+    leaf_pct_x = leaf_x1 - 26
+    palette = ["#214E6F", "#B55C5D", "#4F8A6D", "#8773A8", "#D9824B", "#6B7280"]
+    spine_x = 338
+    spine_top = top + 48
+    block_specs: list[dict[str, Any]] = []
     current_y = top
-    parent_boxes: dict[str, tuple[float, float, float, float]] = {}
     for idx, parent in enumerate(parent_order):
-        parent_rows = work[work["parent_indicator"] == parent].sort_values("weight_percent", ascending=False).head(WEIGHT_TREE_MAX_LEAVES_PER_PARENT)
+        parent_rows = leaf_rows_by_parent[parent]
         weight = float(work[work["parent_indicator"] == parent]["parent_weight_percent"].max())
-        block_h = max(72, len(parent_rows) * row_h)
-        box = (316, current_y + max(0, (block_h - 82) / 2), 668, current_y + max(0, (block_h - 82) / 2) + 82)
-        color = palette[idx % len(palette)]
-        parent_boxes[parent] = box
-        width = max(2, min(12, int(weight / max(root_total, 1) * 22)))
-        draw.line((root_box[2], (root_box[1] + root_box[3]) / 2, box[0], (box[1] + box[3]) / 2), fill=color, width=width)
-        draw.rounded_rectangle(box, radius=12, fill="#FFFFFF", outline=color, width=3)
-        draw_text_box(draw, (box[0] + 12, box[1] + 8, box[2] - 92, box[3] - 8), parent, font_parent, color, "left", max_lines=2)
-        draw_center(draw, (box[2] - 88, box[1], box[2] - 8, box[3]), f"{weight:.1f}%", font_pct, color)
-
-        leaf_x0 = 760
-        leaf_x1 = 1650
-        parent_rows = work[work["parent_indicator"] == parent].sort_values("weight_percent", ascending=False).head(WEIGHT_TREE_MAX_LEAVES_PER_PARENT)
-        block_top = current_y
-        for leaf_idx, (_, leaf) in enumerate(parent_rows.iterrows()):
-            y = block_top + leaf_idx * row_h
-            weight = float(leaf["weight_percent"])
-            line_w = max(1, min(8, int(weight / max(root_total, 1) * 22)))
-            draw.line((box[2], (box[1] + box[3]) / 2, leaf_x0 - 22, y + row_h / 2), fill=color, width=line_w)
-            draw.rounded_rectangle((leaf_x0 - 24, y + 10, leaf_x1, y + 48), radius=10, fill="#FFFFFF", outline="#E1E7EF", width=1)
-            draw.ellipse((leaf_x0 - 34, y + 20, leaf_x0 - 18, y + 36), fill=color)
-            label = clean_text(leaf["indicator_name"])
-            draw_text_box(draw, (leaf_x0 - 2, y + 4, leaf_x1 - 120, y + 54), label, font_leaf, "#1F2933", "left", max_lines=2)
-            draw_text_right(draw, leaf_x1 - 14, y + 13, f"{weight:.1f}%", font_pct, "#52606D")
+        block_h = max(92, len(parent_rows) * row_h + 22)
+        parent_box = (parent_x0, current_y + max(0, (block_h - 80) / 2), parent_x1, current_y + max(0, (block_h - 80) / 2) + 80)
+        block_specs.append({"parent": parent, "rows": parent_rows, "weight": weight, "box": parent_box, "top": current_y, "height": block_h, "color": palette[idx % len(palette)]})
         current_y += block_h + group_gap
+
+    if block_specs:
+        spine_bottom = block_specs[-1]["top"] + block_specs[-1]["height"] - 24
+        line((root_box[2], (root_box[1] + root_box[3]) / 2, spine_x, (root_box[1] + root_box[3]) / 2), "#A9B1BC", 2)
+        line((spine_x, spine_top, spine_x, spine_bottom), "#D2D8E0", 3)
+
+    for item in block_specs:
+        parent = item["parent"]
+        parent_rows = item["rows"]
+        weight = item["weight"]
+        parent_box = item["box"]
+        block_top = item["top"]
+        block_h = item["height"]
+        color = item["color"]
+        parent_mid = (parent_box[1] + parent_box[3]) / 2
+        line((spine_x, parent_mid, parent_box[0], parent_mid), color, max(2, min(8, int(weight / max(root_total, 1.0) * 16))))
+        rounded(parent_box, 18, "#FFFFFF", color, 3)
+        rounded((parent_box[0] + 18, parent_box[1] + 52, parent_box[2] - 18, parent_box[1] + 62), 5, "#EEE6DC")
+        rounded((parent_box[0] + 18, parent_box[1] + 52, parent_box[0] + 18 + (parent_box[2] - parent_box[0] - 36) * weight / max(root_total, 1.0), parent_box[1] + 62), 5, color)
+        text_box((parent_box[0] + 18, parent_box[1] + 8, parent_box[2] - 118, parent_box[1] + 48), parent, font_parent, color, "left", max_lines=1)
+        text_right(parent_box[2] - 18, parent_box[1] + 10, f"{weight:.1f}%", font_parent_pct, color)
+
+        group_card = (leaf_x0 - 20, block_top - 4, leaf_x1 + 18, block_top + block_h - 14)
+        rounded(group_card, 18, "#FFFFFF", "#E9DED0", 1)
+        line((parent_box[2], parent_mid, leaf_x0 - 20, parent_mid), color, 2)
+        branch_x = leaf_x0 + 16
+        if len(parent_rows) > 1:
+            line((branch_x, block_top + 29, branch_x, block_top + (len(parent_rows) - 1) * row_h + 29), color, 2)
+        for leaf_idx, (_, leaf) in enumerate(parent_rows.iterrows()):
+            y = block_top + 8 + leaf_idx * row_h
+            weight = float(leaf["weight_percent"])
+            row_box = (leaf_x0 + 32, y, leaf_x1 - 12, y + 44)
+            if leaf_idx % 2 == 0:
+                rounded(row_box, 12, "#FBF8F2")
+            line((branch_x, y + 22, leaf_x0 + 32, y + 22), color, 2)
+            draw.ellipse(box((leaf_x0 + 5, y + 13, leaf_x0 + 19, y + 27)), fill=color)
+            label = clean_text(leaf["indicator_name"])
+            text_box((leaf_name_x, y + 3, leaf_bar_x - 28, y + 41), label, font_leaf, "#1F2933", "left", max_lines=1)
+            rounded((leaf_bar_x, y + 17, leaf_bar_x + leaf_bar_w, y + 29), 6, "#ECE6DD")
+            fill_w = max(6, leaf_bar_w * weight / max_leaf_weight)
+            rounded((leaf_bar_x, y + 17, leaf_bar_x + fill_w, y + 29), 6, color)
+            text_right(leaf_pct_x, y + 6, f"{weight:.1f}%", font_leaf_pct, "#263241")
+
     if len(work) > leaf_count:
-        draw.text((54, height - 38), "注：图中展示主要一级维度下权重较高的二级指标，完整权重明细保留在数据文件中。", font=font_note, fill="#697586")
-    save_png(image, out_path)
+        text(76, height - 58, "注：图中展示主要一级维度下权重较高的二级指标，完整权重明细保留在 chart_tree_data.csv 中。", font_note, "#8A7665")
+    else:
+        text(76, height - 58, "注：一级维度权重与二级指标权重均来自 chart_tree_data.csv，图中比例条按最大二级指标权重归一化。", font_note, "#8A7665")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(out_path, dpi=(300, 300))
+    with Image.open(out_path) as check:
+        check.verify()
 
 
 def build_weight_artifact(run_dir: Path, subject: dict[str, Any], source: str, artifact_id: str, title_source: str) -> dict[str, Any]:
     out = artifact_dir(run_dir, artifact_id)
     weights = read_weights()
-    area = expected_weight_area(subject, source)
-    df = pd.DataFrame()
-    for candidate in candidate_subject_areas(area):
-        df = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == candidate)].copy()
-        if not df.empty:
-            area = candidate
-            break
+    candidates = candidate_weight_areas(subject, source)
+    df, area = find_weight_subset(weights, source, candidates)
     if df.empty and source == "THE":
-        area = "自然科学"
-        df = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == area)].copy()
+        df, area = find_weight_subset(weights, source, ["自然科学"])
     if df.empty:
         return {"artifact_id": artifact_id, "status": "skipped", "reason": f"missing weight: {source}/{area}"}
     plot_df = df
@@ -938,6 +1130,7 @@ def build_weight_artifact(run_dir: Path, subject: dict[str, Any], source: str, a
         {
             "ranking_source": source,
             "ranking_subject_or_area": area,
+            "candidate_subject_or_areas": candidates[:12],
             "plot_rows": len(plot_df),
             "plot_weight_total": float(plot_df["weight_percent"].sum()),
             "chart_type": chart_type,
@@ -992,16 +1185,9 @@ def build_figure_02(run_dir: Path, subject: dict[str, Any]) -> dict[str, Any]:
     indicators = read_indicators()
     parts = []
     for source in RANKING_SOURCES:
-        area = expected_weight_area(subject, source)
-        subset = pd.DataFrame()
-        for candidate in candidate_subject_areas(area):
-            subset = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == candidate)].copy()
-            if not subset.empty:
-                area = candidate
-                break
+        subset, area = find_weight_subset(weights, source, candidate_weight_areas(subject, source))
         if subset.empty and source == "THE":
-            area = "自然科学"
-            subset = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == area)].copy()
+            subset, area = find_weight_subset(weights, source, ["自然科学"])
         if not subset.empty:
             plot_subset = subset
             first_level = subset[subset.get("indicator_level", "") == "一级指标"].copy() if "indicator_level" in subset.columns else pd.DataFrame()
@@ -1879,6 +2065,14 @@ def english_alias_keys_for_subject(subject: dict[str, Any]) -> set[str]:
             key = normalize_ascii_key(value)
             if key:
                 values.add(key)
+    for value in public_supplements.arwu_public_aliases(subject):
+        key = normalize_ascii_key(value)
+        if key:
+            values.add(key)
+    for value in public_supplements.source_aliases(subject, "软科"):
+        key = normalize_ascii_key(value)
+        if key:
+            values.add(key)
     return values
 
 
@@ -1944,7 +2138,7 @@ def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None
     font_axis = load_font(16)
     font_label = load_font(14)
     draw.text((70, 40), title, font=font_title, fill="#16202A")
-    draw.text((70, 82), "US News 分项指标排名趋势，数值越小表示相对排名越靠前", font=font_sub, fill="#5A6573")
+    draw.text((70, 82), "U.S. News 分项指标排名趋势，数值越小表示相对排名越靠前", font=font_sub, fill="#5A6573")
     plot = df.copy()
     plot["ranking_year"] = pd.to_numeric(plot["ranking_year"], errors="coerce")
     plot["indicator_value_num"] = pd.to_numeric(plot["indicator_value"], errors="coerce")
@@ -1998,7 +2192,7 @@ def build_usnews_indicator_history_trend(run_dir: Path, subject: dict[str, Any])
         return {"artifact_id": artifact_id, "status": "skipped", "reason": f"missing US News external indicator history for subject: {clean_text(subject.get('target_subject'))}"}
     df.to_csv(out / "chart_data.csv", index=False, encoding="utf-8-sig")
     df.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
-    render_indicator_trend(df, f"US News {clean_text(subject['target_subject'])}同济分项指标历史趋势", out / "chart.png")
+    render_indicator_trend(df, f"U.S. News {clean_text(subject['target_subject'])}同济分项指标历史趋势", out / "chart.png")
     years = sorted(pd.to_numeric(df["ranking_year"], errors="coerce").dropna().astype(int).unique().tolist())
     write_common_outputs(
         out,
@@ -2014,7 +2208,11 @@ def build_usnews_indicator_history_trend(run_dir: Path, subject: dict[str, Any])
 def build_usnews_candidate_weight(run_dir: Path, subject: dict[str, Any]) -> dict[str, Any]:
     artifact_id = "figure_05_usnews_indicator_weight"
     if not is_math_subject(subject):
-        return {"artifact_id": artifact_id, "status": "skipped", "reason": "US News candidate weight is math-only"}
+        return {
+            "artifact_id": artifact_id,
+            "status": "skipped",
+            "reason": "missing official US News target-subject weight; math-only candidate weight is intentionally not reused",
+        }
     out = artifact_dir(run_dir, artifact_id)
     df = read_external_csv(USNEWS_WEIGHT_CANDIDATE_CSV)
     if df.empty:
@@ -2025,7 +2223,7 @@ def build_usnews_candidate_weight(run_dir: Path, subject: dict[str, Any]) -> dic
     df.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
     tree_df = build_weight_tree_data(df[df["weight_percent"] > 0].copy())
     tree_df.to_csv(out / "chart_tree_data.csv", index=False, encoding="utf-8-sig")
-    render_weight_tree(tree_df, f"US News {clean_text(subject['target_subject'])}指标权重候选口径", out / "chart.png")
+    render_weight_tree(tree_df, f"U.S. News {clean_text(subject['target_subject'])}指标权重候选口径", out / "chart.png")
     write_common_outputs(
         out,
         artifact_id,
@@ -2611,7 +2809,7 @@ def build_subject_run_artifacts(
         append_builder_result(
             results,
             "figure_05_usnews_indicator_weight",
-            lambda: build_weight_artifact(run_dir, subject, "US News", "figure_05_usnews_indicator_weight", "US News"),
+            lambda: build_weight_artifact(run_dir, subject, "US News", "figure_05_usnews_indicator_weight", "U.S. News"),
         )
     elif USNEWS_WEIGHT_CANDIDATE_CSV.exists():
         append_builder_result(results, "figure_05_usnews_indicator_weight_candidate", lambda: build_usnews_candidate_weight(run_dir, subject))
@@ -2681,7 +2879,7 @@ def build_subject_run_artifacts(
             "US News",
             "table_06_usnews_mainland_peer_ranking",
             "figure_11_usnews_peer_indicator_relative_rank",
-            f"US News排名前200位内地高校{clean_text(subject['target_subject'])}分项指标相对排名",
+            f"U.S. News 排名前200位内地高校{clean_text(subject['target_subject'])}分项指标相对排名",
             True,
         ),
         (

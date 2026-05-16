@@ -17,7 +17,7 @@ TONGJI_49_COVERAGE_CSV = OUTPUT_DIR / "subject_coverage_audit" / "tongji_49_acad
 
 
 # 显式变量，避免命令行参数成为唯一入口。
-SUBJECT_RUN_DIR = OUTPUT_DIR / "subject_agent_runs" / "20260512_145658_0812_计算机科学与技术"
+SUBJECT_RUN_DIR: Path | None = None
 
 
 def now_text() -> str:
@@ -190,17 +190,28 @@ def build_manifest(run_dir: Path) -> dict[str, Any]:
     artifact_readiness = load_artifact_readiness(run_dir)
     decisions = build_slot_decisions(run_dir, template_policy, slot_rows, artifact_generation, artifact_readiness)
     included = [row for row in decisions if row["include_in_word"]]
+    excluded = [row for row in decisions if not row["include_in_word"]]
+    subject = summary.get("resolved_subject", {})
+    supplement_requires_disclosure = any(
+        bool(row.get("requires_disclosure")) for row in subject.get("public_supplements", [])
+    ) or any(
+        bool(row.get("requires_disclosure")) for row in subject.get("source_runtime_overrides", {}).values()
+    )
+    if excluded or supplement_requires_disclosure:
+        template_policy["requires_disclosure"] = True
+        if not clean_text(template_policy.get("disclosure_text")):
+            template_policy["disclosure_text"] = "本报告按当前可核验数据生成；缺失图表槽位会移除模板占位内容并写明数据缺口，不套用其他学科图表。"
     payload = {
         "generated_at": now_text(),
         "run_dir": str(run_dir),
         "request": summary.get("request", {}),
-        "subject": summary.get("resolved_subject", {}),
+        "subject": subject,
         "generation_status": generation_status,
         "template_policy": template_policy,
         "assembly_counts": {
             "slot_count": len(decisions),
             "included_slot_count": len(included),
-            "excluded_slot_count": len(decisions) - len(included),
+            "excluded_slot_count": len(excluded),
         },
         "slot_decisions": decisions,
         "maintenance_contract": {
@@ -217,6 +228,8 @@ def build_manifest(run_dir: Path) -> dict[str, Any]:
 
 
 def main() -> dict[str, Any]:
+    if SUBJECT_RUN_DIR is None:
+        raise ValueError("请先显式设置 SUBJECT_RUN_DIR，或通过 scripts/build_subject_word_report.py 调用本模块。")
     payload = build_manifest(SUBJECT_RUN_DIR)
     print(json.dumps({"manifest": payload["run_dir"], "assembly_counts": payload["assembly_counts"], "template_mode": payload["template_policy"]["template_mode"]}, ensure_ascii=False, indent=2))
     return payload

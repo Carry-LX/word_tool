@@ -13,6 +13,7 @@ from typing import Any
 import pandas as pd
 
 import agent_runtime
+import ranking_public_supplements as public_supplements
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -52,8 +53,8 @@ RECOMMENDED_PYTHON = agent_runtime.resolve_project_path(
 # 这个脚本仍然不使用命令行传参；换学科优先改 configs/runtime/current_subject_request.json。
 # 下面保留显式变量兜底，方便用户直接阅读和局部调试。
 TARGET_UNIVERSITY = agent_runtime.request_value(SUBJECT_REQUEST, "target_university", "同济大学")
-TARGET_SUBJECT = agent_runtime.request_value(SUBJECT_REQUEST, "target_subject", "计算机科学与技术")
-TARGET_SUBJECT_CODE = agent_runtime.request_value(SUBJECT_REQUEST, "target_subject_code", "0812")
+TARGET_SUBJECT = agent_runtime.request_value(SUBJECT_REQUEST, "target_subject", "")
+TARGET_SUBJECT_CODE = agent_runtime.request_value(SUBJECT_REQUEST, "target_subject_code", "")
 REPORT_YEAR = int(agent_runtime.request_value(SUBJECT_REQUEST, "report_year", 2026))
 
 # True 表示当目标仍是数学时，额外调用当前已验证的数学 artifact 生成流水线。
@@ -121,6 +122,30 @@ def candidate_subject_areas(value: Any) -> list[str]:
     normalized = re.sub(r"[、，,;；/]+", " ", text)
     parts = [part.strip() for part in normalized.split() if part.strip()] if re.search("[\u4e00-\u9fff]", normalized) else [text]
     return parts or [text]
+
+
+def ordered_unique(values: list[Any]) -> list[str]:
+    seen = set()
+    rows: list[str] = []
+    for value in values:
+        text = clean_text(value)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        rows.append(text)
+    return rows
+
+
+def valid_mapping_value(value: Any) -> str:
+    return public_supplements.valid_mapping_value(value)
+
+
+def add_alias_values(subject: dict[str, Any], source: str, values: list[Any]) -> int:
+    aliases = subject.setdefault("alias_summary", {})
+    current = list(aliases.get(source, []))
+    merged = ordered_unique(current + [valid_mapping_value(value) for value in values])
+    aliases[source] = merged
+    return max(0, len(merged) - len(current))
 
 
 def slug_text(value: str) -> str:
@@ -195,7 +220,7 @@ def resolve_subject() -> dict[str, Any]:
         .apply(lambda s: sorted({clean_text(x) for x in s if clean_text(x)}))
         .to_dict()
     )
-    return {
+    subject = {
         "target_university": TARGET_UNIVERSITY,
         "target_subject": TARGET_SUBJECT,
         "target_subject_code": TARGET_SUBJECT_CODE,
@@ -211,6 +236,15 @@ def resolve_subject() -> dict[str, Any]:
         "alias_summary": alias_summary,
         "alias_row_count": len(alias_rows),
     }
+    public_alias_count = 0
+    public_alias_count += add_alias_values(subject, "QS", public_supplements.qs_proxy_aliases(subject))
+    public_alias_count += add_alias_values(subject, "软科", public_supplements.arwu_public_aliases(subject))
+    for source in RANKING_SOURCES:
+        public_alias_count += add_alias_values(subject, source, public_supplements.source_aliases(subject, source))
+    subject["public_supplements"] = public_supplements.public_supplement_records(subject)
+    subject["public_supplement_alias_count"] = public_alias_count
+    subject["source_runtime_overrides"] = {}
+    return subject
 
 
 def query_ranking_records(subject_id: str) -> pd.DataFrame:
@@ -245,6 +279,77 @@ def query_ranking_records(subject_id: str) -> pd.DataFrame:
     for column in ["release_year", "ranking_year", "rank_midpoint"]:
         df[column] = pd.to_numeric(df[column], errors="coerce")
     return df.fillna("")
+
+
+def query_supplemental_ranking_records(subject: dict[str, Any]) -> pd.DataFrame:
+    alias_summary = subject.get("alias_summary", {})
+    supplement_records = subject.get("public_supplements", [])
+    supplement_sources = {
+        clean_text(row.get("ranking_source"))
+        for row in supplement_records
+        if clean_text(row.get("ranking_source"))
+    }
+    source_aliases = {
+        source: {normalize_key(value) for value in alias_summary.get(source, []) if normalize_key(value)}
+        for source in supplement_sources
+    }
+    source_aliases = {source: aliases for source, aliases in source_aliases.items() if aliases}
+    if not source_aliases:
+        return pd.DataFrame()
+
+    placeholders = ",".join(["?"] * len(source_aliases))
+    query = f"""
+    SELECT
+      f.fact_id,
+      f.ranking_source,
+      f.release_year,
+      f.ranking_year,
+      f.ranking_subject_raw,
+      f.university_name_cn,
+      f.university_name_en,
+      f.country_or_region,
+      f.is_mainland_china,
+      f.is_tongji,
+      f.rank_raw,
+      f.rank_midpoint,
+      f.total_score,
+      f.source_file,
+      f.source_sheet,
+      f.source_row,
+      f.ranking_subject_norm
+    FROM fact_ranking f
+    WHERE f.ranking_source IN ({placeholders})
+    """
+    with sqlite3.connect(SQLITE_PATH) as conn:
+        df = pd.read_sql_query(query, conn, params=list(source_aliases))
+    if df.empty:
+        return df
+    for column in ["release_year", "ranking_year", "rank_midpoint"]:
+        df[column] = pd.to_numeric(df[column], errors="coerce")
+    matched_parts = []
+    for source, aliases in source_aliases.items():
+        source_df = df[df["ranking_source"] == source].copy()
+        raw_keys = source_df["ranking_subject_raw"].map(normalize_key)
+        norm_keys = source_df["ranking_subject_norm"].map(normalize_key)
+        matched = source_df[raw_keys.isin(aliases) | norm_keys.isin(aliases)].copy()
+        if not matched.empty:
+            matched["ranking_subject_alias"] = matched["ranking_subject_raw"]
+            matched["alias_type"] = "runtime_public_supplement"
+            matched_parts.append(matched.drop(columns=["ranking_subject_norm"]))
+    if not matched_parts:
+        return pd.DataFrame()
+    return pd.concat(matched_parts, ignore_index=True).fillna("")
+
+
+def combine_ranking_records(primary: pd.DataFrame, supplemental: pd.DataFrame) -> pd.DataFrame:
+    if supplemental.empty:
+        return primary
+    if primary.empty:
+        return supplemental
+    combined = pd.concat([primary, supplemental], ignore_index=True).fillna("")
+    if "fact_id" in combined.columns:
+        combined = combined.drop_duplicates(subset=["fact_id"], keep="first").copy()
+    return combined
 
 
 def is_mainland(row: pd.Series) -> bool:
@@ -304,29 +409,90 @@ def read_weight_data() -> pd.DataFrame:
     return df
 
 
-def build_weight_availability(subject: dict[str, Any]) -> list[dict[str, Any]]:
-    weights = read_weight_data()
-    expected = {
-        "软科": clean_text(subject.get("arwu_subject_name")) or TARGET_SUBJECT,
-        "QS": clean_text(subject.get("qs_subject_name")) or TARGET_SUBJECT,
-        "US News": clean_text(subject.get("usnews_subject_name")) or TARGET_SUBJECT,
-        "THE": clean_text(subject.get("the_subject_area")) or "自然科学",
+def weight_candidate_values(subject: dict[str, Any], source: str, records: pd.DataFrame | None = None) -> list[str]:
+    overrides = subject.get("source_runtime_overrides", {}).get(source, {})
+    values: list[Any] = [overrides.get("weight_subject_or_area")]
+    if source == "软科":
+        values.extend([subject.get("arwu_subject_name"), TARGET_SUBJECT])
+    elif source == "QS":
+        values.extend([subject.get("qs_subject_name"), TARGET_SUBJECT])
+        values.extend(public_supplements.qs_proxy_aliases(subject))
+    elif source == "US News":
+        values.extend([subject.get("usnews_subject_name"), TARGET_SUBJECT])
+    elif source == "THE":
+        area = clean_text(subject.get("the_subject_area"))
+        if THE_WEIGHT_AREA_CROSSWALK_JSON.exists():
+            crosswalk = json.loads(THE_WEIGHT_AREA_CROSSWALK_JSON.read_text(encoding="utf-8"))
+            area = crosswalk.get(area, area)
+        values.extend([area, "自然科学"])
+    values.extend(subject.get("alias_summary", {}).get(source, []))
+    if records is not None and not records.empty:
+        source_records = records[records["ranking_source"] == source].copy()
+        if not source_records.empty:
+            latest = latest_source_rows(source_records, source)
+            values.extend(latest.get("ranking_subject_raw", pd.Series(dtype=str)).tolist())
+            values.extend(latest.get("ranking_subject_alias", pd.Series(dtype=str)).tolist())
+    candidates: list[str] = []
+    for value in ordered_unique([valid_mapping_value(value) for value in values]):
+        candidates.extend(candidate_subject_areas(value))
+    return ordered_unique(candidates)
+
+
+def find_weight_subset(weights: pd.DataFrame, source: str, candidates: list[str]) -> tuple[pd.DataFrame, str]:
+    weight_keys = {
+        normalize_key(area): area
+        for area in weights[weights["ranking_source"] == source]["ranking_subject_or_area"].drop_duplicates().tolist()
+        if clean_text(area)
     }
-    if THE_WEIGHT_AREA_CROSSWALK_JSON.exists():
-        crosswalk = json.loads(THE_WEIGHT_AREA_CROSSWALK_JSON.read_text(encoding="utf-8"))
-        expected["THE"] = crosswalk.get(expected["THE"], expected["THE"])
+    for candidate in candidates:
+        direct = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == candidate)].copy()
+        if not direct.empty:
+            return direct, candidate
+        mapped_area = weight_keys.get(normalize_key(candidate), "")
+        if mapped_area:
+            mapped = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == mapped_area)].copy()
+            if not mapped.empty:
+                return mapped, mapped_area
+    return pd.DataFrame(), candidates[0] if candidates else ""
+
+
+def attach_runtime_public_supplements(subject: dict[str, Any], records: pd.DataFrame) -> dict[str, Any]:
+    subject["source_runtime_overrides"] = dict(subject.get("source_runtime_overrides", {}))
+    qs_proxy = public_supplements.qs_proxy(subject)
+    if qs_proxy:
+        subject["source_runtime_overrides"]["QS"] = {
+            "weight_subject_or_area": valid_mapping_value(qs_proxy.get("proxy_subject_or_area")),
+            "ranking_subject_or_area": valid_mapping_value(qs_proxy.get("proxy_subject_or_area")),
+            "proxy_subject_en": valid_mapping_value(qs_proxy.get("proxy_subject_en")),
+            "proxy_level": clean_text(qs_proxy.get("proxy_level")),
+            "requires_disclosure": bool(qs_proxy.get("requires_disclosure")),
+            "reason": clean_text(qs_proxy.get("reason")),
+            "source_key": clean_text(qs_proxy.get("source_key")),
+        }
+
+    strategy = public_supplements.usnews_weight_strategy()
+    if strategy.get("prefer_actual_ranking_subject"):
+        weights = read_weight_data()
+        candidates = weight_candidate_values(subject, "US News", records)
+        subset, matched_area = find_weight_subset(weights, "US News", candidates)
+        if not subset.empty:
+            subject["source_runtime_overrides"]["US News"] = {
+                "weight_subject_or_area": matched_area,
+                "proxy_level": "actual_matched_ranking_subject",
+                "requires_disclosure": bool(strategy.get("requires_disclosure_when_inferred")),
+                "reason": clean_text(strategy.get("reason")),
+            }
+    return subject
+
+
+def build_weight_availability(subject: dict[str, Any], records: pd.DataFrame | None = None) -> list[dict[str, Any]]:
+    weights = read_weight_data()
     rows = []
-    for source, subject_area in expected.items():
-        subset = pd.DataFrame()
-        matched_area = subject_area
-        for candidate in candidate_subject_areas(subject_area):
-            subset = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == candidate)].copy()
-            if not subset.empty:
-                matched_area = candidate
-                break
+    for source in RANKING_SOURCES:
+        candidates = weight_candidate_values(subject, source, records)
+        subset, matched_area = find_weight_subset(weights, source, candidates)
         if subset.empty and source == "THE":
-            subset = weights[(weights["ranking_source"] == source) & (weights["ranking_subject_or_area"] == "自然科学")].copy()
-            matched_area = "自然科学" if not subset.empty else matched_area
+            subset, matched_area = find_weight_subset(weights, source, ["自然科学"])
         primary_subset = subset
         if not subset.empty and "indicator_level" in subset.columns:
             first_level = subset[subset["indicator_level"] == "一级指标"].copy()
@@ -335,7 +501,8 @@ def build_weight_availability(subject: dict[str, Any]) -> list[dict[str, Any]]:
         rows.append(
             {
                 "ranking_source": source,
-                "expected_subject_or_area": matched_area if not subset.empty else subject_area,
+                "expected_subject_or_area": matched_area,
+                "candidate_subject_or_areas": " | ".join(candidates[:10]),
                 "weight_rows": len(subset),
                 "weight_total": round(float(primary_subset["weight_percent"].sum()), 4) if not primary_subset.empty else 0,
                 "data_status": "available" if not subset.empty else "missing_weight",
@@ -486,9 +653,23 @@ def build_artifact_readiness(
         return int(indicator_by_source.get(source, {}).get("year_count") or 0) >= min_years
 
     has_paper_metrics = bool(paper_metric_sources.get("has_paper_metric_source"))
+    overview_source_count = sum(has_tongji(s) for s in RANKING_SOURCES)
+    commonality_source_count = sum((has_weight(s) or has_indicators(s)) for s in RANKING_SOURCES)
     readiness_specs = [
-        ("figure_01_tongji_subject_ranking_overview", "chart", "四大排名概览", all(has_tongji(s) for s in RANKING_SOURCES), "需要四大榜单均有同济最新排名。"),
-        ("figure_02_ranking_indicator_commonality", "chart", "指标共性图", has_weight("软科") and has_weight("QS") and has_weight("THE"), "US News 权重缺失时只能展示指标覆盖，不能展示权重。"),
+        (
+            "figure_01_tongji_subject_ranking_overview",
+            "chart",
+            "多榜单排名概览",
+            overview_source_count >= 2,
+            f"至少两个榜单有同济最新排名即可生成概览；当前可用 {overview_source_count} 个榜单，缺失榜单应在图注或数据缺口中说明。",
+        ),
+        (
+            "figure_02_ranking_indicator_commonality",
+            "chart",
+            "指标共性图",
+            commonality_source_count >= 2,
+            f"至少两个榜单有权重或同济分项指标即可生成共性图；当前可用 {commonality_source_count} 个榜单，缺权重来源按指标覆盖数量展示。",
+        ),
         ("figure_03_arwu_indicator_weight", "chart", "软科权重图", has_weight("软科"), "需要软科目标学科权重。"),
         ("figure_04_qs_indicator_weight", "chart", "QS 权重图", has_weight("QS"), "需要 QS 目标学科权重。"),
         ("figure_05_usnews_indicator_weight", "chart", "US News 权重图", has_weight("US News"), "需要 US News 目标学科权重。"),
@@ -602,6 +783,7 @@ def write_markdown_report(
         f"- target_subject_code: {TARGET_SUBJECT_CODE}",
         f"- subject_id: {subject['subject_id']}",
         f"- alias_row_count: {subject['alias_row_count']}",
+        f"- public_supplement_alias_count: {subject.get('public_supplement_alias_count', 0)}",
         f"- ready_artifacts: {ready_count}/{len(readiness_rows)}",
         "",
         "## 一句话结论",
@@ -618,6 +800,15 @@ def write_markdown_report(
             f"| {row['ranking_source']} | {row['latest_release_year']} | {row['latest_ranking_year']} | "
             f"{row['tongji_latest_rank']} | {row['mainland_top200_rows']} | {row['data_status']} |"
         )
+    public_records = subject.get("public_supplements", [])
+    if public_records:
+        lines.extend(["", "## 公开来源补充", "", "| 榜单 | 补充类型 | 学科/领域 | 口径级别 | 是否披露 | 依据 |", "| --- | --- | --- | --- | --- | --- |"])
+        for row in public_records:
+            lines.append(
+                f"| {row.get('ranking_source', '')} | {row.get('supplement_type', '')} | "
+                f"{row.get('subject_or_area', '')} | {row.get('proxy_level', '')} | "
+                f"{row.get('requires_disclosure', '')} | {row.get('source_key', '')} |"
+            )
     lines.extend(["", "## 权重数据可用性", "", "| 榜单 | 预期学科/领域 | 权重行数 | 权重合计 | 状态 |", "| --- | --- | ---: | ---: | --- |"])
     for row in weight_rows:
         lines.append(
@@ -732,6 +923,7 @@ def write_run_manifest(
             "ranking_availability": str(run_dir / "ranking_availability.csv"),
             "weight_availability": str(run_dir / "weight_availability.csv"),
             "indicator_availability": str(run_dir / "indicator_availability.csv"),
+            "public_ranking_source_supplements": str(run_dir / "public_ranking_source_supplements.csv"),
             "artifact_readiness": str(run_dir / "artifact_readiness.csv"),
             "data_gap_report": str(run_dir / "data_gap_report.csv"),
             "artifacts_dir": str(run_dir / "artifacts"),
@@ -761,11 +953,12 @@ def run_subject_agent() -> dict[str, Any]:
     run_slug = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{TARGET_SUBJECT_CODE}_{slug_text(TARGET_SUBJECT)}"
     run_dir = OUTPUT_DIR / run_slug
     run_dir.mkdir(parents=True, exist_ok=True)
-    request_info = write_current_request(run_dir, subject)
 
-    records = query_ranking_records(subject["subject_id"])
+    records = combine_ranking_records(query_ranking_records(subject["subject_id"]), query_supplemental_ranking_records(subject))
+    subject = attach_runtime_public_supplements(subject, records)
+    request_info = write_current_request(run_dir, subject)
     ranking_rows, ranking_summary = build_ranking_availability(records)
-    weight_rows = build_weight_availability(subject)
+    weight_rows = build_weight_availability(subject, records)
     indicator_rows = build_indicator_availability(subject)
     paper_metric_sources = detect_paper_metric_sources()
     readiness_rows, gaps = build_artifact_readiness(ranking_rows, weight_rows, indicator_rows, paper_metric_sources)
@@ -774,6 +967,24 @@ def run_subject_agent() -> dict[str, Any]:
     write_csv(run_dir / "weight_availability.csv", weight_rows, list(weight_rows[0].keys()))
     write_csv(run_dir / "indicator_availability.csv", indicator_rows, list(indicator_rows[0].keys()))
     write_csv(run_dir / "artifact_readiness.csv", readiness_rows, list(readiness_rows[0].keys()))
+    public_rows = subject.get("public_supplements", [])
+    if public_rows:
+        write_csv(run_dir / "public_ranking_source_supplements.csv", public_rows, list(public_rows[0].keys()))
+    else:
+        write_csv(
+            run_dir / "public_ranking_source_supplements.csv",
+            [],
+            [
+                "ranking_source",
+                "supplement_type",
+                "subject_or_area",
+                "subject_or_area_en",
+                "proxy_level",
+                "requires_disclosure",
+                "reason",
+                "source_key",
+            ],
+        )
     (run_dir / "paper_metric_source_scan.json").write_text(json.dumps(paper_metric_sources, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     if gaps:
         write_csv(run_dir / "data_gap_report.csv", gaps, list(gaps[0].keys()))
