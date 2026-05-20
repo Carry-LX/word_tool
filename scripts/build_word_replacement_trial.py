@@ -150,6 +150,11 @@ def artifact_png_path(artifact_id: str) -> Path | None:
     return None
 
 
+def artifact_svg_path(artifact_id: str) -> Path | None:
+    path = SUBJECT_RUN_DIR / "artifacts" / artifact_id / "chart.svg"
+    return path if path.exists() else None
+
+
 def artifact_matrix_path(artifact_id: str) -> Path | None:
     path = SUBJECT_RUN_DIR / "artifacts" / artifact_id / "table_matrix.csv"
     return path if path.exists() else None
@@ -202,6 +207,54 @@ def extract_template_image_targets(docx_path: Path) -> dict[int, str]:
     return image_targets
 
 
+def extract_template_image_refs(docx_path: Path) -> dict[int, dict[str, str]]:
+    with ZipFile(docx_path) as zip_file:
+        document_xml = zip_file.read("word/document.xml")
+        rels_xml = zip_file.read("word/_rels/document.xml.rels")
+
+    root = ET.fromstring(document_xml)
+    rel_root = ET.fromstring(rels_xml)
+    rels = {rel.attrib.get("Id", ""): rel.attrib.get("Target", "") for rel in rel_root}
+
+    image_refs: dict[int, dict[str, str]] = {}
+    image_index = 0
+    for drawing in root.findall(".//w:drawing", NS):
+        blip = drawing.find(".//a:blip", NS)
+        if blip is None:
+            continue
+        rel_id = blip.attrib.get(f"{{{NS['r']}}}embed", "")
+        target = rels.get(rel_id, "")
+        if target.startswith("media/"):
+            image_index += 1
+            image_refs[image_index] = {
+                "rel_id": rel_id,
+                "target": target,
+                "target_member": f"word/{target}",
+            }
+    return image_refs
+
+
+def iter_visible_figure_rows(rows: list[dict[str, str]]) -> list[tuple[int, dict[str, str]]]:
+    visible_rows: list[tuple[int, dict[str, str]]] = []
+    visible_image_index = 0
+    for row in rows:
+        is_embedded_figure = row.get("slot_kind") == "figure" and bool(row.get("reference_media"))
+        is_caption_only_figure = row.get("slot_kind") == "figure_caption_without_embedded_object"
+        if not is_embedded_figure and not is_caption_only_figure:
+            continue
+        visible_image_index += 1
+        visible_rows.append((visible_image_index, row))
+    return visible_rows
+
+
+def visible_figure_index_map(rows: list[dict[str, str]]) -> dict[str, int]:
+    return {
+        row.get("logical_slot_id", ""): visible_index
+        for visible_index, row in iter_visible_figure_rows(rows)
+        if row.get("logical_slot_id")
+    }
+
+
 def replace_zip_members(source_docx: Path, target_docx: Path, replacements: dict[str, Path]) -> None:
     temp_docx = target_docx.with_suffix(".tmp.docx")
     with ZipFile(source_docx, "r") as zin, ZipFile(temp_docx, "w", ZIP_DEFLATED) as zout:
@@ -223,6 +276,63 @@ def replace_docx_xml_member(docx_path: Path, member_name: str, xml_bytes: bytes)
             else:
                 zout.writestr(item, zin.read(item.filename))
     temp_docx.replace(docx_path)
+
+
+def inject_svg_image_relationships(docx_path: Path, svg_replacements: list[dict[str, str]]) -> int:
+    if not svg_replacements:
+        return 0
+
+    new_members = {
+        item["new_member"]: Path(item["svg_path"]).read_bytes()
+        for item in svg_replacements
+        if Path(item["svg_path"]).exists()
+    }
+    if not new_members:
+        return 0
+
+    temp_docx = docx_path.with_suffix(".tmp.docx")
+    changed = 0
+    with ZipFile(docx_path, "r") as zin, ZipFile(temp_docx, "w", ZIP_DEFLATED) as zout:
+        existing_members = set(zin.namelist())
+        old_members = {
+            f"word/{item['old_target']}"
+            for item in svg_replacements
+            if item.get("old_target") and not item["old_target"].lower().endswith(".svg")
+        }
+        for zip_item in zin.infolist():
+            if zip_item.filename in new_members:
+                continue
+            if zip_item.filename in old_members:
+                changed += 1
+                continue
+            data = zin.read(zip_item.filename)
+            if zip_item.filename == "word/_rels/document.xml.rels":
+                text = data.decode("utf-8")
+                for item in svg_replacements:
+                    old_target = item["old_target"]
+                    new_target = item["new_target"]
+                    old_text = f'Target="{old_target}"'
+                    new_text = f'Target="{new_target}"'
+                    if old_text in text:
+                        text = text.replace(old_text, new_text, 1)
+                        changed += 1
+                data = text.encode("utf-8")
+            elif zip_item.filename == "[Content_Types].xml":
+                text = data.decode("utf-8")
+                if 'Extension="svg"' not in text:
+                    text = text.replace(
+                        "</Types>",
+                        '<Default Extension="svg" ContentType="image/svg+xml"/></Types>',
+                    )
+                    changed += 1
+                data = text.encode("utf-8")
+            zout.writestr(zip_item, data)
+        for member_name, payload in new_members.items():
+            if member_name not in existing_members:
+                changed += 1
+            zout.writestr(member_name, payload)
+    temp_docx.replace(docx_path)
+    return changed
 
 
 def content_width_emu(document: Document) -> int:
@@ -1270,6 +1380,86 @@ def insert_image_after_paragraph(document: Document, paragraph: Paragraph, image
     inserted.add_run().add_picture(str(image_path), width=Emu(content_width_emu(document)))
 
 
+def insert_caption_after_paragraph(paragraph: Paragraph, caption_text: str) -> Paragraph:
+    new_element = OxmlElement("w:p")
+    paragraph._element.addnext(new_element)
+    inserted = Paragraph(new_element, paragraph._parent)
+    inserted.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    inserted.paragraph_format.space_before = Pt(2)
+    inserted.paragraph_format.space_after = Pt(6)
+    run = inserted.add_run(caption_text)
+    run.font.name = "SimSun"
+    run.font.size = Pt(10.5)
+    return inserted
+
+
+def insert_qs_peer_indicator_figure(document: Document) -> list[dict[str, Any]]:
+    artifact_id = "figure_10_qs_peer_indicator_relative_rank"
+    image_path = artifact_png_path(artifact_id)
+    rows = read_artifact_rows(artifact_id, "chart_data.csv")
+    if image_path is None or not rows:
+        return [
+            {
+                "slot": "qs_peer_indicator_insert",
+                "artifact_id": artifact_id,
+                "operation": "insert_qs_peer_indicator_figure",
+                "status": "skipped",
+                "reason": "artifact_not_generated",
+            }
+        ]
+
+    subject_name = read_target_subject_name()
+    indicator_count = len(rows)
+    peer_sizes = [to_number(row.get("peer_scope_size", "")) for row in rows]
+    peer_count = int(max([value for value in peer_sizes if value is not None] or [0]))
+    summary = (
+        f"QS 已具备 2026 年分项指标数据，可对前200位内地高校样本进行最新年对标。"
+        f"本图围绕{subject_name}学科的{indicator_count}个 QS 分项指标，展示同济大学相对同行高校的位置；"
+        "多年趋势仍需待 2023-2025 年 QS 分项指标结构化后再展开。"
+    )
+    if peer_count:
+        summary = summary.replace("前200位内地高校样本", f"前200位内地高校样本（{peer_count}所）")
+
+    target: Paragraph | None = None
+    for paragraph in document.paragraphs:
+        text = paragraph_text(paragraph)
+        if "当前尚未形成 QS 分项指标相对排名图" in text or "本报告将 QS 作为综合位次与同行梯队参考" in text:
+            target = paragraph
+            break
+    if target is None:
+        for paragraph in document.paragraphs:
+            text = paragraph_text(paragraph)
+            if "3、U.S.News学科排名" in text or "3、U.S. News学科排名" in text or "3、U.S. News 学科排名" in text:
+                target = paragraph.insert_paragraph_before()
+                break
+    if target is None:
+        return [
+            {
+                "slot": "qs_peer_indicator_insert",
+                "artifact_id": artifact_id,
+                "operation": "insert_qs_peer_indicator_figure",
+                "status": "skipped",
+                "reason": "target_paragraph_not_found",
+            }
+        ]
+
+    set_paragraph_text_with_template_style(target, summary, paragraph_run_style(target))
+    insert_image_after_paragraph(document, target, image_path)
+    image_paragraph = Paragraph(target._p.getnext(), target._parent)
+    insert_caption_after_paragraph(image_paragraph, f"图 10、QS排名前200位内地高校{subject_name}分项指标相对排名")
+    return [
+        {
+            "slot": "qs_peer_indicator_insert",
+            "artifact_id": artifact_id,
+            "operation": "insert_qs_peer_indicator_figure",
+            "status": "ok",
+            "source_png": str(image_path),
+            "indicator_count": indicator_count,
+            "peer_count": peer_count,
+        }
+    ]
+
+
 def replace_tables_and_caption_only_figures(rows: list[dict[str, str]], source_docx: Path, target_docx: Path) -> list[dict[str, Any]]:
     document = Document(str(source_docx))
     log_rows: list[dict[str, Any]] = []
@@ -1390,7 +1580,7 @@ def find_table_matrix_for_audit(document: Document, expected_matrix: list[list[s
 
 def audit_replacements(rows: list[dict[str, str]], output_docx: Path) -> list[dict[str, Any]]:
     audit_rows: list[dict[str, Any]] = []
-    image_targets = extract_template_image_targets(TEMPLATE_DOCX)
+    image_targets = extract_template_image_targets(output_docx)
 
     with ZipFile(output_docx) as zip_file:
         docx_members = set(zip_file.namelist())
@@ -1399,18 +1589,45 @@ def audit_replacements(rows: list[dict[str, str]], output_docx: Path) -> list[di
             for member in docx_members
             if member.startswith("word/media/")
         }
+    visible_media_hashes = {
+        member: docx_media_hashes[member]
+        for member in image_targets.values()
+        if member in docx_media_hashes
+    }
 
     document = Document(str(output_docx))
+    visible_index_by_slot = visible_figure_index_map(rows)
 
     for row in rows:
         artifact_id = row["artifact_id"]
         if row["slot_kind"] == "figure" and row["reference_media"]:
-            image_index = parse_slot_index(row["reference_object"], "image_")
-            target_member = image_targets.get(image_index or -1, "")
+            source_path = artifact_svg_path(artifact_id) or artifact_png_path(artifact_id)
+            source_hash = sha256_bytes(source_path.read_bytes()) if source_path else ""
+            visible_index = visible_index_by_slot.get(row["logical_slot_id"], -1)
+            target_member = image_targets.get(visible_index, "")
+            target_hash = docx_media_hashes.get(target_member, "")
+            matching_targets = [member for member, docx_hash in visible_media_hashes.items() if source_hash and source_hash == docx_hash]
+            status = "ok" if source_hash and target_hash == source_hash else "mismatch"
+            audit_rows.append(
+                {
+                    "logical_slot_id": row["logical_slot_id"],
+                    "slot_kind": row["slot_kind"],
+                    "artifact_id": artifact_id,
+                    "expected_source": str(source_path) if source_path else "",
+                    "docx_target": target_member,
+                    "matching_visible_targets": ";".join(matching_targets),
+                    "check": "visible_media_hash_equal_at_slot_order",
+                    "status": status,
+                    "visible_image_index": visible_index,
+                }
+            )
+        elif row["slot_kind"] == "figure_caption_without_embedded_object":
             source_png = artifact_png_path(artifact_id)
             source_hash = sha256_bytes(source_png.read_bytes()) if source_png else ""
-            docx_hash = docx_media_hashes.get(target_member, "")
-            status = "ok" if source_hash and source_hash == docx_hash else "mismatch"
+            visible_index = visible_index_by_slot.get(row["logical_slot_id"], -1)
+            target_member = image_targets.get(visible_index, "")
+            target_hash = docx_media_hashes.get(target_member, "")
+            status = "ok" if source_hash and target_hash == source_hash else "mismatch"
             audit_rows.append(
                 {
                     "logical_slot_id": row["logical_slot_id"],
@@ -1418,23 +1635,9 @@ def audit_replacements(rows: list[dict[str, str]], output_docx: Path) -> list[di
                     "artifact_id": artifact_id,
                     "expected_source": str(source_png) if source_png else "",
                     "docx_target": target_member,
-                    "check": "media_hash_equal",
+                    "check": "visible_media_hash_equal_at_slot_order",
                     "status": status,
-                }
-            )
-        elif row["slot_kind"] == "figure_caption_without_embedded_object":
-            source_png = artifact_png_path(artifact_id)
-            source_hash = sha256_bytes(source_png.read_bytes()) if source_png else ""
-            status = "ok" if source_hash in docx_media_hashes.values() else "mismatch"
-            audit_rows.append(
-                {
-                    "logical_slot_id": row["logical_slot_id"],
-                    "slot_kind": row["slot_kind"],
-                    "artifact_id": artifact_id,
-                    "expected_source": str(source_png) if source_png else "",
-                    "docx_target": "new media relationship after caption",
-                    "check": "media_hash_present",
-                    "status": status,
+                    "visible_image_index": visible_index,
                 }
             )
         elif row["slot_kind"] == "table":
@@ -1539,6 +1742,135 @@ def replace_embedded_images(rows: list[dict[str, str]], source_docx: Path, targe
 
     if replacements:
         replace_zip_members(target_docx, target_docx, replacements)
+    return log_rows
+
+
+def inject_available_svg_images(rows: list[dict[str, str]], docx_path: Path) -> list[dict[str, Any]]:
+    image_refs = extract_template_image_refs(docx_path)
+    visible_index_by_slot = visible_figure_index_map(rows)
+    svg_replacements: list[dict[str, str]] = []
+    log_rows: list[dict[str, Any]] = []
+    for row in rows:
+        if row["slot_kind"] != "figure" or not row["reference_media"]:
+            continue
+        svg_path = artifact_svg_path(row["artifact_id"])
+        visible_image_index = visible_index_by_slot.get(row["logical_slot_id"])
+        image_ref = image_refs.get(visible_image_index or -1, {})
+        if svg_path is None or visible_image_index is None or not image_ref:
+            continue
+        old_target = image_ref["target"]
+        if old_target.lower().endswith(".svg"):
+            log_rows.append(
+                {
+                    "slot": row["logical_slot_id"],
+                    "artifact_id": row["artifact_id"],
+                    "operation": "prepare_svg_image_relationship",
+                    "status": "skipped",
+                    "reason": "already_svg",
+                    "visible_image_index": visible_image_index,
+                    "old_target": old_target,
+                    "source_svg": str(svg_path),
+                }
+            )
+            continue
+        new_target = re.sub(r"\.[A-Za-z0-9]+$", ".svg", old_target)
+        new_member = f"word/{new_target}"
+        svg_replacements.append(
+            {
+                "slot": row["logical_slot_id"],
+                "artifact_id": row["artifact_id"],
+                "old_target": old_target,
+                "new_target": new_target,
+                "new_member": new_member,
+                "svg_path": str(svg_path),
+            }
+        )
+        log_rows.append(
+            {
+                "slot": row["logical_slot_id"],
+                "artifact_id": row["artifact_id"],
+                "operation": "prepare_svg_image_relationship",
+                "status": "ok",
+                "visible_image_index": visible_image_index,
+                "old_target": old_target,
+                "new_target": new_target,
+                "source_svg": str(svg_path),
+            }
+        )
+    svg_change_count = inject_svg_image_relationships(docx_path, svg_replacements)
+    if svg_replacements:
+        log_rows.append(
+            {
+                "operation": "inject_svg_image_relationships",
+                "status": "ok" if svg_change_count else "skipped",
+                "svg_count": len(svg_replacements),
+                "changed_items": svg_change_count,
+            }
+        )
+    return log_rows
+
+
+def append_replacement_log(extra_operations: list[dict[str, Any]], audit_rows: list[dict[str, Any]]) -> None:
+    if REPLACEMENT_LOG_JSON.exists():
+        payload = json.loads(REPLACEMENT_LOG_JSON.read_text(encoding="utf-8"))
+    else:
+        payload = {
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "template_docx": str(TEMPLATE_DOCX),
+            "subject_run_dir": str(SUBJECT_RUN_DIR),
+            "output_docx": str(OUTPUT_DOCX),
+            "operations": [],
+        }
+    operations = payload.setdefault("operations", [])
+    operations.extend(extra_operations)
+    payload["summary"] = {
+        "ok": sum(1 for item in operations if item.get("status") == "ok"),
+        "skipped": sum(1 for item in operations if item.get("status") == "skipped"),
+        "audit_ok": sum(1 for item in audit_rows if item["status"] == "ok"),
+        "audit_mismatch": sum(1 for item in audit_rows if item["status"] != "ok"),
+    }
+    REPLACEMENT_LOG_JSON.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+
+
+def replace_visible_figure_media_by_order(rows: list[dict[str, str]], docx_path: Path) -> list[dict[str, Any]]:
+    image_targets = extract_template_image_targets(docx_path)
+    replacements: dict[str, Path] = {}
+    log_rows: list[dict[str, Any]] = []
+    for visible_image_index, row in iter_visible_figure_rows(rows):
+        image_path = artifact_png_path(row.get("artifact_id", ""))
+        target_member = image_targets.get(visible_image_index, "")
+        if image_path is None or not target_member:
+            log_rows.append(
+                {
+                    "slot": row.get("logical_slot_id", ""),
+                    "artifact_id": row.get("artifact_id", ""),
+                    "operation": "replace_visible_figure_media_by_order",
+                    "status": "skipped",
+                    "visible_image_index": visible_image_index,
+                    "reason": "missing_png_or_visible_target",
+                }
+            )
+            continue
+        replacements[target_member] = image_path
+        log_rows.append(
+            {
+                "slot": row.get("logical_slot_id", ""),
+                "artifact_id": row.get("artifact_id", ""),
+                "operation": "replace_visible_figure_media_by_order",
+                "status": "ok",
+                "visible_image_index": visible_image_index,
+                "target_member": target_member,
+                "source_png": str(image_path),
+            }
+        )
+    if replacements:
+        replace_zip_members(docx_path, docx_path, replacements)
+    return log_rows
+
+
+def refresh_visible_figure_media(rows: list[dict[str, str]], docx_path: Path) -> list[dict[str, Any]]:
+    log_rows = replace_visible_figure_media_by_order(rows, docx_path)
+    log_rows.extend(inject_available_svg_images(rows, docx_path))
     return log_rows
 
 
@@ -1681,12 +2013,47 @@ def ensure_page_break_before_first_body_heading(document: Document) -> int:
     return 0
 
 
+def summarize_qs_comprehensive_history_for_residual_text(subject_name: str, qs_subject_name: str) -> str:
+    rows = [
+        row
+        for row in read_artifact_rows("figure_07_all_rankings_history", "chart_data.csv")
+        if clean_text(row.get("ranking_source", "")).upper() == "QS"
+    ]
+    if not rows:
+        return ""
+    rows = sorted(rows, key=lambda row: to_number(row.get("ranking_year", "")) or to_number(row.get("release_year", "")) or 0)
+    first = rows[0]
+    latest = rows[-1]
+    first_year = int(to_number(first.get("ranking_year", "")) or to_number(first.get("release_year", "")) or 0)
+    latest_year = int(to_number(latest.get("ranking_year", "")) or to_number(latest.get("release_year", "")) or 0)
+    first_mid = to_number(first.get("rank_midpoint", ""))
+    latest_mid = to_number(latest.get("rank_midpoint", ""))
+    subject_label = clean_text(qs_subject_name) or clean_text(first.get("ranking_subject_raw", "")) or subject_name
+    if first_mid is not None and latest_mid is not None and len(rows) >= 2:
+        direction = "明显提升" if latest_mid < first_mid else "有所回落" if latest_mid > first_mid else "基本稳定"
+        return (
+            f"QS 已形成可核验的综合位次历史序列，当前采用“{subject_label}”口径："
+            f"{first_year}年为{rank_text(first)}，{latest_year}年为{rank_text(latest)}，"
+            f"区间中位位次约由{first_mid:g}变为{latest_mid:g}，整体{direction}。"
+            "这说明 QS 不只是背景参考，也可作为观察国际声誉和同行竞争位势的重要证据；"
+            "分项归因仍需待声誉、雇主评价、篇均被引和 H 指数等多年指标进一步结构化后展开。"
+        )
+    latest_year_text = f"{latest_year}年" if latest_year else "最新年份"
+    return (
+        f"QS 学科排名已有{subject_name}学科综合位次记录，当前采用“{subject_label}”口径，"
+        f"{latest_year_text}位次为{rank_text(latest)}。该结果可用于观察综合竞争位置；"
+        "分项指标多年历史尚未完全结构化，后续应补齐声誉、雇主评价、篇均被引和 H 指数等口径后再展开归因。"
+    )
+
+
 def replace_residual_template_paragraphs(document: Document) -> int:
     subject_name = read_target_subject_name()
     qs_subject_name = resolved_subject_value("qs_subject_name", subject_name)
     qs_available = bool(qs_subject_name and qs_subject_name not in {"无", "暂无", "无直接口径"})
+    qs_history_summary = summarize_qs_comprehensive_history_for_residual_text(subject_name, qs_subject_name)
     qs_history_text = (
-        f"当前 QS 学科排名可用于观察{subject_name}学科综合位次和同行梯队，但本地数据暂未形成可与 U.S. News、THE 直接对应的多年分项历史表；因此本节主要把 QS 作为综合趋势参考。"
+        qs_history_summary
+        or f"当前 QS 学科排名可用于观察{subject_name}学科综合位次和同行梯队，但本地数据暂未形成可与 U.S. News、THE 直接对应的多年分项历史表；因此本节主要把 QS 作为综合趋势参考。"
         if qs_available
         else f"当前{subject_name}学科暂无 QS 直接学科排名历史口径，本节不使用其他学科或宽泛领域替代；待补充 QS 口径后再纳入综合趋势比较。"
     )
@@ -1701,12 +2068,12 @@ def replace_residual_template_paragraphs(document: Document) -> int:
         else f"当前{subject_name}学科暂无 QS 分项指标相对排名图，本报告不套用模板中的 QS 图表；待补充 QS 分项数据后再纳入对标分析。"
     )
     conclusion_text = (
-        f"综合四类学科排名和论文指标看，同济大学{subject_name}学科在 U.S. News 中位次相对靠前，在 QS、THE 和部分论文质量指标上仍有提升空间。下一阶段建设应同时关注国际榜单口径差异、论文质量结构和国际合作网络。"
+        f"综合四类学科排名和论文指标看，同济大学{subject_name}学科在 U.S. News 中位次相对靠前，在 QS、THE 和部分论文质量指标上仍有提升空间。下一阶段应同时关注榜单口径差异、论文质量结构和国际合作网络。"
         if qs_available
         else f"综合当前可核验的学科排名和论文指标看，同济大学{subject_name}学科在 U.S. News 中位次相对靠前，软科、THE 和部分论文质量指标仍有提升空间；QS 暂无直接口径，后续应在补齐数据后再纳入判断。"
     )
     suggestion_text = (
-        "针对软科、QS 和 THE，应分别关注高水平成果与高被引学者、学术声誉与雇主声誉、研究质量与国际展望等维度；这些方向需要与学院人才引育、标志性成果培育和国际合作组织能力同步推进。"
+        "针对软科、QS 和 THE，应分别补强高水平成果、声誉评价、研究质量与国际合作，并纳入学院年度建设任务。"
         if qs_available
         else "针对软科和 THE，应分别关注高水平成果与高被引学者、研究质量与国际展望等维度；QS 相关学术声誉和雇主声誉指标待直接口径补齐后再纳入建设清单。"
     )
@@ -1753,7 +2120,7 @@ def normalize_report_brand_names(document: Document) -> int:
         text = paragraph_text(paragraph)
         if not text:
             continue
-        replacement = re.sub(r"U\.S\.\s*News", "U.S. News", text)
+        replacement = re.sub(r"U\.\s*S\.\s*News", "U.S. News", text)
         replacement = re.sub(r"US News(?=\d|\s|排名|学科|分项|中|、|，|。|$)", "U.S. News", replacement)
         replacement = replacement.replace("U.S. News学科", "U.S. News 学科")
         replacement = replacement.replace("U.S. News排名", "U.S. News 排名")
@@ -1791,6 +2158,30 @@ def remove_trailing_empty_paragraphs(document: Document) -> int:
         body.remove(last_content)
         removed += 1
         children = list(body)
+    return removed
+
+
+def remove_empty_paragraphs_before_section_breaks(document: Document) -> int:
+    body = document._body._element
+    removed = 0
+    changed = True
+    while changed:
+        changed = False
+        children = list(body)
+        for index, child in enumerate(children):
+            if child.tag != qn("w:p") or child.find(".//" + qn("w:sectPr")) is None:
+                continue
+            prev_index = index - 1
+            while prev_index >= 0:
+                prev = list(body)[prev_index]
+                if prev.tag != qn("w:p") or not is_empty_paragraph_element(prev):
+                    break
+                body.remove(prev)
+                removed += 1
+                changed = True
+                prev_index -= 1
+            if changed:
+                break
     return removed
 
 
@@ -1851,8 +2242,12 @@ def scale_embedded_image(docx_path: Path, target_member: str, scale: float) -> i
 
 def embedded_image_width_ratio(row: dict[str, str]) -> float:
     artifact_id = row.get("artifact_id", "")
+    if artifact_id in {"figure_03_arwu_indicator_weight", "figure_04_qs_indicator_weight"}:
+        return 0.76
     if artifact_id == "figure_06_the_indicator_weight":
         return 0.90
+    if artifact_id == "figure_16_paper_international_collab_relative_rank":
+        return 0.74
     if "peer_indicator" in artifact_id:
         return 1.0
     if artifact_id.startswith(("figure_13", "figure_14", "figure_15", "figure_16")):
@@ -1908,7 +2303,7 @@ def set_embedded_image_extent(docx_path: Path, target_member: str, width_emu: in
 
 
 def normalize_embedded_image_extents(rows: list[dict[str, str]], docx_path: Path, content_width: int) -> list[dict[str, Any]]:
-    image_targets = extract_template_image_targets(TEMPLATE_DOCX)
+    image_targets = extract_template_image_targets(docx_path)
     log_rows: list[dict[str, Any]] = []
     for row in rows:
         if row.get("slot_kind") != "figure" or not row.get("reference_media"):
@@ -1956,6 +2351,7 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     placeholder_changes = replace_subject_placeholders(document, subject_name, the_subject_area)
     excluded_slot_cleanups = remove_excluded_slot_content(document, excluded_rows)
     residual_paragraph_changes = replace_residual_template_paragraphs(document)
+    qs_peer_indicator_insertions = insert_qs_peer_indicator_figure(document)
     brand_name_changes = normalize_report_brand_names(document)
     cover_title_changes = normalize_cover_title(document)
     removed_heading_page_breaks = remove_empty_page_breaks_before_heading1(document)
@@ -1963,6 +2359,7 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     cover_main_spacing_changes = compact_cover_main_spacing(document)
     cover_spacing_changes = compact_cover_section_break(document)
     trailing_empty_changes = remove_trailing_empty_paragraphs(document)
+    pre_section_empty_changes = remove_empty_paragraphs_before_section_breaks(document)
     doc_content_width = content_width_emu(document)
     document.save(str(OUTPUT_DOCX))
 
@@ -2036,6 +2433,7 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "status": "ok",
             "changed_paragraphs": residual_paragraph_changes,
         },
+        *qs_peer_indicator_insertions,
         {
             "slot": "brand_names",
             "artifact_id": "",
@@ -2057,6 +2455,13 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "status": "ok",
             "removed_paragraphs": trailing_empty_changes,
         },
+        {
+            "slot": "pre_section_empty_paragraphs",
+            "artifact_id": "",
+            "operation": "remove_empty_paragraphs_before_section_breaks",
+            "status": "ok",
+            "removed_paragraphs": pre_section_empty_changes,
+        },
     ] + excluded_slot_cleanups + image_extent_changes
 
 
@@ -2073,6 +2478,7 @@ def main() -> None:
     working_docx.unlink(missing_ok=True)
     log_rows.extend(replace_embedded_images(rows, TEMPLATE_DOCX, OUTPUT_DOCX))
     log_rows.extend(postprocess_final_document(rows, excluded_rows))
+    log_rows.extend(refresh_visible_figure_media(rows, OUTPUT_DOCX))
     audit_rows = audit_replacements(rows, OUTPUT_DOCX)
     write_audit_files(audit_rows)
 

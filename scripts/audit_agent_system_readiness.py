@@ -118,8 +118,8 @@ def audit_runtime_config(issues: list[dict[str, Any]]) -> dict[str, Any]:
         "target_subject": SUBJECT_REQUEST.get("target_subject", ""),
         "target_subject_code": SUBJECT_REQUEST.get("target_subject_code", ""),
         "report_year": SUBJECT_REQUEST.get("report_year", ""),
-        "ranking_sources": SUBJECT_REQUEST.get(
-            "ranking_sources",
+        "ranking_sources": agent_runtime.normalize_ranking_sources(
+            SUBJECT_REQUEST.get("ranking_sources"),
             agent_runtime.deep_get(RUNTIME_PROFILE, "execution.ranking_sources", []),
         ),
     }
@@ -253,6 +253,20 @@ def latest_run_summary() -> dict[str, Any]:
     return payload
 
 
+def latest_report_agent_summary() -> dict[str, Any]:
+    runs_dir = agent_runtime.profile_path(
+        RUNTIME_PROFILE,
+        "paths.report_agent_runs_dir",
+        PROJECT_DIR / "outputs" / "report_agent_runs",
+    )
+    summaries = sorted(runs_dir.glob("*/report_agent_summary.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not summaries:
+        return {}
+    payload = json.loads(summaries[0].read_text(encoding="utf-8"))
+    payload["_summary_path"] = str(summaries[0])
+    return payload
+
+
 def audit_latest_run(issues: list[dict[str, Any]]) -> dict[str, Any]:
     summary = latest_run_summary()
     if not summary:
@@ -268,14 +282,39 @@ def audit_latest_run(issues: list[dict[str, Any]]) -> dict[str, Any]:
     artifact_count = int(summary.get("artifact_count", 0) or 0)
     ready_count = int(summary.get("ready_artifact_count", 0) or 0)
     fail_count = int(summary.get("subject_artifact_audit", {}).get("fail_count", 0) or 0)
-    if artifact_count and ready_count < artifact_count:
+    run_dir = Path(str(summary.get("run_dir", ""))) if summary.get("run_dir") else Path()
+    decision_summary_path = run_dir / "agent_decision_summary.json" if str(run_dir) else Path()
+    source_matrix_path = run_dir / "source_decision_matrix.csv" if str(run_dir) else Path()
+    decision_summary: dict[str, Any] = {}
+    if decision_summary_path.exists():
+        decision_summary = json.loads(decision_summary_path.read_text(encoding="utf-8"))
+    else:
         add_issue(
             issues,
-            "P1",
+            "P2",
+            "agent_logic",
+            "agent_decision_summary",
+            "Latest subject run has no machine-readable agent decision summary.",
+            "Regenerate the run with scripts/run_subject_agent.py so source-level decisions and disclosure requirements are captured.",
+        )
+    if not source_matrix_path.exists():
+        add_issue(
+            issues,
+            "P2",
+            "agent_logic",
+            "source_decision_matrix",
+            "Latest subject run has no source decision matrix.",
+            "Regenerate the run with scripts/run_subject_agent.py so each ranking source has a reusable status row.",
+        )
+    if artifact_count and ready_count < artifact_count:
+        critical_blocked_count = int(decision_summary.get("critical_blocked_count", 0) or 0)
+        add_issue(
+            issues,
+            "P1" if critical_blocked_count else "P2",
             "artifact_pipeline",
             "artifact_readiness",
-            f"Only {ready_count}/{artifact_count} artifacts were marked ready in the latest run.",
-            "Use the generated data_gap_report.csv to decide whether to supplement data or disable the corresponding slot.",
+            f"{ready_count}/{artifact_count} artifacts were marked ready in the latest run; critical_blocked_count={critical_blocked_count}.",
+            "Use agent_decision_summary.json and data_gap_report.csv to decide whether the gap blocks delivery or should stay disclosed as an optional missing slot.",
         )
     if fail_count:
         add_issue(
@@ -290,9 +329,55 @@ def audit_latest_run(issues: list[dict[str, Any]]) -> dict[str, Any]:
         "summary_path": summary.get("_summary_path", ""),
         "run_dir": summary.get("run_dir", ""),
         "request": summary.get("request", {}),
+        "agent_decision_summary": decision_summary,
+        "decision_summary_path": str(decision_summary_path) if decision_summary_path else "",
+        "source_decision_matrix_path": str(source_matrix_path) if source_matrix_path else "",
         "ready_artifact_count": ready_count,
         "artifact_count": artifact_count,
         "artifact_audit": summary.get("subject_artifact_audit", {}),
+    }
+
+
+def audit_report_agent_run(issues: list[dict[str, Any]]) -> dict[str, Any]:
+    summary = latest_report_agent_summary()
+    if not summary:
+        add_issue(
+            issues,
+            "P1",
+            "agent_orchestration",
+            "latest_report_agent_run",
+            "No end-to-end report agent run summary was found.",
+            "Run scripts/run_report_agent.py so subject analysis, chart QA, Word QA, system audit, and delivery gate are executed as one agent state machine.",
+        )
+        return {}
+    stages = summary.get("stages", [])
+    failed_required = [row.get("name", "") for row in stages if row.get("required") and row.get("status") == "fail"]
+    delivery_gate = summary.get("delivery_gate", {})
+    if failed_required:
+        add_issue(
+            issues,
+            "P1",
+            "agent_orchestration",
+            "required_stages",
+            f"Report agent has failed required stages: {failed_required}.",
+            "Open report_agent_state.json, fix the first failed stage, and rerun scripts/run_report_agent.py.",
+        )
+    if not delivery_gate.get("deliverable"):
+        add_issue(
+            issues,
+            "P1",
+            "agent_orchestration",
+            "delivery_gate",
+            "Latest report agent run did not pass the delivery gate.",
+            "Use report_agent_summary.md to inspect failed stages and unresolved gate conditions.",
+        )
+    return {
+        "summary_path": summary.get("_summary_path", ""),
+        "agent_run_dir": summary.get("agent_run_dir", ""),
+        "status": summary.get("status", ""),
+        "deliverable": bool(delivery_gate.get("deliverable")),
+        "failed_required_stages": failed_required,
+        "word_output_docx": summary.get("outputs", {}).get("word_output_docx", ""),
     }
 
 
@@ -427,7 +512,16 @@ def build_markdown(payload: dict[str, Any]) -> str:
             "",
             f"- summary_path: {payload['latest_run'].get('summary_path', '')}",
             f"- run_dir: {payload['latest_run'].get('run_dir', '')}",
+            f"- agent_mode: {payload['latest_run'].get('agent_decision_summary', {}).get('agent_mode', '')}",
             f"- ready_artifacts: {payload['latest_run'].get('ready_artifact_count', 0)}/{payload['latest_run'].get('artifact_count', 0)}",
+            "",
+            "## Latest Report Agent",
+            "",
+            f"- summary_path: {payload['latest_report_agent_run'].get('summary_path', '')}",
+            f"- agent_run_dir: {payload['latest_report_agent_run'].get('agent_run_dir', '')}",
+            f"- status: {payload['latest_report_agent_run'].get('status', '')}",
+            f"- deliverable: {payload['latest_report_agent_run'].get('deliverable', False)}",
+            f"- word_output_docx: {payload['latest_report_agent_run'].get('word_output_docx', '')}",
             "",
             "## Generated Files",
             "",
@@ -446,6 +540,7 @@ def build_audit() -> dict[str, Any]:
     governance_files = audit_governance_files(issues)
     mapping = audit_subject_mapping(issues)
     latest_run = audit_latest_run(issues)
+    report_agent_run = audit_report_agent_run(issues)
     script_risks = audit_script_risks(issues)
     coverage = audit_coverage_outputs(issues)
 
@@ -456,6 +551,7 @@ def build_audit() -> dict[str, Any]:
         "governance_files": governance_files,
         "cross_subject_mapping": mapping,
         "latest_run": latest_run,
+        "latest_report_agent_run": report_agent_run,
         "script_risks": script_risks,
         "coverage_outputs": coverage,
         "issues": issues,

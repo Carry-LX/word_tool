@@ -126,7 +126,27 @@ def resolve_template_policy(generation_status: dict[str, Any]) -> dict[str, Any]
 def artifact_output_files(run_dir: Path, artifact_id: str) -> dict[str, str]:
     artifact_dir = run_dir / "artifacts" / artifact_id
     files = {}
-    for filename in ["chart.png", "table.png", "chart_data.csv", "table_matrix.csv", "table_data.csv", "source_trace.csv", "chart_spec.json", "table_spec.json", "narrative.md"]:
+    for filename in [
+        "chart.png",
+        "chart.svg",
+        "table.png",
+        "chart_data.csv",
+        "chart_plot_data.csv",
+        "chart_tree_data.csv",
+        "peer_indicator_long.csv",
+        "table_matrix.csv",
+        "table_data.csv",
+        "latest_peer_records.csv",
+        "latest_peer_records_full_top200.csv",
+        "peer_records_top200.csv",
+        "deduped_duplicate_records.csv",
+        "source_trace.csv",
+        "chart_spec.json",
+        "table_spec.json",
+        "narrative.md",
+        "run_log.md",
+        "table.md",
+    ]:
         path = artifact_dir / filename
         if path.exists():
             files[filename] = str(path)

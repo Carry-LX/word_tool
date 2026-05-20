@@ -90,11 +90,18 @@ UPDATE_README_ON_RUN = agent_runtime.profile_bool(
     False,
 )
 
-RANKING_SOURCES = SUBJECT_REQUEST.get(
-    "ranking_sources",
-    agent_runtime.deep_get(RUNTIME_PROFILE, "execution.ranking_sources", ["软科", "QS", "US News", "THE"]),
+RANKING_SOURCES = agent_runtime.normalize_ranking_sources(
+    SUBJECT_REQUEST.get("ranking_sources"),
+    agent_runtime.deep_get(RUNTIME_PROFILE, "execution.ranking_sources", agent_runtime.SUPPORTED_RANKING_SOURCES),
 )
 TOP_RANK_MIDPOINT = agent_runtime.profile_int(RUNTIME_PROFILE, "execution.top_rank_midpoint", 200)
+PROXY_POLICY = agent_runtime.request_value(
+    SUBJECT_REQUEST,
+    "proxy_policy",
+    agent_runtime.deep_get(RUNTIME_PROFILE, "governance.proxy_policy", "allow_with_disclosure"),
+)
+ALLOW_AREA_MAPPING = agent_runtime.request_bool(SUBJECT_REQUEST, "allow_area_mapping", True)
+PEER_SCOPE = agent_runtime.request_value(SUBJECT_REQUEST, "peer_scope", "mainland_top200_by_ranking")
 
 
 def now_text() -> str:
@@ -136,6 +143,14 @@ def ordered_unique(values: list[Any]) -> list[str]:
     return rows
 
 
+def proxy_allowed() -> bool:
+    return PROXY_POLICY != "disallow"
+
+
+def supplement_allowed(row: dict[str, Any]) -> bool:
+    return proxy_allowed() or not bool(row.get("requires_disclosure"))
+
+
 def valid_mapping_value(value: Any) -> str:
     return public_supplements.valid_mapping_value(value)
 
@@ -174,6 +189,10 @@ def runtime_context() -> dict[str, Any]:
         "recommended_python": str(RECOMMENDED_PYTHON),
         "runtime_profile": RUNTIME_PROFILE.get("_profile_path", ""),
         "subject_request": SUBJECT_REQUEST.get("_request_path", ""),
+        "ranking_sources": RANKING_SOURCES,
+        "proxy_policy": PROXY_POLICY,
+        "allow_area_mapping": ALLOW_AREA_MAPPING,
+        "peer_scope": PEER_SCOPE,
         "using_recommended_python": Path(sys.executable).resolve() == RECOMMENDED_PYTHON.resolve()
         if RECOMMENDED_PYTHON.exists()
         else False,
@@ -225,6 +244,10 @@ def resolve_subject() -> dict[str, Any]:
         "target_subject": TARGET_SUBJECT,
         "target_subject_code": TARGET_SUBJECT_CODE,
         "report_year": REPORT_YEAR,
+        "ranking_sources": RANKING_SOURCES,
+        "proxy_policy": PROXY_POLICY,
+        "allow_area_mapping": ALLOW_AREA_MAPPING,
+        "peer_scope": PEER_SCOPE,
         "subject_id": row["subject_id"],
         "ministry_subject_name": row["ministry_subject_name"],
         "subject_short_name": row.get("subject_short_name", ""),
@@ -237,13 +260,23 @@ def resolve_subject() -> dict[str, Any]:
         "alias_row_count": len(alias_rows),
     }
     public_alias_count = 0
-    public_alias_count += add_alias_values(subject, "QS", public_supplements.qs_proxy_aliases(subject))
+    if proxy_allowed():
+        public_alias_count += add_alias_values(subject, "QS", public_supplements.qs_proxy_aliases(subject))
     public_alias_count += add_alias_values(subject, "软科", public_supplements.arwu_public_aliases(subject))
     for source in RANKING_SOURCES:
         public_alias_count += add_alias_values(subject, source, public_supplements.source_aliases(subject, source))
-    subject["public_supplements"] = public_supplements.public_supplement_records(subject)
+    public_records = public_supplements.public_supplement_records(subject)
+    subject["public_supplements"] = [row for row in public_records if supplement_allowed(row)]
     subject["public_supplement_alias_count"] = public_alias_count
     subject["source_runtime_overrides"] = {}
+    subject["proxy_policy_decisions"] = [
+        {
+            "policy": PROXY_POLICY,
+            "allow_area_mapping": ALLOW_AREA_MAPPING,
+            "peer_scope": PEER_SCOPE,
+            "decision": "proxy_supplements_enabled" if proxy_allowed() else "proxy_supplements_disabled",
+        }
+    ]
     return subject
 
 
@@ -459,7 +492,7 @@ def find_weight_subset(weights: pd.DataFrame, source: str, candidates: list[str]
 def attach_runtime_public_supplements(subject: dict[str, Any], records: pd.DataFrame) -> dict[str, Any]:
     subject["source_runtime_overrides"] = dict(subject.get("source_runtime_overrides", {}))
     qs_proxy = public_supplements.qs_proxy(subject)
-    if qs_proxy:
+    if qs_proxy and proxy_allowed():
         subject["source_runtime_overrides"]["QS"] = {
             "weight_subject_or_area": valid_mapping_value(qs_proxy.get("proxy_subject_or_area")),
             "ranking_subject_or_area": valid_mapping_value(qs_proxy.get("proxy_subject_or_area")),
@@ -469,19 +502,37 @@ def attach_runtime_public_supplements(subject: dict[str, Any], records: pd.DataF
             "reason": clean_text(qs_proxy.get("reason")),
             "source_key": clean_text(qs_proxy.get("source_key")),
         }
+    elif qs_proxy:
+        subject.setdefault("proxy_policy_decisions", []).append(
+            {
+                "ranking_source": "QS",
+                "decision": "proxy_override_skipped",
+                "reason": "proxy_policy=disallow",
+                "source_key": clean_text(qs_proxy.get("source_key")),
+            }
+        )
 
     strategy = public_supplements.usnews_weight_strategy()
     if strategy.get("prefer_actual_ranking_subject"):
         weights = read_weight_data()
         candidates = weight_candidate_values(subject, "US News", records)
         subset, matched_area = find_weight_subset(weights, "US News", candidates)
-        if not subset.empty:
+        requires_disclosure = bool(strategy.get("requires_disclosure_when_inferred"))
+        if not subset.empty and (proxy_allowed() or not requires_disclosure):
             subject["source_runtime_overrides"]["US News"] = {
                 "weight_subject_or_area": matched_area,
                 "proxy_level": "actual_matched_ranking_subject",
-                "requires_disclosure": bool(strategy.get("requires_disclosure_when_inferred")),
+                "requires_disclosure": requires_disclosure,
                 "reason": clean_text(strategy.get("reason")),
             }
+        elif not subset.empty:
+            subject.setdefault("proxy_policy_decisions", []).append(
+                {
+                    "ranking_source": "US News",
+                    "decision": "actual_ranking_subject_weight_override_skipped",
+                    "reason": "proxy_policy=disallow",
+                }
+            )
     return subject
 
 
@@ -563,6 +614,106 @@ def build_indicator_availability(subject: dict[str, Any]) -> list[dict[str, Any]
             }
         )
     return rows
+
+
+def truthy(value: Any) -> bool:
+    return agent_runtime.coerce_bool(value, False)
+
+
+def build_source_decision_matrix(
+    subject: dict[str, Any],
+    ranking_rows: list[dict[str, Any]],
+    weight_rows: list[dict[str, Any]],
+    indicator_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    ranking_by_source = {row["ranking_source"]: row for row in ranking_rows}
+    weight_by_source = {row["ranking_source"]: row for row in weight_rows}
+    indicator_by_source = {row["ranking_source"]: row for row in indicator_rows}
+    supplements = subject.get("public_supplements", [])
+    overrides = subject.get("source_runtime_overrides", {})
+    rows: list[dict[str, Any]] = []
+    for source in RANKING_SOURCES:
+        ranking = ranking_by_source.get(source, {})
+        weight = weight_by_source.get(source, {})
+        indicator = indicator_by_source.get(source, {})
+        source_supplements = [row for row in supplements if clean_text(row.get("ranking_source")) == source]
+        source_override = overrides.get(source, {})
+        has_tongji = int(ranking.get("tongji_latest_rows") or 0) > 0
+        has_peer = int(ranking.get("mainland_top200_rows") or 0) > 0
+        has_weight = int(weight.get("weight_rows") or 0) > 0
+        has_indicator = int(indicator.get("tongji_indicator_rows") or 0) > 0
+        uses_proxy = bool(source_override) or any(truthy(row.get("requires_disclosure")) for row in source_supplements)
+        requires_disclosure = any(
+            [
+                truthy(source_override.get("requires_disclosure")),
+                any(truthy(row.get("requires_disclosure")) for row in source_supplements),
+            ]
+        )
+        if has_tongji and has_peer and (has_weight or has_indicator):
+            status = "ready"
+            recommendation = "use_in_core_report"
+        elif has_tongji and (has_weight or has_indicator):
+            status = "partial_peer_gap"
+            recommendation = "use_for_tongji_only_views"
+        elif has_tongji:
+            status = "partial_metric_gap"
+            recommendation = "use_ranking_only_or_add_metrics"
+        else:
+            status = "blocked_ranking_gap"
+            recommendation = "add_subject_alias_or_ranking_records"
+        rows.append(
+            {
+                "ranking_source": source,
+                "has_tongji_latest_rank": has_tongji,
+                "has_mainland_peer_top200": has_peer,
+                "has_weight": has_weight,
+                "has_indicator": has_indicator,
+                "indicator_year_count": int(indicator.get("year_count") or 0),
+                "uses_proxy_or_external_supplement": uses_proxy,
+                "requires_disclosure": requires_disclosure,
+                "proxy_policy": PROXY_POLICY,
+                "runtime_override": clean_text(source_override.get("proxy_level")),
+                "supplement_count": len(source_supplements),
+                "overall_status": status,
+                "recommendation": recommendation,
+            }
+        )
+    return rows
+
+
+def build_agent_decision_summary(source_rows: list[dict[str, Any]], readiness_rows: list[dict[str, Any]], gaps: list[dict[str, Any]]) -> dict[str, Any]:
+    ready_artifact_count = sum(1 for row in readiness_rows if row["readiness_status"] == "ready")
+    critical_blocked = [
+        row
+        for row in readiness_rows
+        if row.get("blocking_level") == "P1" and row.get("readiness_status") != "ready"
+    ]
+    disclosure_required = any(truthy(row.get("requires_disclosure")) for row in source_rows)
+    ready_sources = [row for row in source_rows if row.get("overall_status") == "ready"]
+    if critical_blocked:
+        agent_mode = "partial_blocked"
+    elif disclosure_required:
+        agent_mode = "full_with_disclosure"
+    elif ready_artifact_count == len(readiness_rows):
+        agent_mode = "full_ready"
+    else:
+        agent_mode = "partial_noncritical_gaps"
+    return {
+        "generated_at": now_text(),
+        "agent_mode": agent_mode,
+        "proxy_policy": PROXY_POLICY,
+        "allow_area_mapping": ALLOW_AREA_MAPPING,
+        "peer_scope": PEER_SCOPE,
+        "source_count": len(source_rows),
+        "ready_source_count": len(ready_sources),
+        "proxy_or_external_source_count": sum(truthy(row.get("uses_proxy_or_external_supplement")) for row in source_rows),
+        "disclosure_required": disclosure_required,
+        "ready_artifact_count": ready_artifact_count,
+        "artifact_count": len(readiness_rows),
+        "blocked_or_partial_count": len(gaps),
+        "critical_blocked_count": len(critical_blocked),
+        "critical_blocked_artifacts": [row["artifact_id"] for row in critical_blocked],
+    }
 
 
 def detect_paper_metric_sources() -> dict[str, Any]:
@@ -685,6 +836,7 @@ def build_artifact_readiness(
         ("figure_10_usnews_indicator_history_trend", "chart", "US News 分项指标历史趋势图", has_indicator_years("US News", 2), "趋势图需要 US News 多年分项指标。"),
         ("table_03_the_tongji_indicator_history", "table", "THE 分项指标历史表", has_indicator_years("THE", 2), "需要 THE 同济分项指标多年份数据。"),
         ("figure_09_arwu_peer_indicator_relative_rank", "chart", "软科 peer 分项相对排名", has_peer("软科") and has_indicators("软科"), "需要 peer 样本和分项指标。"),
+        ("figure_10_qs_peer_indicator_relative_rank", "chart", "QS peer 分项相对排名", has_peer("QS") and has_indicators("QS"), "需要 QS peer 样本和最新年分项指标；多年趋势另需多年度分项指标。"),
         ("figure_11_usnews_peer_indicator_relative_rank", "chart", "US News peer 分项相对排名", has_peer("US News") and has_indicators("US News"), "需要 peer 样本和分项指标。"),
         ("figure_12_the_peer_indicator_relative_rank", "chart", "THE peer 分项相对排名", has_peer("THE") and has_indicators("THE"), "需要 peer 样本和分项指标。"),
         ("figure_13_paper_output_citation_relative_rank", "chart", "论文及被引总量相对排名图", has_paper_metrics, "需要独立论文指标数据源，不能由排名表臆造。"),
@@ -693,22 +845,45 @@ def build_artifact_readiness(
         ("figure_16_paper_international_collab_relative_rank", "chart", "国际合著论文占比相对排名图", has_paper_metrics, "需要国际合著论文数或占比字段。"),
         ("table_09_peer_full_ranking_history_appendix", "table", "对标高校排名历史附表", sum(has_peer(s) for s in RANKING_SOURCES) >= 2, "由各榜单 peer 表和历史排名合并生成。"),
     ]
+    critical_artifacts = {
+        "figure_01_tongji_subject_ranking_overview",
+        "figure_02_ranking_indicator_commonality",
+        "figure_07_all_rankings_history",
+        "table_04_mainland_rank_band_distribution",
+    }
     readiness_rows = []
     gaps = []
     for artifact_id, artifact_type, label, ready, note in readiness_specs:
         external_status = external_status_by_artifact.get(artifact_id, "")
+        readiness_scope = "direct_data"
         if external_status and external_status != "candidate_indirect_not_auto_merge":
             ready = True
             note = f"{note} external_data补源状态：{external_status}。"
+            readiness_scope = "external_supplement"
         elif external_status:
             note = f"{note} external_data已生成候选口径：{external_status}，进入Word前需要人工确认。"
+            readiness_scope = "candidate_needs_review"
         status = "ready" if ready else "blocked_or_partial"
+        blocking_level = "none" if ready else ("P1" if artifact_id in critical_artifacts else "P2")
+        recommended_action = (
+            "build_artifact"
+            if ready
+            else (
+                "review_external_candidate"
+                if readiness_scope == "candidate_needs_review"
+                else "supplement_source_data_or_adjust_subject_mapping"
+            )
+        )
         readiness_rows.append(
             {
                 "artifact_id": artifact_id,
                 "artifact_type": artifact_type,
                 "label": label,
                 "readiness_status": status,
+                "readiness_scope": readiness_scope,
+                "blocking_level": blocking_level,
+                "recommended_action": recommended_action,
+                "include_in_word_candidate": ready,
                 "note": note,
             }
         )
@@ -718,6 +893,8 @@ def build_artifact_readiness(
                     "artifact_id": artifact_id,
                     "label": label,
                     "gap_type": "data_or_parameterization_gap",
+                    "blocking_level": blocking_level,
+                    "recommended_action": recommended_action,
                     "reason": note,
                 }
             )
@@ -732,6 +909,10 @@ def build_request_payload(subject: dict[str, Any]) -> dict[str, Any]:
             "target_subject": TARGET_SUBJECT,
             "target_subject_code": TARGET_SUBJECT_CODE,
             "report_year": REPORT_YEAR,
+            "ranking_sources": RANKING_SOURCES,
+            "proxy_policy": PROXY_POLICY,
+            "allow_area_mapping": ALLOW_AREA_MAPPING,
+            "peer_scope": PEER_SCOPE,
         },
         "resolved_subject": subject,
         "agent_contract": {
@@ -770,6 +951,8 @@ def write_markdown_report(
     ranking_rows: list[dict[str, Any]],
     weight_rows: list[dict[str, Any]],
     indicator_rows: list[dict[str, Any]],
+    source_decision_rows: list[dict[str, Any]],
+    agent_decision_summary: dict[str, Any],
     readiness_rows: list[dict[str, Any]],
     gaps: list[dict[str, Any]],
 ) -> None:
@@ -784,6 +967,8 @@ def write_markdown_report(
         f"- subject_id: {subject['subject_id']}",
         f"- alias_row_count: {subject['alias_row_count']}",
         f"- public_supplement_alias_count: {subject.get('public_supplement_alias_count', 0)}",
+        f"- agent_mode: {agent_decision_summary.get('agent_mode', '')}",
+        f"- proxy_policy: {PROXY_POLICY}",
         f"- ready_artifacts: {ready_count}/{len(readiness_rows)}",
         "",
         "## 一句话结论",
@@ -799,6 +984,12 @@ def write_markdown_report(
         lines.append(
             f"| {row['ranking_source']} | {row['latest_release_year']} | {row['latest_ranking_year']} | "
             f"{row['tongji_latest_rank']} | {row['mainland_top200_rows']} | {row['data_status']} |"
+        )
+    lines.extend(["", "## 榜单源决策矩阵", "", "| 榜单 | 核心状态 | 代理/外部补源 | 需披露 | 建议 |", "| --- | --- | --- | --- | --- |"])
+    for row in source_decision_rows:
+        lines.append(
+            f"| {row['ranking_source']} | {row['overall_status']} | "
+            f"{row['uses_proxy_or_external_supplement']} | {row['requires_disclosure']} | {row['recommendation']} |"
         )
     public_records = subject.get("public_supplements", [])
     if public_records:
@@ -821,9 +1012,12 @@ def write_markdown_report(
             f"| {row['ranking_source']} | {row['tongji_indicator_rows']} | {row['ranking_years']} | "
             f"{row['year_count']} | {row['data_status']} |"
         )
-    lines.extend(["", "## Artifact 就绪判断", "", "| artifact | 类型 | 说明 | 状态 |", "| --- | --- | --- | --- |"])
+    lines.extend(["", "## Artifact 就绪判断", "", "| artifact | 类型 | 说明 | 状态 | 阻塞级别 | 建议动作 |", "| --- | --- | --- | --- | --- | --- |"])
     for row in readiness_rows:
-        lines.append(f"| {row['artifact_id']} | {row['artifact_type']} | {row['label']} | {row['readiness_status']} |")
+        lines.append(
+            f"| {row['artifact_id']} | {row['artifact_type']} | {row['label']} | "
+            f"{row['readiness_status']} | {row.get('blocking_level', '')} | {row.get('recommended_action', '')} |"
+        )
     if gaps:
         lines.extend(["", "## 当前阻塞或半阻塞项", "", "| artifact | 对象 | 原因 |", "| --- | --- | --- |"])
         for gap in gaps:
@@ -900,6 +1094,8 @@ def write_run_manifest(
     ranking_rows: list[dict[str, Any]],
     weight_rows: list[dict[str, Any]],
     indicator_rows: list[dict[str, Any]],
+    source_decision_rows: list[dict[str, Any]],
+    agent_decision_summary: dict[str, Any],
     readiness_rows: list[dict[str, Any]],
     gaps: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -910,10 +1106,12 @@ def write_run_manifest(
         "request_paths": request_info.get("written_paths", []),
         "input_issues": input_issues,
         "subject": subject,
+        "agent_decision_summary": agent_decision_summary,
         "counts": {
             "ranking_sources": len(ranking_rows),
             "weight_sources": len(weight_rows),
             "indicator_sources": len(indicator_rows),
+            "ready_sources": sum(1 for row in source_decision_rows if row.get("overall_status") == "ready"),
             "ready_artifacts": sum(1 for row in readiness_rows if row["readiness_status"] == "ready"),
             "artifact_count": len(readiness_rows),
             "gap_count": len(gaps),
@@ -923,6 +1121,8 @@ def write_run_manifest(
             "ranking_availability": str(run_dir / "ranking_availability.csv"),
             "weight_availability": str(run_dir / "weight_availability.csv"),
             "indicator_availability": str(run_dir / "indicator_availability.csv"),
+            "source_decision_matrix": str(run_dir / "source_decision_matrix.csv"),
+            "agent_decision_summary": str(run_dir / "agent_decision_summary.json"),
             "public_ranking_source_supplements": str(run_dir / "public_ranking_source_supplements.csv"),
             "artifact_readiness": str(run_dir / "artifact_readiness.csv"),
             "data_gap_report": str(run_dir / "data_gap_report.csv"),
@@ -962,10 +1162,15 @@ def run_subject_agent() -> dict[str, Any]:
     indicator_rows = build_indicator_availability(subject)
     paper_metric_sources = detect_paper_metric_sources()
     readiness_rows, gaps = build_artifact_readiness(ranking_rows, weight_rows, indicator_rows, paper_metric_sources)
+    source_decision_rows = build_source_decision_matrix(subject, ranking_rows, weight_rows, indicator_rows)
+    agent_decision_summary = build_agent_decision_summary(source_decision_rows, readiness_rows, gaps)
 
     write_csv(run_dir / "ranking_availability.csv", ranking_rows, list(ranking_rows[0].keys()))
     write_csv(run_dir / "weight_availability.csv", weight_rows, list(weight_rows[0].keys()))
     write_csv(run_dir / "indicator_availability.csv", indicator_rows, list(indicator_rows[0].keys()))
+    write_csv(run_dir / "source_decision_matrix.csv", source_decision_rows, list(source_decision_rows[0].keys()))
+    write_json(run_dir / "source_decision_matrix.json", {"generated_at": now_text(), "sources": source_decision_rows})
+    write_json(run_dir / "agent_decision_summary.json", agent_decision_summary)
     write_csv(run_dir / "artifact_readiness.csv", readiness_rows, list(readiness_rows[0].keys()))
     public_rows = subject.get("public_supplements", [])
     if public_rows:
@@ -989,9 +1194,19 @@ def run_subject_agent() -> dict[str, Any]:
     if gaps:
         write_csv(run_dir / "data_gap_report.csv", gaps, list(gaps[0].keys()))
     else:
-        write_csv(run_dir / "data_gap_report.csv", [], ["artifact_id", "label", "gap_type", "reason"])
+        write_csv(run_dir / "data_gap_report.csv", [], ["artifact_id", "label", "gap_type", "blocking_level", "recommended_action", "reason"])
 
-    write_markdown_report(run_dir, subject, ranking_rows, weight_rows, indicator_rows, readiness_rows, gaps)
+    write_markdown_report(
+        run_dir,
+        subject,
+        ranking_rows,
+        weight_rows,
+        indicator_rows,
+        source_decision_rows,
+        agent_decision_summary,
+        readiness_rows,
+        gaps,
+    )
     run_manifest = write_run_manifest(
         run_dir,
         subject,
@@ -1000,6 +1215,8 @@ def run_subject_agent() -> dict[str, Any]:
         ranking_rows,
         weight_rows,
         indicator_rows,
+        source_decision_rows,
+        agent_decision_summary,
         readiness_rows,
         gaps,
     )
@@ -1021,6 +1238,8 @@ def run_subject_agent() -> dict[str, Any]:
         },
         "resolved_subject": subject,
         "ranking_summary": ranking_summary,
+        "agent_decision_summary": agent_decision_summary,
+        "source_decision_matrix": source_decision_rows,
         "ready_artifact_count": ready_count,
         "artifact_count": len(readiness_rows),
         "blocked_or_partial_count": len(gaps),
@@ -1034,6 +1253,8 @@ def run_subject_agent() -> dict[str, Any]:
             "run_manifest": str(run_dir / "run_manifest.json"),
             "artifact_readiness": str(run_dir / "artifact_readiness.csv"),
             "data_gap_report": str(run_dir / "data_gap_report.csv"),
+            "source_decision_matrix": str(run_dir / "source_decision_matrix.csv"),
+            "agent_decision_summary": str(run_dir / "agent_decision_summary.json"),
             "generated_artifacts": str(run_dir / "artifacts"),
             "current_request": request_info["written_paths"][0],
         },

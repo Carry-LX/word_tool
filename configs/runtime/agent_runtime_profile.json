@@ -23,14 +23,21 @@
     "build_narrative_bundle": true,
     "use_demo_narrative_result": false,
     "run_word_qa": true,
-    "run_render_qa": false,
+    "run_render_qa": true,
     "update_word_fields_with_com": true,
     "table_replacement_mode": "native"
+  },
+  "report_agent": {
+    "resume_incomplete_run": true,
+    "rerun_passed_stages": false,
+    "stop_on_gate_failure": true,
+    "allow_delivery_with_warnings": true
   },
   "paths": {
     "subject_agent_runs_dir": "outputs/subject_agent_runs",
     "full_word_reports_dir": "outputs/full_word_reports",
-    "agent_system_audit_dir": "outputs/agent_system_audit"
+    "agent_system_audit_dir": "outputs/agent_system_audit",
+    "report_agent_runs_dir": "outputs/report_agent_runs"
   },
   "governance": {
     "path_output_policy": "plain_text_windows_paths",

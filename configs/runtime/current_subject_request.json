@@ -1,48 +1,19 @@
 {
-  "generated_at": "2026-05-14T00:00:00",
+  "generated_at": "2026-05-19T00:00:00",
   "request": {
     "target_university": "同济大学",
-    "target_subject": "生物医学工程",
-    "target_subject_code": "0831",
-    "report_year": 2026
-  },
-  "resolved_subject": {
-    "target_university": "同济大学",
-    "target_subject": "生物医学工程",
-    "target_subject_code": "0831",
+    "target_subject": "计算机科学与技术",
+    "target_subject_code": "0812",
+    "target_college": "计算机科学与技术学院",
     "report_year": 2026,
-    "subject_id": "subject_0831",
-    "ministry_subject_name": "生物医学工程",
-    "subject_short_name": "生物医学工程",
-    "tongji_college": "医学院",
-    "arwu_subject_name": "生物医学工程",
-    "qs_subject_name": "无",
-    "usnews_subject_name": "",
-    "the_subject_area": "工程",
-    "alias_summary": {
-      "THE": [
-        "Engineering",
-        "工学",
-        "工程",
-        "工程学"
-      ],
-      "US News": [
-        "Engineering",
-        "engineering",
-        "工程学"
-      ],
-      "ministry": [
-        "生物医学工程"
-      ],
-      "软科": [
-        "生物医学工程"
-      ]
-    },
-    "alias_row_count": 13
-  },
-  "agent_contract": {
-    "single_entrypoint": "scripts/run_subject_agent.py",
-    "no_cli_args": true,
-    "change_subject_by_editing_top_level_variables": true
+    "peer_scope": "mainland_top200_by_ranking",
+    "ranking_sources": [
+      "软科",
+      "QS",
+      "US News",
+      "THE"
+    ],
+    "allow_area_mapping": true,
+    "proxy_policy": "allow_with_disclosure"
   }
 }
