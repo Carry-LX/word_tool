@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from typing import Any
 import audit_word_report
 import agent_runtime
 import build_narrative_generation_bundle as narrative_bundle
+import generate_narrative_with_llm as narrative_llm
 import build_word_assembly_manifest as assembly_manifest
 import build_word_replacement_trial as word_trial
 import run_subject_agent as subject_agent
@@ -34,6 +36,7 @@ SUBJECT_RUN_DIR: Path | None = (
     else None
 )
 BUILD_NARRATIVE_BUNDLE = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.build_narrative_bundle", True)
+GENERATE_NARRATIVE_WITH_LLM = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.narrative_llm.enabled", False)
 USE_DEMO_NARRATIVE_RESULT = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.use_demo_narrative_result", False)
 RUN_WORD_QA = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.run_word_qa", True)
 RUN_RENDER_QA = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.run_render_qa", False)
@@ -536,7 +539,13 @@ def resolve_run_dir() -> tuple[Path, dict[str, Any]]:
 
 
 def prepare_narrative_assets(run_dir: Path) -> dict[str, Any]:
-    result: dict[str, Any] = {"bundle_path": "", "result_path": "", "llm_called": False, "demo_result_used": False}
+    result: dict[str, Any] = {
+        "bundle_path": "",
+        "result_path": "",
+        "validation_path": "",
+        "llm_called": False,
+        "demo_result_used": False,
+    }
     narrative_dir = run_dir / "narrative_generation"
     narrative_dir.mkdir(parents=True, exist_ok=True)
     if BUILD_NARRATIVE_BUNDLE:
@@ -544,6 +553,12 @@ def prepare_narrative_assets(run_dir: Path) -> dict[str, Any]:
         result["bundle_path"] = str(bundle_path)
     result_path = narrative_dir / "narrative_generation_result.json"
     result["result_path"] = str(result_path)
+    if GENERATE_NARRATIVE_WITH_LLM:
+        llm_result = narrative_llm.generate_narrative_for_run(run_dir, RUNTIME_PROFILE)
+        result.update(llm_result)
+        result["llm_called"] = bool(llm_result.get("llm_called"))
+        result["result_path"] = str(result_path)
+        return result
     if USE_DEMO_NARRATIVE_RESULT and not result_path.exists() and NARRATIVE_DEMO_RESULT_JSON.exists():
         shutil.copyfile(NARRATIVE_DEMO_RESULT_JSON, result_path)
         result["demo_result_used"] = True
@@ -615,6 +630,8 @@ def build_subject_word_report() -> dict[str, Any]:
         "word_qa": qa_result,
     }
     write_json(output_docx.parent / "subject_word_report_summary.json", payload)
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return payload
 

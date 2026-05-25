@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -28,7 +29,7 @@ RANKING_SOURCE_ALIASES = {
 
 
 def read_json(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -106,7 +107,8 @@ def load_runtime_profile(path: str | Path | None = None) -> dict[str, Any]:
 
 def load_subject_request(profile: dict[str, Any] | None = None) -> dict[str, Any]:
     profile = profile or load_runtime_profile()
-    request_path = resolve_project_path(profile.get("active_subject_request_path"), DEFAULT_REQUEST_PATH)
+    request_path_value = os.environ.get("SUBJECT_REQUEST_PATH") or profile.get("active_subject_request_path")
+    request_path = resolve_project_path(request_path_value, DEFAULT_REQUEST_PATH)
     if not request_path.exists():
         raise FileNotFoundError(f"Subject request not found: {request_path}")
     payload = read_json(request_path)

@@ -8,6 +8,8 @@ __pycache__/
 /external_data/
 /logs/
 /.codex_tmp/
+/release/
+/docs/reference_samples/
 
 # Office temporary files
 ~$*

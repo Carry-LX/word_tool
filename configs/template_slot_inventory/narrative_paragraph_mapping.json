@@ -281,6 +281,23 @@
       ]
     },
     {
+      "logical_slot_id": "L016Q",
+      "artifact_id": "figure_10_qs_peer_indicator_relative_rank",
+      "reference_caption": "图：QS排名前200位内地高校分项指标相对排名",
+      "caption_paragraph_index": null,
+      "replace_decision": "replace",
+      "notes": "QS 对标分指标图为新增虚拟槽位，原模板只有说明段，没有物理图片对象。",
+      "paragraphs": [
+        {
+          "template_paragraph_index": 89,
+          "segment_key": "qs_peer_indicator_summary",
+          "position_relative_to_caption": "before_caption",
+          "generation_hint": "总结 QS 最新年对标分指标的优势与短板，并说明多年分项趋势边界。",
+          "template_text": "当前尚未形成 QS 分项指标相对排名图，本报告将 QS 作为综合位次与同行梯队参考；待补充 QS 分项数据后，可再纳入学术声誉、雇主声誉、篇均被引和 H 指数等维度对标。"
+        }
+      ]
+    },
+    {
       "logical_slot_id": "L017",
       "artifact_id": "figure_11_usnews_peer_indicator_relative_rank",
       "reference_caption": "图7、U.S.News排名前200位内地高校分项指标相对排名",
@@ -343,8 +360,8 @@
           "template_paragraph_index": 104,
           "segment_key": "paper_quality_intro",
           "position_relative_to_caption": "before_caption",
-          "generation_hint": "说明比较维度：CNCI、篇均被引、TOP1%、TOP10%。",
-          "template_text": "下面从学科规范化引文影响力CNCI（Category Normalized Citation Impact）、篇均被引、被引TOP1%论文占比、被引TOP10%论文占比四个方面比较37所高校的数据。"
+          "generation_hint": "说明本图比较维度：CNCI 与篇均被引。",
+          "template_text": "下面从学科规范化引文影响力CNCI（Category Normalized Citation Impact）和篇均被引两个方面比较37所高校的数据。"
         },
         {
           "template_paragraph_index": 105,
@@ -367,8 +384,8 @@
           "template_paragraph_index": 108,
           "segment_key": "paper_highly_cited_summary",
           "position_relative_to_caption": "before_caption",
-          "generation_hint": "总结 TOP1% 与 TOP10% 高被引论文相对位置。",
-          "template_text": "同济在内地高校被引TOP1%论文占比、被引TOP10%论文相对排名都较靠后。同济大学在内地高校中排名30位以后。"
+          "generation_hint": "总结 Top 1% 论文与高被引论文的相对位置；只有数据列明确提供 TOP10% 时才写 TOP10%。",
+          "template_text": "同济在内地高校 Top 1% 论文和高被引论文相对排名中仍有提升空间。"
         }
       ]
     },
@@ -411,10 +428,6 @@
     {
       "template_paragraph_index": 75,
       "notes": "QS 对标高校整体分析段。当前模板中没有对应 QS 宽表槽位。"
-    },
-    {
-      "template_paragraph_index": 89,
-      "notes": "QS 对标分指标分析段。当前模板中没有对应 QS 分指标图槽位。"
     },
     {
       "template_paragraph_index": 116,

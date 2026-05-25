@@ -21,6 +21,7 @@ import ranking_public_supplements as public_supplements
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 RUNTIME_PROFILE = agent_runtime.load_runtime_profile()
 SUBJECT_REQUEST = agent_runtime.load_subject_request(RUNTIME_PROFILE)
+DATA_DIR = PROJECT_DIR / "data"
 PROCESSED_DIR = PROJECT_DIR / "processed"
 CONFIG_DIR = PROJECT_DIR / "configs"
 EXTERNAL_DATA_DIR = PROJECT_DIR / "external_data"
@@ -438,6 +439,15 @@ def alias_specificity_score(row: pd.Series, subject: dict[str, Any], source: str
     broad_aliases = {"engineering", "工程学", "工程", "physical sciences", "natural sciences"}
     if raw in broad_aliases or alias in broad_aliases:
         score += 20
+    subject_code = clean_text(subject.get("target_subject_code")) or clean_text(subject.get("ministry_subject_code"))
+    if source == "US News" and (subject_code == "0812" or clean_text(subject.get("subject_id")) == "subject_0812"):
+        subject_keys = {normalize_text_key(raw), normalize_text_key(alias)}
+        if subject_keys & {"computerscience", "计算机科学"}:
+            score -= 80
+        elif subject_keys & {"artificialintelligence", "人工智能"}:
+            score += 35
+        elif subject_keys & {"engineering", "工程学", "工程"}:
+            score += 60
     return score
 
 
@@ -614,6 +624,43 @@ def expected_weight_area(subject: dict[str, Any], source: str) -> str:
         if area in crosswalk:
             return crosswalk[area]
     return area or "自然科学"
+
+
+def expected_ranking_area(subject: dict[str, Any], source: str) -> str:
+    override = subject.get("source_runtime_overrides", {}).get(source, {})
+    override_area = valid_mapping_value(override.get("ranking_subject_or_area"))
+    if override_area:
+        return override_area
+    if source == "软科":
+        aliases = public_supplements.arwu_public_aliases(subject)
+        return (
+            valid_mapping_value(subject.get("arwu_subject_name"))
+            or (aliases[0] if aliases else "")
+            or clean_text(subject.get("target_subject"))
+        )
+    if source == "QS":
+        return (
+            valid_mapping_value(subject.get("qs_subject_name"))
+            or valid_mapping_value(public_supplements.qs_proxy(subject).get("proxy_subject_or_area"))
+            or clean_text(subject.get("target_subject"))
+        )
+    if source == "US News":
+        return (
+            valid_mapping_value(subject.get("usnews_subject_name"))
+            or valid_mapping_value(override.get("weight_subject_or_area"))
+            or clean_text(subject.get("target_subject"))
+        )
+    if source == "THE":
+        return valid_mapping_value(subject.get("the_subject_area")) or clean_text(subject.get("target_subject"))
+    return clean_text(subject.get("target_subject"))
+
+
+def source_title_subject_label(subject: dict[str, Any], source: str) -> str:
+    target = clean_text(subject.get("target_subject"))
+    area = expected_ranking_area(subject, source)
+    if area and target and area != target:
+        return f"{area}口径"
+    return target or area
 
 
 def candidate_subject_areas(value: Any) -> list[str]:
@@ -821,7 +868,13 @@ def render_history(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
     left, top, right, bottom = 138, 148, 1348, 748
     draw.text((72, 38), f"同济大学{subject_name}学科四大国际排名历史趋势", font=font_title, fill="#16202A")
     draw.text((72, 92), "排名区间按中间位次绘图，数值越小表示排名越靠前", font=font_sub, fill="#5A6573")
-    years = sorted(int(x) for x in df["release_year"].dropna().unique())
+    df = df.copy()
+    axis_years = pd.to_numeric(df.get("ranking_year", pd.Series(dtype=str)), errors="coerce")
+    if "release_year" in df.columns:
+        axis_years = axis_years.fillna(pd.to_numeric(df["release_year"], errors="coerce"))
+    df["_history_axis_year"] = axis_years
+    df = df.dropna(subset=["_history_axis_year", "rank_midpoint"]).copy()
+    years = sorted(int(x) for x in df["_history_axis_year"].dropna().unique())
     values = [to_float(x) for x in df["rank_midpoint"].dropna()]
     if not years or not values:
         save_png(image, out_path)
@@ -845,9 +898,9 @@ def render_history(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
         x = xp(year)
         draw_center(draw, (x - 48, bottom + 18, x + 48, bottom + 54), str(year), font_axis, "#52606D")
     for source, group in df.groupby("ranking_source"):
-        group = group.sort_values(["release_year", "ranking_year"])
+        group = group.sort_values(["_history_axis_year", "release_year"])
         color = SOURCE_COLORS.get(source, "#333333")
-        points = [(xp(int(row["release_year"])), yp(float(row["rank_midpoint"]))) for _, row in group.iterrows()]
+        points = [(xp(int(row["_history_axis_year"])), yp(float(row["rank_midpoint"]))) for _, row in group.iterrows()]
         if len(points) > 1:
             draw.line(points, fill=color, width=6)
         label_offsets = {
@@ -870,17 +923,102 @@ def render_history(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
     save_png(image, out_path)
 
 
+def rank_midpoint_from_raw(value: Any) -> float | None:
+    text = clean_text(value).replace("–", "-").replace("—", "-").replace("~", "-")
+    if not text or text in {"未进入", "滑落"}:
+        return None
+    numbers = [int(item) for item in re.findall(r"\d+", text)]
+    if not numbers:
+        return None
+    if len(numbers) >= 2 and "-" in text:
+        return (min(numbers[0], numbers[1]) + max(numbers[0], numbers[1])) / 2
+    return float(numbers[0])
+
+
+def supplement_the_tongji_history(tongji: pd.DataFrame, subject: dict[str, Any]) -> pd.DataFrame:
+    paths = sorted(DATA_DIR.glob("世界大学学科排名THE*2022-2026*.xlsx"))
+    if not paths:
+        return tongji
+    try:
+        history = pd.read_excel(paths[0], sheet_name="同济历史", dtype=str).fillna("")
+    except Exception:
+        return tongji
+    if history.empty:
+        return tongji
+
+    candidates = {
+        valid_mapping_value(subject.get("the_subject_area")),
+        valid_mapping_value(expected_weight_area(subject, "THE")),
+        clean_text(subject.get("subject_short_name")),
+        clean_text(subject.get("target_subject")),
+    }
+    candidates.update(valid_mapping_value(value) for value in subject.get("alias_summary", {}).get("THE", []))
+    candidate_keys = {normalize_text_key(value) for value in candidates if value}
+
+    area_col = "THE学科领域" if "THE学科领域" in history.columns else history.columns[0]
+    matched = history[history[area_col].map(normalize_text_key).isin(candidate_keys)].copy()
+    if matched.empty:
+        return tongji
+
+    existing_years = set(
+        pd.to_numeric(tongji[tongji["ranking_source"] == "THE"].get("ranking_year", pd.Series(dtype=str)), errors="coerce")
+        .dropna()
+        .astype(int)
+        .tolist()
+    )
+    additions: list[dict[str, Any]] = []
+    row = matched.iloc[0]
+    source_file = paths[0].name
+    for column in history.columns:
+        match = re.search(r"(20\d{2})国际排名", clean_text(column))
+        if not match:
+            continue
+        year = int(match.group(1))
+        if year in existing_years:
+            continue
+        rank_raw = clean_text(row.get(column))
+        midpoint = rank_midpoint_from_raw(rank_raw)
+        if midpoint is None:
+            continue
+        additions.append(
+            {
+                "fact_id": f"the_tongji_history_{subject_code(subject) or 'subject'}_{year}",
+                "ranking_source": "THE",
+                "release_year": year,
+                "ranking_year": year,
+                "ranking_subject_raw": clean_text(row.get(area_col)),
+                "university_name_cn": clean_text(subject.get("target_university")) or "同济大学",
+                "university_name_en": "Tongji University",
+                "country_or_region": "中国内地",
+                "is_mainland_china": "1",
+                "is_tongji": "1",
+                "rank_raw": rank_raw,
+                "rank_midpoint": midpoint,
+                "total_score": "",
+                "source_file": source_file,
+                "source_sheet": "同济历史",
+                "source_row": int(row.name) + 2,
+                "ranking_subject_alias": clean_text(row.get(area_col)),
+                "alias_type": "the_tongji_history_sheet",
+            }
+        )
+    if not additions:
+        return tongji
+    return pd.concat([tongji, pd.DataFrame(additions)], ignore_index=True, sort=False).fillna("")
+
+
 def build_figure_07(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame) -> dict[str, Any]:
     artifact_id = "figure_07_all_rankings_history"
     out = artifact_dir(run_dir, artifact_id)
     df = dedupe_records(records)
     tongji = df[df["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
     tongji = dedupe_subject_rows_by_period(tongji, subject)
-    tongji = tongji.sort_values(["ranking_source", "release_year", "ranking_year"])
+    tongji = supplement_the_tongji_history(tongji, subject)
+    tongji = tongji.sort_values(["ranking_source", "ranking_year", "release_year"])
     tongji.to_csv(out / "chart_data.csv", index=False, encoding="utf-8-sig")
     tongji.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
     render_history(tongji, clean_text(subject["target_subject"]), out / "chart.png")
-    write_common_outputs(out, artifact_id, "chart", len(tongji), len(tongji), {"chart_type": "multi-source history line"})
+    write_common_outputs(out, artifact_id, "chart", len(tongji), len(tongji), {"chart_type": "multi-source history line", "x_axis": "ranking_year"})
     return {"artifact_id": artifact_id, "status": "generated", "rows": len(tongji), "output_dir": str(out)}
 
 
@@ -1553,7 +1691,7 @@ def render_commonality_flow(df: pd.DataFrame, subject_name: str, out_path: Path)
         y2 = group_y.get(group, 155) + 31
         width = max(2, min(16, int(to_float(row["link_value"]) / 4) + 2))
         draw.line((sx + 210, y1, gx, y2), fill=color, width=width)
-    draw.text((70, 850), "注：US News 若缺少目标学科权重，本图仅展示分项指标覆盖关系，不解释为权重。", font=font_small, fill="#697586")
+    draw.text((70, 850), "注：US News 若缺少对应口径权重，本图仅展示分项指标覆盖关系，不解释为权重。", font=font_small, fill="#697586")
     save_png(image, out_path)
 
 
@@ -2256,11 +2394,13 @@ def build_table_04(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
     for source in RANKING_SOURCES:
         latest = latest_source_rows(records, source)
         mainland = latest[latest.apply(is_mainland, axis=1)].copy() if not latest.empty else latest
-        top200 = mainland[pd.to_numeric(mainland["rank_midpoint"], errors="coerce") <= TOP_RANK_MIDPOINT].copy()
+        mainland["_rank_midpoint_num"] = pd.to_numeric(mainland["rank_midpoint"], errors="coerce")
+        top200 = mainland[mainland["_rank_midpoint_num"] <= TOP_RANK_MIDPOINT].copy()
         top200, _ = dedupe_university_rows(top200, subject, source)
-        peer_records.extend(top200.to_dict("records"))
+        top200["_rank_midpoint_num"] = pd.to_numeric(top200["rank_midpoint"], errors="coerce")
+        peer_records.extend(top200.drop(columns=["_rank_midpoint_num"], errors="ignore").to_dict("records"))
         for lo, hi, label in bands:
-            count = len(mainland[(mainland["rank_midpoint"] >= lo) & (mainland["rank_midpoint"] <= hi)])
+            count = len(top200[(top200["_rank_midpoint_num"] >= lo) & (top200["_rank_midpoint_num"] <= hi)])
             rows.append({"榜单": source, "位次区间": label, "高校数量": count})
         rows.append({"榜单": source, "位次区间": "1-200合计", "高校数量": len(top200)})
     df = pd.DataFrame(rows)
@@ -2590,7 +2730,7 @@ def build_usnews_candidate_weight(run_dir: Path, subject: dict[str, Any]) -> dic
         return {
             "artifact_id": artifact_id,
             "status": "skipped",
-            "reason": "missing official US News target-subject weight; math-only candidate weight is intentionally not reused",
+            "reason": "missing official US News matching-subject weight; math-only candidate weight is intentionally not reused",
         }
     out = artifact_dir(run_dir, artifact_id)
     df = read_external_csv(USNEWS_WEIGHT_CANDIDATE_CSV)
@@ -3251,28 +3391,28 @@ def build_subject_run_artifacts(
             "软科",
             "table_05_arwu_mainland_peer_ranking",
             "figure_09_arwu_peer_indicator_relative_rank",
-            f"软科排名前200位内地高校{clean_text(subject['target_subject'])}分项指标相对表现",
+            f"软科排名前200位内地高校{source_title_subject_label(subject, '软科')}分项指标相对表现",
             False,
         ),
         (
             "QS",
             "table_07_qs_mainland_peer_ranking",
             "figure_10_qs_peer_indicator_relative_rank",
-            f"QS排名前200位内地高校{clean_text(subject['target_subject'])}分项指标相对表现",
+            f"QS排名前200位内地高校{source_title_subject_label(subject, 'QS')}分项指标相对表现",
             False,
         ),
         (
             "US News",
             "table_06_usnews_mainland_peer_ranking",
             "figure_11_usnews_peer_indicator_relative_rank",
-            f"U.S. News 排名前200位内地高校{clean_text(subject['target_subject'])}分项指标相对排名",
+            f"U.S. News 排名前200位内地高校{source_title_subject_label(subject, 'US News')}分项指标相对排名",
             True,
         ),
         (
             "THE",
             "table_08_the_mainland_peer_ranking",
             "figure_12_the_peer_indicator_relative_rank",
-            f"THE排名前200位内地高校{clean_text(subject['target_subject'])}分项指标相对排名",
+            f"THE排名前200位内地高校{source_title_subject_label(subject, 'THE')}分项指标相对排名",
             True,
         ),
     ]

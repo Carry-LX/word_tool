@@ -9,6 +9,8 @@ from typing import Any
 
 import pandas as pd
 
+import subject_bridge_utils
+
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_DIR / "data"
@@ -18,6 +20,8 @@ LOG_DIR = PROJECT_DIR / "logs"
 
 SQLITE_PATH = PROCESSED_DIR / "ranking.sqlite"
 FACT_RANKING_INDICATOR_CSV = PROCESSED_DIR / "fact_ranking_indicator.csv"
+DIM_SUBJECT_ALIAS_CSV = PROCESSED_DIR / "dim_subject_alias.csv"
+FACT_RANKING_INDICATOR_SUBJECT_BRIDGE_CSV = PROCESSED_DIR / "fact_ranking_indicator_subject_bridge.csv"
 RUN_LOG = LOG_DIR / "ranking_indicator_run_log.md"
 
 TARGET_UNIVERSITY = "同济大学"
@@ -217,6 +221,45 @@ def build_records() -> pd.DataFrame:
         },
         {
             "ranking_source": "QS",
+            "file": "2024年QS世界学科排名-20240412.xlsx",
+            "sheet": "数据",
+            "release_year_col": "发布年度",
+            "ranking_year_col": "发布年度",
+            "subject_col": "学科中文",
+            "university_cn_col": "中文名称",
+            "university_en_col": "英文名称",
+            "region_col": "所在地区",
+            "world_rank_col": "国际排名",
+            "indicators": [
+                {"column": "总得分", "name": "总得分", "metric_type": "score"},
+                {"column": "H指数", "name": "H指数", "metric_type": "score"},
+                {"column": "篇均被引次数", "name": "篇均被引次数", "metric_type": "score"},
+                {"column": "学术声誉", "name": "学术声誉", "metric_type": "score"},
+                {"column": "雇主声誉", "name": "雇主声誉", "metric_type": "score"},
+                {"column": "国际网络研究", "name": "国际网络研究", "metric_type": "score"},
+            ],
+        },
+        {
+            "ranking_source": "QS",
+            "file": "2025年QS世界大学学科排名20250313.xlsx",
+            "sheet": "明细数",
+            "release_year_col": "年份",
+            "ranking_year_col": "年份",
+            "subject_col": "学科中文",
+            "university_cn_col": "大学",
+            "region_col": "地区",
+            "world_rank_col": "排名",
+            "indicators": [
+                {"column": "综合得分", "name": "总得分", "metric_type": "score"},
+                {"column": "H指数排名", "name": "H指数", "metric_type": "score"},
+                {"column": "论文篇均引用率", "name": "篇均被引次数", "metric_type": "score"},
+                {"column": "学术声誉", "name": "学术声誉", "metric_type": "score"},
+                {"column": "雇主声誉", "name": "雇主声誉", "metric_type": "score"},
+                {"column": "国际研究网络", "name": "国际网络研究", "metric_type": "score"},
+            ],
+        },
+        {
+            "ranking_source": "QS",
             "file": "2026年QS世界学科排名20260326.xlsx",
             "sheet": "数据",
             "release_year_col": "发布年度",
@@ -324,7 +367,30 @@ def write_sqlite(df: pd.DataFrame) -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_ri_university ON fact_ranking_indicator(university_name_cn, university_name_en)")
 
 
-def qa_reports(df: pd.DataFrame) -> dict[str, Any]:
+def build_indicator_subject_bridge(df: pd.DataFrame) -> pd.DataFrame:
+    aliases = subject_bridge_utils.read_alias_table(DIM_SUBJECT_ALIAS_CSV)
+    return subject_bridge_utils.build_subject_bridge(
+        df,
+        aliases,
+        fact_id_col="ranking_indicator_id",
+        subject_id_col="",
+        bridge_id_prefix="ranking_indicator_subject_bridge",
+    )
+
+
+def write_bridge_sqlite(bridge: pd.DataFrame) -> None:
+    with sqlite3.connect(SQLITE_PATH) as conn:
+        conn.execute("DROP TABLE IF EXISTS fact_ranking_indicator_subject_bridge")
+        bridge.to_sql("fact_ranking_indicator_subject_bridge", conn, index=False)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ri_bridge_subject ON fact_ranking_indicator_subject_bridge(subject_id)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ri_bridge_fact ON fact_ranking_indicator_subject_bridge(ranking_indicator_id)"
+        )
+
+
+def qa_reports(df: pd.DataFrame, indicator_subject_bridge: pd.DataFrame) -> dict[str, Any]:
     QA_DIR.mkdir(parents=True, exist_ok=True)
     by_source = df.groupby("ranking_source").size().to_dict()
     by_source_metric = df.groupby(["ranking_source", "metric_type"]).size().reset_index(name="row_count")
@@ -337,6 +403,14 @@ def qa_reports(df: pd.DataFrame) -> dict[str, Any]:
         .sort_values(["ranking_source", "indicator_name"])
     )
     indicator_coverage.to_csv(QA_DIR / "ranking_indicator_coverage.csv", index=False, encoding="utf-8-sig")
+
+    bridge_summary = (
+        indicator_subject_bridge.groupby(["ranking_source", "match_policy"], dropna=False)
+        .size()
+        .reset_index(name="row_count")
+        .sort_values(["ranking_source", "match_policy"])
+    )
+    bridge_summary.to_csv(QA_DIR / "ranking_indicator_subject_bridge_summary.csv", index=False, encoding="utf-8-sig")
 
     tongji = df[df["is_tongji"] == True].copy()
     tongji.to_csv(QA_DIR / "tongji_ranking_indicators.csv", index=False, encoding="utf-8-sig")
@@ -396,12 +470,17 @@ def qa_reports(df: pd.DataFrame) -> dict[str, Any]:
     summary = {
         "generated_at": now_text(),
         "fact_ranking_indicator_rows": int(len(df)),
+        "ranking_indicator_subject_bridge_rows": int(len(indicator_subject_bridge)),
+        "ranking_indicator_subject_bridge_multi_alias_rows": int(
+            (indicator_subject_bridge.get("match_policy", pd.Series(dtype=str)) == "multi_alias_bridge").sum()
+        ),
         "rows_by_source": by_source,
         "metric_type_counts": df["metric_type"].value_counts().to_dict(),
         "tongji_indicator_rows": int(len(tongji)),
         "p1_smoke": smoke_rows,
         "outputs": {
             "fact_ranking_indicator": str(FACT_RANKING_INDICATOR_CSV),
+            "fact_ranking_indicator_subject_bridge": str(FACT_RANKING_INDICATOR_SUBJECT_BRIDGE_CSV),
             "by_source_metric_type": str(QA_DIR / "ranking_indicator_by_source_metric_type.csv"),
             "indicator_coverage": str(QA_DIR / "ranking_indicator_coverage.csv"),
             "tongji_ranking_indicators": str(QA_DIR / "tongji_ranking_indicators.csv"),
@@ -420,6 +499,8 @@ def qa_reports(df: pd.DataFrame) -> dict[str, Any]:
         "",
         f"- 生成时间：{summary['generated_at']}",
         f"- fact_ranking_indicator 行数：{summary['fact_ranking_indicator_rows']}",
+        f"- fact_ranking_indicator_subject_bridge 行数：{summary['ranking_indicator_subject_bridge_rows']}",
+        f"- bridge 一对多候选行数：{summary['ranking_indicator_subject_bridge_multi_alias_rows']}",
         f"- 同济分项指标记录数：{summary['tongji_indicator_rows']}",
         "",
         "## rows by source",
@@ -471,11 +552,14 @@ def append_run_log(summary: dict[str, Any]) -> None:
         "### 输出",
         "",
         f"- `{FACT_RANKING_INDICATOR_CSV}`",
+        f"- `{FACT_RANKING_INDICATOR_SUBJECT_BRIDGE_CSV}`",
         f"- `{QA_DIR / 'ranking_indicator_summary.md'}`",
         "",
         "### 核验摘要",
         "",
         f"- fact_ranking_indicator 行数：{summary['fact_ranking_indicator_rows']}",
+        f"- fact_ranking_indicator_subject_bridge 行数：{summary['ranking_indicator_subject_bridge_rows']}",
+        f"- bridge 一对多候选行数：{summary['ranking_indicator_subject_bridge_multi_alias_rows']}",
         f"- 同济分项指标记录数：{summary['tongji_indicator_rows']}",
         "",
     ]
@@ -489,9 +573,12 @@ def main() -> None:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     df = build_records()
     df = compute_relative_ranks(df)
+    indicator_subject_bridge = build_indicator_subject_bridge(df)
     df.to_csv(FACT_RANKING_INDICATOR_CSV, index=False, encoding="utf-8-sig")
+    indicator_subject_bridge.to_csv(FACT_RANKING_INDICATOR_SUBJECT_BRIDGE_CSV, index=False, encoding="utf-8-sig")
     write_sqlite(df)
-    summary = qa_reports(df)
+    write_bridge_sqlite(indicator_subject_bridge)
+    summary = qa_reports(df, indicator_subject_bridge)
     append_run_log(summary)
     print((QA_DIR / "ranking_indicator_summary.md").read_text(encoding="utf-8"))
 

@@ -3,11 +3,14 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
+import subject_bridge_utils
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -21,6 +24,7 @@ TONGJI_SUBJECT_PROXY_SUPPLEMENT_CSV = PROJECT_DIR / "configs" / "runtime" / "ton
 DIM_SUBJECT_CSV = PROCESSED_DIR / "dim_subject.csv"
 DIM_SUBJECT_ALIAS_CSV = PROCESSED_DIR / "dim_subject_alias.csv"
 FACT_RANKING_CSV = PROCESSED_DIR / "fact_ranking.csv"
+FACT_RANKING_SUBJECT_BRIDGE_CSV = PROCESSED_DIR / "fact_ranking_subject_bridge.csv"
 SQLITE_PATH = PROCESSED_DIR / "ranking.sqlite"
 
 RUN_LOG = LOG_DIR / "processed_core_run_log.md"
@@ -52,12 +56,18 @@ def normalize_key(value: Any) -> str:
 
 
 def split_alias_text(value: Any) -> list[str]:
-    text = clean_text(value)
+    if value is None:
+        return []
+    raw_text = str(value).strip()
+    if raw_text.lower() == "nan":
+        return []
+    raw_text = raw_text.replace("_x000D_", "\n").replace("\r\n", "\n").replace("\r", "\n")
+    text = clean_text(raw_text)
     if not text:
         return []
 
     candidates: list[str] = [text]
-    for part in re.split(r"[；;,/、，|]+", text):
+    for part in re.split(r"[；;,/、，|\n]+", raw_text):
         item = clean_text(part)
         if not item:
             continue
@@ -71,6 +81,25 @@ def split_alias_text(value: Any) -> list[str]:
         if item and item not in unique_items:
             unique_items.append(item)
     return unique_items
+
+
+def split_mapping_subject_names(value: Any) -> list[str]:
+    text = clean_text(value)
+    if not text:
+        return []
+    if not re.search(r"[；;,/、，|\n\r]+", text):
+        return [text]
+    unique_items: list[str] = []
+    for part in re.split(r"[；;,/、，|\n\r]+", text):
+        item = clean_text(part)
+        if item and item not in unique_items:
+            unique_items.append(item)
+    return unique_items
+
+
+def has_alias_separator(value: Any) -> bool:
+    text = clean_text(value)
+    return bool(text and re.search(r"[；;,/、，|\n\r]|_x000D_", text))
 
 
 def read_sheet(file_name: str, sheet_name: str, header: int = 0) -> pd.DataFrame:
@@ -302,6 +331,17 @@ def infer_ranking_source(value: Any) -> str:
 def build_dim_subject_alias(dim_subject: pd.DataFrame) -> pd.DataFrame:
     manual_config = load_manual_alias_config()
     invalid_alias_values = {normalize_key(value) for value in manual_config.get("invalid_alias_values", [])}
+    mapping_sheet_reverse = read_sheet("教育部学科与四大国际学科排名映射关系.xlsx", "Sheet1")
+    protected_alias_norms_by_source: dict[str, set[str]] = defaultdict(set)
+    for _, row in mapping_sheet_reverse.iterrows():
+        source = infer_ranking_source(row.get("榜单名称"))
+        if not source:
+            continue
+        for column in [column for column in mapping_sheet_reverse.columns if clean_text(column).startswith("榜单学科")]:
+            alias_text = clean_text(row.get(column))
+            if alias_text and has_alias_separator(alias_text):
+                protected_alias_norms_by_source[source].add(normalize_key(alias_text))
+
     ministry_name_to_id = {
         normalize_key(row["ministry_subject_name"]): clean_text(row["subject_id"])
         for _, row in dim_subject.iterrows()
@@ -313,7 +353,11 @@ def build_dim_subject_alias(dim_subject: pd.DataFrame) -> pd.DataFrame:
         text = clean_text(alias)
         if not subject_id or not ranking_source or not text:
             return
-        for item in split_alias_text(text):
+        if normalize_key(text) in protected_alias_norms_by_source.get(ranking_source, set()):
+            alias_items = [text]
+        else:
+            alias_items = split_alias_text(text)
+        for item in alias_items:
             if not item or normalize_key(item) in invalid_alias_values:
                 continue
             aliases.append(
@@ -385,12 +429,14 @@ def build_dim_subject_alias(dim_subject: pd.DataFrame) -> pd.DataFrame:
                 clean_text(rule.get("note")),
             )
 
-    sheet1 = read_sheet("教育部学科与四大国际学科排名映射关系.xlsx", "Sheet1")
-    for _, row in sheet1.iterrows():
+    for _, row in mapping_sheet_reverse.iterrows():
         source = infer_ranking_source(row.get("榜单名称"))
-        subject_name = clean_text(row.get("对应一级学科"))
-        subject_id = ministry_name_to_id.get(normalize_key(subject_name), "")
-        add_alias(subject_id, source, row.get("榜单学科"), "mapping_sheet1", "教育部学科映射Sheet1")
+        subject_names = split_mapping_subject_names(row.get("对应一级学科"))
+        alias_columns = [column for column in mapping_sheet_reverse.columns if clean_text(column).startswith("榜单学科")]
+        for subject_name in subject_names:
+            subject_id = ministry_name_to_id.get(normalize_key(subject_name), "")
+            for alias_column in alias_columns:
+                add_alias(subject_id, source, row.get(alias_column), "mapping_sheet1", "教育部学科映射Sheet1")
 
     for file_name, sheet_name, source in [
         ("2025-2026年度US News世界学科排名20251124.xlsx", "Sheet1", "US News"),
@@ -441,6 +487,14 @@ def direct_subject_id_for(source: str, subject_raw: str, lookups: dict[tuple[str
     return "", len(subject_ids)
 
 
+def is_tongji_university_name(*values: Any) -> bool:
+    for value in values:
+        key = normalize_key(value)
+        if key in {"同济大学", "tongjiuniversity"}:
+            return True
+    return False
+
+
 def ranking_record(
     ranking_source: str,
     release_year: int | None,
@@ -470,7 +524,7 @@ def ranking_record(
         "university_name_en": university_name_en,
         "country_or_region": country_or_region,
         "is_mainland_china": "中国内地" in country_or_region or country_or_region in {"中国大陆", "中国"},
-        "is_tongji": university_name_cn == TARGET_UNIVERSITY or university_name_en == "Tongji University",
+        "is_tongji": is_tongji_university_name(university_name_cn, university_name_en),
         **parsed_rank,
         "total_score": clean_text(total_score),
         "source_file": source_file,
@@ -797,21 +851,43 @@ def build_fact_ranking(dim_subject_alias: pd.DataFrame) -> pd.DataFrame:
     return fact
 
 
-def write_sqlite(dim_subject: pd.DataFrame, dim_subject_alias: pd.DataFrame, fact_ranking: pd.DataFrame) -> None:
+def build_fact_ranking_subject_bridge(fact_ranking: pd.DataFrame, dim_subject_alias: pd.DataFrame) -> pd.DataFrame:
+    return subject_bridge_utils.build_subject_bridge(
+        fact_ranking,
+        dim_subject_alias,
+        fact_id_col="fact_id",
+        bridge_id_prefix="ranking_subject_bridge",
+    )
+
+
+def write_sqlite(
+    dim_subject: pd.DataFrame,
+    dim_subject_alias: pd.DataFrame,
+    fact_ranking: pd.DataFrame,
+    fact_ranking_subject_bridge: pd.DataFrame,
+) -> None:
     if SQLITE_PATH.exists():
         SQLITE_PATH.unlink()
     with sqlite3.connect(SQLITE_PATH) as conn:
         dim_subject.to_sql("dim_subject", conn, index=False)
         dim_subject_alias.to_sql("dim_subject_alias", conn, index=False)
         fact_ranking.to_sql("fact_ranking", conn, index=False)
+        fact_ranking_subject_bridge.to_sql("fact_ranking_subject_bridge", conn, index=False)
         conn.execute("CREATE INDEX idx_fact_ranking_subject ON fact_ranking(subject_id)")
         conn.execute("CREATE INDEX idx_fact_ranking_subject_norm ON fact_ranking(ranking_source, ranking_subject_norm)")
+        conn.execute("CREATE INDEX idx_fact_ranking_bridge_subject ON fact_ranking_subject_bridge(subject_id)")
+        conn.execute("CREATE INDEX idx_fact_ranking_bridge_fact ON fact_ranking_subject_bridge(fact_id)")
         conn.execute("CREATE INDEX idx_dim_subject_alias_norm ON dim_subject_alias(ranking_source, ranking_subject_norm)")
         conn.execute("CREATE INDEX idx_fact_ranking_source_year ON fact_ranking(ranking_source, release_year, ranking_year)")
         conn.execute("CREATE INDEX idx_fact_ranking_university ON fact_ranking(university_name_cn, university_name_en)")
 
 
-def qa_reports(dim_subject: pd.DataFrame, dim_subject_alias: pd.DataFrame, fact_ranking: pd.DataFrame) -> dict[str, Any]:
+def qa_reports(
+    dim_subject: pd.DataFrame,
+    dim_subject_alias: pd.DataFrame,
+    fact_ranking: pd.DataFrame,
+    fact_ranking_subject_bridge: pd.DataFrame,
+) -> dict[str, Any]:
     QA_DIR.mkdir(parents=True, exist_ok=True)
 
     parse_exceptions = fact_ranking[fact_ranking["rank_note"].isin(["missing", "unparsed"])].copy()
@@ -833,6 +909,14 @@ def qa_reports(dim_subject: pd.DataFrame, dim_subject_alias: pd.DataFrame, fact_
         .sort_values(["ranking_source", "source_file", "source_sheet"])
     )
     source_trace.to_csv(QA_DIR / "source_trace_summary.csv", index=False, encoding="utf-8-sig")
+
+    bridge_summary = (
+        fact_ranking_subject_bridge.groupby(["ranking_source", "match_policy"], dropna=False)
+        .size()
+        .reset_index(name="row_count")
+        .sort_values(["ranking_source", "match_policy"])
+    )
+    bridge_summary.to_csv(QA_DIR / "fact_ranking_subject_bridge_summary.csv", index=False, encoding="utf-8-sig")
 
     tongji = fact_ranking[fact_ranking["is_tongji"] == True].copy()
     math_subject_ids = set(
@@ -872,6 +956,8 @@ def qa_reports(dim_subject: pd.DataFrame, dim_subject_alias: pd.DataFrame, fact_
         "subject_id_missing_rows": int((fact_ranking["subject_id"].map(clean_text) == "").sum()),
         "subject_alias_no_match_rows": int((fact_ranking["subject_alias_match_count"].fillna(0).astype(int) == 0).sum()),
         "subject_alias_ambiguous_rows": int((fact_ranking["subject_alias_match_count"].fillna(0).astype(int) > 1).sum()),
+        "subject_bridge_rows": int(len(fact_ranking_subject_bridge)),
+        "subject_bridge_multi_alias_rows": int((fact_ranking_subject_bridge.get("match_policy", pd.Series(dtype=str)) == "multi_alias_bridge").sum()),
         "rank_parse_exception_rows": int(len(parse_exceptions)),
         "tongji_rows": int(len(tongji)),
         "tongji_math_rows": int(len(tongji_math)),
@@ -879,6 +965,7 @@ def qa_reports(dim_subject: pd.DataFrame, dim_subject_alias: pd.DataFrame, fact_
             "dim_subject_csv": str(DIM_SUBJECT_CSV),
             "dim_subject_alias_csv": str(DIM_SUBJECT_ALIAS_CSV),
             "fact_ranking_csv": str(FACT_RANKING_CSV),
+            "fact_ranking_subject_bridge_csv": str(FACT_RANKING_SUBJECT_BRIDGE_CSV),
             "sqlite": str(SQLITE_PATH),
             "ranking_parse_exceptions": str(QA_DIR / "ranking_parse_exceptions.csv"),
             "subject_mapping_unmatched": str(QA_DIR / "subject_mapping_unmatched.csv"),
@@ -901,6 +988,8 @@ def qa_reports(dim_subject: pd.DataFrame, dim_subject_alias: pd.DataFrame, fact_
         f"- subject_id 缺失行数：{summary['subject_id_missing_rows']}",
         f"- 学科 alias 无匹配行数：{summary['subject_alias_no_match_rows']}",
         f"- 学科 alias 一对多行数：{summary['subject_alias_ambiguous_rows']}",
+        f"- fact_ranking_subject_bridge 行数：{summary['subject_bridge_rows']}",
+        f"- bridge 一对多候选行数：{summary['subject_bridge_multi_alias_rows']}",
         f"- 排名解析异常行数：{summary['rank_parse_exception_rows']}",
         f"- 同济大学记录数：{summary['tongji_rows']}",
         f"- 同济数学记录数：{summary['tongji_math_rows']}",
@@ -994,6 +1083,7 @@ def append_run_log(summary: dict[str, Any]) -> None:
         f"- `{DIM_SUBJECT_CSV}`",
         f"- `{DIM_SUBJECT_ALIAS_CSV}`",
         f"- `{FACT_RANKING_CSV}`",
+        f"- `{FACT_RANKING_SUBJECT_BRIDGE_CSV}`",
         f"- `{SQLITE_PATH}`",
         f"- `{QA_DIR / 'processed_core_summary.md'}`",
         "",
@@ -1004,6 +1094,8 @@ def append_run_log(summary: dict[str, Any]) -> None:
         f"- subject_id 缺失行数：{summary['subject_id_missing_rows']}",
         f"- 学科 alias 无匹配行数：{summary['subject_alias_no_match_rows']}",
         f"- 学科 alias 一对多行数：{summary['subject_alias_ambiguous_rows']}",
+        f"- fact_ranking_subject_bridge 行数：{summary['subject_bridge_rows']}",
+        f"- bridge 一对多候选行数：{summary['subject_bridge_multi_alias_rows']}",
         f"- 排名解析异常行数：{summary['rank_parse_exception_rows']}",
         f"- 同济数学记录数：{summary['tongji_math_rows']}",
         "",
@@ -1022,13 +1114,15 @@ def main() -> None:
     dim_subject = build_dim_subject()
     dim_subject_alias = build_dim_subject_alias(dim_subject)
     fact_ranking = build_fact_ranking(dim_subject_alias)
+    fact_ranking_subject_bridge = build_fact_ranking_subject_bridge(fact_ranking, dim_subject_alias)
 
     dim_subject.to_csv(DIM_SUBJECT_CSV, index=False, encoding="utf-8-sig")
     dim_subject_alias.to_csv(DIM_SUBJECT_ALIAS_CSV, index=False, encoding="utf-8-sig")
     fact_ranking.to_csv(FACT_RANKING_CSV, index=False, encoding="utf-8-sig")
-    write_sqlite(dim_subject, dim_subject_alias, fact_ranking)
+    fact_ranking_subject_bridge.to_csv(FACT_RANKING_SUBJECT_BRIDGE_CSV, index=False, encoding="utf-8-sig")
+    write_sqlite(dim_subject, dim_subject_alias, fact_ranking, fact_ranking_subject_bridge)
 
-    summary = qa_reports(dim_subject, dim_subject_alias, fact_ranking)
+    summary = qa_reports(dim_subject, dim_subject_alias, fact_ranking, fact_ranking_subject_bridge)
     append_run_log(summary)
 
     print((QA_DIR / "processed_core_summary.md").read_text(encoding="utf-8"))

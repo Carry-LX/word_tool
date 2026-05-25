@@ -41,6 +41,8 @@ DIM_SUBJECT_CSV = PROCESSED_DIR / "dim_subject.csv"
 DIM_ALIAS_CSV = PROCESSED_DIR / "dim_subject_alias.csv"
 FACT_WEIGHT_CSV = PROCESSED_DIR / "fact_indicator_weight.csv"
 FACT_INDICATOR_CSV = PROCESSED_DIR / "fact_ranking_indicator.csv"
+FACT_RANKING_SUBJECT_BRIDGE_CSV = PROCESSED_DIR / "fact_ranking_subject_bridge.csv"
+FACT_INDICATOR_SUBJECT_BRIDGE_CSV = PROCESSED_DIR / "fact_ranking_indicator_subject_bridge.csv"
 LOGICAL_SLOT_MAPPING_CSV = CONFIG_DIR / "template_slot_inventory" / "logical_slot_artifact_mapping.csv"
 CURRENT_REQUEST_JSON = CONFIG_DIR / "runtime" / "current_subject_request.json"
 THE_WEIGHT_AREA_CROSSWALK_JSON = CONFIG_DIR / "runtime" / "the_weight_area_crosswalk.json"
@@ -206,6 +208,8 @@ def validate_required_inputs() -> list[dict[str, str]]:
         "dim_subject_alias": DIM_ALIAS_CSV,
         "fact_indicator_weight": FACT_WEIGHT_CSV,
         "fact_ranking_indicator": FACT_INDICATOR_CSV,
+        "fact_ranking_subject_bridge": FACT_RANKING_SUBJECT_BRIDGE_CSV,
+        "fact_ranking_indicator_subject_bridge": FACT_INDICATOR_SUBJECT_BRIDGE_CSV,
     }
     issues = []
     for issue in agent_runtime.validate_subject_request(SUBJECT_REQUEST):
@@ -316,15 +320,9 @@ def query_ranking_records(subject_id: str) -> pd.DataFrame:
 
 def query_supplemental_ranking_records(subject: dict[str, Any]) -> pd.DataFrame:
     alias_summary = subject.get("alias_summary", {})
-    supplement_records = subject.get("public_supplements", [])
-    supplement_sources = {
-        clean_text(row.get("ranking_source"))
-        for row in supplement_records
-        if clean_text(row.get("ranking_source"))
-    }
     source_aliases = {
         source: {normalize_key(value) for value in alias_summary.get(source, []) if normalize_key(value)}
-        for source in supplement_sources
+        for source in RANKING_SOURCES
     }
     source_aliases = {source: aliases for source, aliases in source_aliases.items() if aliases}
     if not source_aliases:
@@ -367,7 +365,7 @@ def query_supplemental_ranking_records(subject: dict[str, Any]) -> pd.DataFrame:
         matched = source_df[raw_keys.isin(aliases) | norm_keys.isin(aliases)].copy()
         if not matched.empty:
             matched["ranking_subject_alias"] = matched["ranking_subject_raw"]
-            matched["alias_type"] = "runtime_public_supplement"
+            matched["alias_type"] = "runtime_alias_supplement"
             matched_parts.append(matched.drop(columns=["ranking_subject_norm"]))
     if not matched_parts:
         return pd.DataFrame()
@@ -533,6 +531,31 @@ def attach_runtime_public_supplements(subject: dict[str, Any], records: pd.DataF
                     "reason": "proxy_policy=disallow",
                 }
             )
+    if records is not None and not records.empty:
+        supplement_rows = records[records.get("alias_type", pd.Series(dtype=str)).astype(str).eq("runtime_alias_supplement")].copy()
+        for source in sorted(supplement_rows.get("ranking_source", pd.Series(dtype=str)).dropna().astype(str).unique().tolist()):
+            if source in subject["source_runtime_overrides"]:
+                continue
+            if supplement_rows[supplement_rows["ranking_source"] == source].empty:
+                continue
+            subject["source_runtime_overrides"][source] = {
+                "ranking_subject_or_area": ";".join(
+                    sorted(
+                        {
+                            clean_text(value)
+                            for value in supplement_rows[supplement_rows["ranking_source"] == source]
+                            .get("ranking_subject_raw", pd.Series(dtype=str))
+                            .dropna()
+                            .astype(str)
+                            .tolist()
+                            if clean_text(value)
+                        }
+                    )[:8]
+                ),
+                "proxy_level": "runtime_alias_supplement",
+                "requires_disclosure": True,
+                "reason": "本地事实表存在同济记录，但原始学科口径未能通过 subject_id 直接 join；已按运行时别名补入，报告中需披露映射/代理口径。",
+            }
     return subject
 
 
@@ -811,8 +834,8 @@ def build_artifact_readiness(
             "figure_01_tongji_subject_ranking_overview",
             "chart",
             "多榜单排名概览",
-            overview_source_count >= 2,
-            f"至少两个榜单有同济最新排名即可生成概览；当前可用 {overview_source_count} 个榜单，缺失榜单应在图注或数据缺口中说明。",
+            overview_source_count >= 1,
+            f"至少一个榜单有同济最新排名即可生成概览；当前可用 {overview_source_count} 个榜单，缺失榜单应在图注或数据缺口中说明。",
         ),
         (
             "figure_02_ranking_indicator_commonality",
@@ -821,11 +844,11 @@ def build_artifact_readiness(
             commonality_source_count >= 2,
             f"至少两个榜单有权重或同济分项指标即可生成共性图；当前可用 {commonality_source_count} 个榜单，缺权重来源按指标覆盖数量展示。",
         ),
-        ("figure_03_arwu_indicator_weight", "chart", "软科权重图", has_weight("软科"), "需要软科目标学科权重。"),
-        ("figure_04_qs_indicator_weight", "chart", "QS 权重图", has_weight("QS"), "需要 QS 目标学科权重。"),
-        ("figure_05_usnews_indicator_weight", "chart", "US News 权重图", has_weight("US News"), "需要 US News 目标学科权重。"),
+        ("figure_03_arwu_indicator_weight", "chart", "软科权重图", has_weight("软科"), "需要软科对应口径权重。"),
+        ("figure_04_qs_indicator_weight", "chart", "QS 权重图", has_weight("QS"), "需要 QS 对应口径权重。"),
+        ("figure_05_usnews_indicator_weight", "chart", "US News 权重图", has_weight("US News"), "需要 US News 对应口径权重。"),
         ("figure_06_the_indicator_weight", "chart", "THE 权重图", has_weight("THE"), "需要 THE 对应领域权重。"),
-        ("figure_07_all_rankings_history", "chart", "四大排名历史趋势", sum(has_tongji(s) for s in RANKING_SOURCES) >= 2, "至少两个榜单有同济历史排名才有趋势价值。"),
+        ("figure_07_all_rankings_history", "chart", "四大排名历史趋势", sum(has_tongji(s) for s in RANKING_SOURCES) >= 1, "至少一个榜单有同济历史排名即可生成历史图；单榜单时用于展示当前可核验历史，缺失榜单不补造。"),
         ("table_04_mainland_rank_band_distribution", "table", "内地高校位次分布", sum(has_peer(s) for s in RANKING_SOURCES) >= 2, "需要各榜单最新内地高校排名样本。"),
         ("table_05_arwu_mainland_peer_ranking", "table", "软科 peer 排名表", has_peer("软科"), "需要软科前200内地高校样本。"),
         ("table_06_usnews_mainland_peer_ranking", "table", "US News peer 排名表", has_peer("US News"), "需要 US News 前200内地高校样本。"),

@@ -32,12 +32,24 @@ def update_word_fields(docx_path: Path) -> dict[str, Any]:
         word.Visible = False
         word.DisplayAlerts = 0
         document = word.Documents.Open(str(docx_path.resolve()), ReadOnly=False, AddToRecentFiles=False)
+        try:
+            document.Repaginate()
+        except Exception:
+            pass
 
         fields_updated = int(document.Fields.Update())
         toc_updated = 0
+        try:
+            document.Repaginate()
+        except Exception:
+            pass
         for toc in document.TablesOfContents:
             toc.Update()
             toc_updated += 1
+        try:
+            document.Repaginate()
+        except Exception:
+            pass
 
         for section in document.Sections:
             for header in section.Headers:

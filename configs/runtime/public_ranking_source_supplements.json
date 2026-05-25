@@ -202,7 +202,8 @@
     },
     "0825": {
       "aliases": [
-        "Aerospace Engineering"
+        "Aerospace Engineering",
+        "航空航天工程"
       ],
       "proxy_level": "candidate_alias",
       "requires_disclosure": true,
@@ -220,7 +221,8 @@
     },
     "0816": {
       "aliases": [
-        "Remote Sensing"
+        "Remote Sensing",
+        "遥感技术"
       ],
       "proxy_level": "close_subject_proxy",
       "requires_disclosure": true,
@@ -328,7 +330,8 @@
     },
     "0818": {
       "aliases": [
-        "Earth Sciences"
+        "Earth Sciences",
+        "地球科学"
       ],
       "proxy_level": "direct_public_alias",
       "requires_disclosure": false,

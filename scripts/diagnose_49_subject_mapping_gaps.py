@@ -184,17 +184,23 @@ def diagnose() -> dict[str, Any]:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     detail_path = OUTPUT_DIR / "subject_49_mapping_gap_diagnostics.csv"
     out.to_csv(detail_path, index=False, encoding="utf-8-sig")
-    issue_rows = out[out["diagnosis"].isin(["subject_id_fact_alias_miss", "runtime_alias_recovers_local_fact"])].copy()
+    issue_rows = out[out["diagnosis"].isin(["subject_id_fact_alias_miss"])].copy()
+    runtime_recovery_rows = out[out["diagnosis"].isin(["runtime_alias_recovers_local_fact"])].copy()
     issue_path = OUTPUT_DIR / "subject_49_possible_mapping_issues.csv"
     issue_rows.to_csv(issue_path, index=False, encoding="utf-8-sig")
+    runtime_recovery_path = OUTPUT_DIR / "subject_49_runtime_alias_recoveries.csv"
+    runtime_recovery_rows.to_csv(runtime_recovery_path, index=False, encoding="utf-8-sig")
     summary = {
         "generated_at": now_text(),
         "row_count": len(out),
         "mapping_related_issue_count": len(issue_rows),
+        "runtime_alias_recovery_count": len(runtime_recovery_rows),
         "detail_csv": str(detail_path),
         "mapping_related_issue_csv": str(issue_path),
+        "runtime_alias_recovery_csv": str(runtime_recovery_path),
         "diagnosis_breakdown": out.groupby("diagnosis").size().to_dict(),
         "mapping_issue_breakdown": issue_rows.groupby("ranking_source").size().to_dict() if not issue_rows.empty else {},
+        "runtime_alias_recovery_breakdown": runtime_recovery_rows.groupby("ranking_source").size().to_dict() if not runtime_recovery_rows.empty else {},
     }
     (OUTPUT_DIR / "subject_49_mapping_gap_diagnostics_summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
@@ -207,8 +213,10 @@ def diagnose() -> dict[str, Any]:
         f"- generated_at: {summary['generated_at']}",
         f"- row_count: {summary['row_count']}",
         f"- mapping_related_issue_count: {summary['mapping_related_issue_count']}",
+        f"- runtime_alias_recovery_count: {summary['runtime_alias_recovery_count']}",
         f"- detail_csv: {detail_path}",
         f"- mapping_related_issue_csv: {issue_path}",
+        f"- runtime_alias_recovery_csv: {runtime_recovery_path}",
         "",
         "## 诊断分类",
         "",
@@ -217,6 +225,9 @@ def diagnose() -> dict[str, Any]:
         lines.append(f"- {key}: {value}")
     lines.extend(["", "## 映射相关问题来源分布", ""])
     for key, value in summary["mapping_issue_breakdown"].items():
+        lines.append(f"- {key}: {value}")
+    lines.extend(["", "## 运行时别名补充恢复来源分布", ""])
+    for key, value in summary["runtime_alias_recovery_breakdown"].items():
         lines.append(f"- {key}: {value}")
     (OUTPUT_DIR / "subject_49_mapping_gap_diagnostics_summary.md").write_text(
         "\n".join(lines),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import html
 import re
 import os
 import subprocess
@@ -78,6 +79,23 @@ def inspect_zip(docx_path: Path) -> dict[str, Any]:
                 result["odd_page_section_break_count"] = document_xml.count('w:val="oddPage"')
                 if result["odd_page_section_break_count"]:
                     result["warnings"].append("document_contains_odd_page_section_breaks")
+                xml_text = html.unescape(document_xml)
+                stale_xml_patterns = {
+                    "stale_arwu_alumni_award_template": "\u6821\u53cb\u83b7\u5956",
+                    "stale_arwu_teacher_award_template": "\u6559\u5e08\u83b7\u5956",
+                    "stale_arwu_ns_paper_template": "N&S\u8bba\u6587",
+                    "unresolved_xx_subject": "XX\u5b66\u79d1",
+                    "unresolved_xx_subject_spaced": "XX \u5b66\u79d1",
+                }
+                xml_hits = {
+                    name: xml_text.count(pattern)
+                    for name, pattern in stale_xml_patterns.items()
+                    if pattern in xml_text
+                }
+                result["bad_text_xml_counts"] = xml_hits
+                if xml_hits:
+                    result["status"] = "fail"
+                    result["warnings"].append("unresolved_template_text_present_in_xml")
             if "word/_rels/document.xml.rels" in members:
                 rels_xml = zip_file.read("word/_rels/document.xml.rels").decode("utf-8", errors="ignore")
                 media_targets = sorted(set(re.findall(r'Target="(media/[^"]+)"', rels_xml)))
@@ -156,6 +174,10 @@ def inspect_docx_structure(docx_path: Path) -> dict[str, Any]:
     if any(row["long_table"] for row in wide_tables):
         result["warnings"].append("long_tables_need_repeated_header_review")
     bad_patterns = {
+        "stale_arwu_alumni_award_template": "\u6821\u53cb\u83b7\u5956",
+        "stale_arwu_teacher_award_template": "\u6559\u5e08\u83b7\u5956",
+        "stale_arwu_ns_paper_template": "N&S\u8bba\u6587",
+        "stale_arwu_top_alumni_template": "\u9876\u5c16\u6821\u53cb",
         "debug_narrative_placeholder": "自动说明占位",
         "debug_slot_marker": "slot=",
         "debug_artifact_marker": "artifact=",
@@ -243,6 +265,8 @@ def run_render(docx_path: Path, output_dir: Path) -> dict[str, Any]:
         command,
         cwd=str(PROJECT_DIR),
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         timeout=240,
         env=render_environment(),

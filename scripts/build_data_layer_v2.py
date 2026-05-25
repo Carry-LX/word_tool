@@ -70,6 +70,7 @@ ARTIFACT_CONTRACT_ROWS = [
     ("table_07_qs_mainland_peer_ranking", "fact_ranking;dim_university", "official_raw;derived_from_local_workbook", "no", "no", "partial", "QS 对标高校历史表。"),
     ("table_08_the_mainland_peer_ranking", "fact_ranking;dim_university", "official_raw;derived_from_local_workbook", "no", "no", "partial", "THE 对标高校历史表，领域口径需要披露。"),
     ("figure_09_arwu_peer_indicator_relative_rank", "fact_ranking_indicator;fact_ranking", "official_raw;derived_from_local_workbook", "no", "no", "partial", "软科 peer 分项指标相对排名。"),
+    ("figure_10_qs_peer_indicator_relative_rank", "fact_ranking_indicator;fact_ranking", "official_raw;derived_from_local_workbook", "no", "no", "partial", "QS peer 分项指标相对排名。"),
     ("figure_10_usnews_indicator_history_trend", "fact_external_indicator_history", "official_raw;derived_from_local_workbook", "no", "no", "partial", "US News 同济分项历史趋势。"),
     ("figure_11_usnews_peer_indicator_relative_rank", "fact_ranking_indicator;fact_ranking", "official_raw;derived_from_local_workbook", "no", "no", "partial", "US News peer 分项指标相对排名。"),
     ("figure_12_the_peer_indicator_relative_rank", "fact_ranking_indicator;fact_ranking", "official_raw;derived_from_local_workbook", "no", "no", "partial", "THE peer 分项指标相对排名。"),
