@@ -128,6 +128,7 @@ def source_has_ranking(facts: pd.DataFrame, subject: dict[str, Any], source: str
 
 def source_has_weight(weights: pd.DataFrame, subject: dict[str, Any], source: str) -> tuple[bool, str]:
     values = list(subject.get("alias_summary", {}).get(source, []))
+    values.extend([subject.get("target_subject"), subject.get("ministry_subject_name")])
     field = {
         "软科": "arwu_subject_name",
         "QS": "qs_subject_name",
@@ -138,6 +139,7 @@ def source_has_weight(weights: pd.DataFrame, subject: dict[str, Any], source: st
         values.insert(0, subject.get(field))
     if source == "QS":
         values = public_supplements.qs_proxy_aliases(subject) + values
+    values = public_supplements.source_aliases(subject, source) + values
     weight_rows = weights[weights["ranking_source"] == source].copy()
     weight_key_to_area = {
         normalize_key(value): value
