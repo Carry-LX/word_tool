@@ -6,25 +6,17 @@ import re
 from pathlib import Path
 from typing import Any
 
+import ranking_sources
+
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_PROFILE_PATH = PROJECT_DIR / "configs" / "runtime" / "agent_runtime_profile.json"
 DEFAULT_REQUEST_PATH = PROJECT_DIR / "configs" / "runtime" / "current_subject_request.json"
-SUPPORTED_RANKING_SOURCES = ["软科", "QS", "US News", "THE"]
+SUPPORTED_RANKING_SOURCE_KEYS = list(ranking_sources.CANONICAL_KEYS)
+SUPPORTED_RANKING_SOURCES = [ranking_sources.display_label(key) for key in SUPPORTED_RANKING_SOURCE_KEYS]
 RANKING_SOURCE_ALIASES = {
-    "arwu": "软科",
-    "gras": "软科",
-    "shanghairanking": "软科",
-    "shanghai ranking": "软科",
-    "软科": "软科",
-    "qs": "QS",
-    "usnews": "US News",
-    "us news": "US News",
-    "u.s.news": "US News",
-    "u.s. news": "US News",
-    "the": "THE",
-    "timeshighereducation": "THE",
-    "times higher education": "THE",
+    alias: ranking_sources.display_label(key)
+    for alias, key in ranking_sources.ALIASES.items()
 }
 
 
@@ -64,7 +56,14 @@ def normalize_ranking_source(value: Any) -> str:
     text = str(value or "").strip()
     if not text:
         return ""
+    key = ranking_sources.source_key(text)
+    if key:
+        return ranking_sources.display_label(key)
     return RANKING_SOURCE_ALIASES.get(normalize_key(text), text)
+
+
+def normalize_ranking_source_key(value: Any) -> str:
+    return ranking_sources.source_key(value)
 
 
 def normalize_ranking_sources(values: Any, default: list[str] | None = None) -> list[str]:

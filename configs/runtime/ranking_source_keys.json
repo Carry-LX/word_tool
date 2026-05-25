@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "purpose": "Canonical ranking source keys used at code boundaries. Persisted historical CSV values may still contain display labels.",
+  "canonical_keys": ["arwu", "qs", "usnews", "the"],
+  "display_labels": {
+    "arwu": "\u8f6f\u79d1",
+    "qs": "QS",
+    "usnews": "US News",
+    "the": "THE"
+  },
+  "migration_policy": {
+    "internal_logic": "Prefer canonical ASCII keys: arwu, qs, usnews, the.",
+    "storage_compatibility": "Existing processed and output tables may keep display labels for compatibility.",
+    "display_layer": "Convert canonical keys to Chinese/display labels only when writing user-facing text."
+  }
+}

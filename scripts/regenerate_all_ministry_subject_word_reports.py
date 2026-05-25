@@ -23,7 +23,7 @@ SUBJECT_RUN_ROOT = PROJECT_DIR / "outputs" / "subject_agent_runs"
 BATCH_OUTPUT_ROOT = PROJECT_DIR / "outputs" / "regenerate_all_ministry_subject_word_reports"
 SOFFICE_WRAPPER_DIR = Path("E:/tools/codex-bin")
 
-# Keep this empty for all unique ministry subject codes from COVERAGE_CSV.
+# Keep this empty for all unique ministry subjects from COVERAGE_CSV.
 ONLY_CODES: list[str] = []
 
 RUN_RENDER_QA = True
@@ -46,24 +46,31 @@ def clean_text(value: Any) -> str:
     return "" if text.lower() == "nan" else text
 
 
-def read_coverage_codes() -> list[str]:
+def read_ministry_subjects() -> list[dict[str, str]]:
     with COVERAGE_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    codes = sorted(
-        {
-            clean_text(row.get("ministry_subject_code")).zfill(4)
-            for row in rows
-            if clean_text(row.get("ministry_subject_code"))
-        }
-    )
+    subjects: dict[tuple[str, str], dict[str, str]] = {}
+    for row in rows:
+        code = clean_text(row.get("ministry_subject_code")).zfill(4)
+        subject = clean_text(row.get("ministry_subject_name")) or clean_text(row.get("source_subject_name"))
+        if not code or not subject:
+            continue
+        subjects.setdefault((code, subject), {"code": code, "subject": subject})
+    result = [subjects[key] for key in sorted(subjects)]
     if ONLY_CODES:
         wanted = {code.zfill(4) for code in ONLY_CODES}
-        codes = [code for code in codes if code in wanted]
-    return codes
+        result = [row for row in result if row["code"] in wanted]
+    return result
 
 
-def latest_run_dirs_by_code() -> dict[str, Path]:
-    result: dict[str, Path] = {}
+def subject_name_from_dir(path: Path) -> str:
+    match = re.match(r"^\d{8}_\d{6}_(\d{4})_(.+)$", path.name)
+    return match.group(2).strip() if match else ""
+
+
+def latest_run_dirs_by_subject() -> tuple[dict[str, Path], dict[tuple[str, str], Path]]:
+    by_code: dict[str, Path] = {}
+    by_subject: dict[tuple[str, str], Path] = {}
     for run_dir in SUBJECT_RUN_ROOT.glob("*"):
         if not run_dir.is_dir():
             continue
@@ -73,9 +80,14 @@ def latest_run_dirs_by_code() -> dict[str, Path]:
         if not (run_dir / "agent_run_summary.json").exists():
             continue
         code = match.group(1)
-        if code not in result or run_dir.stat().st_mtime > result[code].stat().st_mtime:
-            result[code] = run_dir
-    return result
+        if code not in by_code or run_dir.stat().st_mtime > by_code[code].stat().st_mtime:
+            by_code[code] = run_dir
+        subject = subject_name_from_dir(run_dir)
+        if subject:
+            key = (code, subject)
+            if key not in by_subject or run_dir.stat().st_mtime > by_subject[key].stat().st_mtime:
+                by_subject[key] = run_dir
+    return by_code, by_subject
 
 
 def prepend_soffice_wrapper_to_path() -> None:
@@ -121,15 +133,22 @@ def main() -> None:
     batch_dir.mkdir(parents=True, exist_ok=True)
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    codes = read_coverage_codes()
-    run_dirs = latest_run_dirs_by_code()
-    selected = [{"code": code, "run_dir": str(run_dirs.get(code, ""))} for code in codes]
+    subjects = read_ministry_subjects()
+    run_dirs_by_code, run_dirs_by_subject = latest_run_dirs_by_subject()
+    selected = [
+        {
+            "code": row["code"],
+            "subject": row["subject"],
+            "run_dir": str(run_dirs_by_subject.get((row["code"], row["subject"])) or run_dirs_by_code.get(row["code"], "")),
+        }
+        for row in subjects
+    ]
     write_json(batch_dir / "selected_subject_runs.json", selected)
 
     progress = {
         "started_at": now_text(),
         "batch_dir": str(batch_dir),
-        "total": len(codes),
+        "total": len(subjects),
         "completed": 0,
         "failed": 0,
         "current_code": "",
@@ -137,13 +156,15 @@ def main() -> None:
     }
     write_json(batch_dir / "progress.json", progress)
 
-    for index, code in enumerate(codes, start=1):
-        run_dir = run_dirs.get(code)
+    for index, row in enumerate(subjects, start=1):
+        code = row["code"]
+        subject = row["subject"]
+        run_dir = run_dirs_by_subject.get((code, subject)) or run_dirs_by_code.get(code)
         progress["current_code"] = code
         progress["completed"] = index - 1
         write_json(batch_dir / "progress.json", progress)
         if run_dir is None:
-            item = {"code": code, "status": "missing_subject_run_dir"}
+            item = {"code": code, "subject": subject, "status": "missing_subject_run_dir"}
             progress["failed"] += 1
             progress["results"].append(item)
             write_json(batch_dir / "progress.json", progress)
@@ -165,6 +186,7 @@ def main() -> None:
                     with contextlib.redirect_stdout(stdout_handle), contextlib.redirect_stderr(stderr_handle):
                         payload = word_report.build_subject_word_report()
             item = compact_summary(code, run_dir, payload)
+            item["subject"] = subject
             item["status"] = "ok"
             item["stdout_log"] = str(stdout_path)
             item["stderr_log"] = str(stderr_path)
