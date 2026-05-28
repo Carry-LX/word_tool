@@ -101,7 +101,11 @@ def clean_university_cn(value: Any) -> str:
 
 
 def resolve_wos_subject_paper_xlsx() -> Path | None:
-    matches = sorted((PROJECT_DIR / "data").glob(WOS_SUBJECT_PAPER_GLOB))
+    matches = sorted(
+        path
+        for path in (PROJECT_DIR / "data").glob(WOS_SUBJECT_PAPER_GLOB)
+        if not path.name.startswith("~$")
+    )
     return matches[0] if matches else None
 
 

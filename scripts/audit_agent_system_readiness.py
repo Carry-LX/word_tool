@@ -80,6 +80,49 @@ def write_csv(path: Path, rows: list[dict[str, Any]], fieldnames: list[str]) -> 
         writer.writerows(rows)
 
 
+def clean_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, float) and pd.isna(value):
+        return ""
+    text = str(value).strip()
+    return "" if text.lower() == "nan" else text
+
+
+def normalize_subject_key(value: Any) -> str:
+    text = canonical_subject_scope_text(value).lower().replace("&", " and ")
+    return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "", text)
+
+
+def canonical_subject_scope_text(value: Any) -> str:
+    text = clean_text(value)
+    if not text:
+        return ""
+    alias_pairs = {
+        "engineering": "工程学",
+        "工学": "工程学",
+        "工程": "工程学",
+        "physical sciences": "自然科学",
+        "natural sciences": "自然科学",
+        "computer science": "计算机科学",
+    }
+    aliases = {normalize_subject_key_raw(key): value for key, value in alias_pairs.items()}
+    crosswalk_path = CONFIG_DIR / "runtime" / "the_weight_area_crosswalk.json"
+    if crosswalk_path.exists():
+        try:
+            crosswalk = json.loads(crosswalk_path.read_text(encoding="utf-8"))
+            for key, canonical in crosswalk.items():
+                aliases[normalize_subject_key_raw(key)] = clean_text(canonical)
+        except Exception:
+            pass
+    return aliases.get(normalize_subject_key_raw(text), text)
+
+
+def normalize_subject_key_raw(value: Any) -> str:
+    text = clean_text(value).lower().replace("&", " and ")
+    return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "", text)
+
+
 def add_issue(issues: list[dict[str, Any]], severity: str, area: str, item: str, message: str, recommendation: str) -> None:
     issues.append(
         {
@@ -269,6 +312,98 @@ def latest_report_agent_summary() -> dict[str, Any]:
     return payload
 
 
+def latest_regeneration_batch_summary() -> dict[str, Any]:
+    runs_dir = PROJECT_DIR / "outputs" / "regenerate_all_ministry_subject_word_reports"
+    summaries = sorted(runs_dir.glob("batch_*/summary.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not summaries:
+        return {}
+    payload = json.loads(summaries[0].read_text(encoding="utf-8"))
+    payload["_summary_path"] = str(summaries[0])
+    return payload
+
+
+def audit_latest_run_subject_scope_consistency(run_dir: Path, issues: list[dict[str, Any]]) -> dict[str, Any]:
+    ranking_path = run_dir / "ranking_availability.csv"
+    artifacts_dir = run_dir / "artifacts"
+    if not ranking_path.exists() or not artifacts_dir.exists():
+        return {"checked": False, "mismatch_count": 0, "mismatches": []}
+    availability = pd.read_csv(ranking_path, dtype=str).fillna("")
+    selected_by_source = {
+        clean_text(row.get("ranking_source")): clean_text(row.get("selected_ranking_subject_or_area"))
+        for row in availability.to_dict(orient="records")
+        if clean_text(row.get("ranking_source")) and clean_text(row.get("selected_ranking_subject_or_area"))
+    }
+    selected_keys = {source: normalize_subject_key(value) for source, value in selected_by_source.items()}
+    subject_columns = [
+        "ranking_subject_raw",
+        "ranking_subject_or_area",
+        "ranking_subject_alias",
+        "_peer_subject_raw",
+    ]
+    mismatches: list[dict[str, Any]] = []
+    checked_rows = 0
+    for path in sorted(artifacts_dir.glob("**/*.csv")):
+        try:
+            df = pd.read_csv(path, dtype=str).fillna("")
+        except Exception as exc:  # noqa: BLE001
+            mismatches.append(
+                {
+                    "artifact_file": str(path),
+                    "ranking_source": "",
+                    "selected_subject_or_area": "",
+                    "observed_subject_or_area": "",
+                    "column": "",
+                    "row_count": 0,
+                    "status": f"read_error: {exc}",
+                }
+            )
+            continue
+        if "ranking_source" not in df.columns:
+            continue
+        available_subject_columns = [column for column in subject_columns if column in df.columns]
+        if not available_subject_columns:
+            continue
+        for source, selected_key in selected_keys.items():
+            if not selected_key:
+                continue
+            source_df = df[df["ranking_source"].map(clean_text) == source].copy()
+            if source_df.empty:
+                continue
+            for column in available_subject_columns:
+                values = sorted({clean_text(value) for value in source_df[column].tolist() if clean_text(value)})
+                if not values:
+                    continue
+                checked_rows += len(source_df)
+                bad_values = [value for value in values if normalize_subject_key(value) != selected_key]
+                if bad_values:
+                    mismatches.append(
+                        {
+                            "artifact_file": str(path),
+                            "ranking_source": source,
+                            "selected_subject_or_area": selected_by_source[source],
+                            "observed_subject_or_area": " | ".join(bad_values[:8]),
+                            "column": column,
+                            "row_count": len(source_df),
+                            "status": "subject_scope_mismatch",
+                        }
+                    )
+    if mismatches:
+        add_issue(
+            issues,
+            "P1",
+            "subject_scope",
+            "latest_run_artifact_scope_consistency",
+            f"Latest subject run has {len(mismatches)} artifact subject-scope mismatches.",
+            "Regenerate the subject run after fixing selected-source filtering; do not mix alternate ranking subjects within one source section.",
+        )
+    return {
+        "checked": True,
+        "checked_rows": checked_rows,
+        "mismatch_count": len(mismatches),
+        "mismatches": mismatches[:50],
+    }
+
+
 def audit_latest_run(issues: list[dict[str, Any]]) -> dict[str, Any]:
     summary = latest_run_summary()
     if not summary:
@@ -327,6 +462,7 @@ def audit_latest_run(issues: list[dict[str, Any]]) -> dict[str, Any]:
             f"{fail_count} generated artifacts failed audit in the latest run.",
             "Fix artifact builders before generating a delivery DOCX.",
         )
+    scope_consistency = audit_latest_run_subject_scope_consistency(run_dir, issues) if str(run_dir) else {}
     return {
         "summary_path": summary.get("_summary_path", ""),
         "run_dir": summary.get("run_dir", ""),
@@ -337,12 +473,39 @@ def audit_latest_run(issues: list[dict[str, Any]]) -> dict[str, Any]:
         "ready_artifact_count": ready_count,
         "artifact_count": artifact_count,
         "artifact_audit": summary.get("subject_artifact_audit", {}),
+        "subject_scope_consistency": scope_consistency,
     }
 
 
 def audit_report_agent_run(issues: list[dict[str, Any]]) -> dict[str, Any]:
     summary = latest_report_agent_summary()
     if not summary:
+        batch_summary = latest_regeneration_batch_summary()
+        if batch_summary:
+            total = int(batch_summary.get("total", 0) or 0)
+            completed = int(batch_summary.get("completed", 0) or 0)
+            failed = int(batch_summary.get("failed", 0) or 0)
+            if failed or completed < total:
+                add_issue(
+                    issues,
+                    "P1",
+                    "agent_orchestration",
+                    "latest_regeneration_batch",
+                    f"Latest regeneration batch is incomplete: completed={completed}, total={total}, failed={failed}.",
+                    "Open the batch summary and logs, fix the failed subject, then rerun scripts/run_batch_reports.py.",
+                )
+            return {
+                "summary_path": batch_summary.get("_summary_path", ""),
+                "agent_run_dir": "",
+                "orchestrator": "regenerate_all_ministry_subject_word_reports",
+                "status": "pass" if total and completed == total and failed == 0 else "incomplete",
+                "deliverable": bool(total and completed == total and failed == 0),
+                "failed_required_stages": [],
+                "word_output_docx": "",
+                "report_count": total,
+                "completed": completed,
+                "failed": failed,
+            }
         add_issue(
             issues,
             "P1",

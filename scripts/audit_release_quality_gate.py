@@ -103,6 +103,26 @@ def is_newer_report(path: Path, current: Path | None) -> bool:
     return current is None or path.stat().st_mtime > current.stat().st_mtime
 
 
+def page_number_from_path(value: str) -> int:
+    match = re.search(r"page-(\d+)", Path(value).stem)
+    return int(match.group(1)) if match else 0
+
+
+def split_sparse_pages(render: dict[str, Any]) -> tuple[list[str], list[str]]:
+    page_count = int(render.get("page_count") or 0)
+    frontmatter_sparse: list[str] = []
+    blocking_sparse: list[str] = []
+    for page in render.get("sparse_pages") or []:
+        page_number = page_number_from_path(page)
+        if page_number and page_number <= 3:
+            frontmatter_sparse.append(page)
+        elif page_count and page_number == page_count:
+            blocking_sparse.append(page)
+        else:
+            blocking_sparse.append(page)
+    return frontmatter_sparse, blocking_sparse
+
+
 def latest_report_dirs() -> tuple[dict[str, Path], dict[tuple[str, str], Path]]:
     latest_by_code: dict[str, Path] = {}
     latest_by_subject: dict[tuple[str, str], Path] = {}
@@ -146,7 +166,8 @@ def report_status(code: str, report_dir: Path, expected_subject_name: str = "") 
         blocking.append(f"qa_status_{status}")
     if render.get("blank_pages"):
         blocking.append("blank_pages")
-    if render.get("sparse_pages"):
+    frontmatter_sparse_pages, blocking_sparse_pages = split_sparse_pages(render)
+    if blocking_sparse_pages:
         blocking.append("sparse_pages")
     return {
         "code": code,
@@ -160,6 +181,8 @@ def report_status(code: str, report_dir: Path, expected_subject_name: str = "") 
         "page_count": render.get("page_count"),
         "blank_pages": render.get("blank_pages") or [],
         "sparse_pages": render.get("sparse_pages") or [],
+        "frontmatter_sparse_pages": frontmatter_sparse_pages,
+        "blocking_sparse_pages": blocking_sparse_pages,
         "blocking_issues": blocking,
         "pass": not blocking,
     }

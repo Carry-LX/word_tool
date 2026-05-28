@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import shutil
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +17,6 @@ import generate_narrative_with_llm as narrative_llm
 import build_word_assembly_manifest as assembly_manifest
 import build_word_replacement_trial as word_trial
 import run_subject_agent as subject_agent
-import update_word_fields
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -41,10 +42,13 @@ USE_DEMO_NARRATIVE_RESULT = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pi
 RUN_WORD_QA = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.run_word_qa", True)
 RUN_RENDER_QA = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.run_render_qa", False)
 UPDATE_WORD_FIELDS_WITH_COM = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.update_word_fields_with_com", True)
+NORMALIZE_DOCX_FOR_WORD_OPEN = agent_runtime.profile_bool(RUNTIME_PROFILE, "word_pipeline.normalize_docx_for_word_open", True)
 TABLE_REPLACEMENT_MODE = agent_runtime.profile_str(RUNTIME_PROFILE, "word_pipeline.table_replacement_mode", "native")
 ARTIFACT_DATA_BUNDLE_DIRNAME = "artifact_source_bundle"
 ARTIFACT_DATA_BUNDLE_INDEX_CSV = "artifact_source_bundle_index.csv"
 ARTIFACT_DATA_BUNDLE_INDEX_JSON = "artifact_source_bundle_index.json"
+DOCX_NORMALIZATION_TIMEOUT_SECONDS = 420
+WORD_FIELD_UPDATE_TIMEOUT_SECONDS = 180
 
 
 def now_text() -> str:
@@ -96,6 +100,95 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
         return []
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def parse_json_from_text(text: str) -> dict[str, Any]:
+    text = str(text or "").strip()
+    if not text:
+        return {}
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end < start:
+        return {}
+    try:
+        return json.loads(text[start : end + 1])
+    except json.JSONDecodeError:
+        return {}
+
+
+def append_stage_log(output_dir: Path, stage: str, status: str, extra: dict[str, Any] | None = None) -> None:
+    row = {"time": now_text(), "stage": stage, "status": status}
+    if extra:
+        row.update(extra)
+    path = output_dir / "build_stage_log.jsonl"
+    with path.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def run_docx_normalization(docx_path: Path) -> dict[str, Any]:
+    if not NORMALIZE_DOCX_FOR_WORD_OPEN:
+        return {"status": "skipped", "reason": "disabled_by_runtime_profile", "docx_path": str(docx_path)}
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["NORMALIZE_DOCX_PATH"] = str(docx_path.resolve())
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(PROJECT_DIR / "scripts" / "normalize_docx_for_word_open.py")],
+            cwd=str(PROJECT_DIR),
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            timeout=DOCX_NORMALIZATION_TIMEOUT_SECONDS,
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "status": "timeout",
+            "docx_path": str(docx_path),
+            "timeout_seconds": DOCX_NORMALIZATION_TIMEOUT_SECONDS,
+            "stdout": (exc.stdout or "")[-2000:] if isinstance(exc.stdout, str) else "",
+            "stderr": (exc.stderr or "")[-2000:] if isinstance(exc.stderr, str) else "",
+        }
+    payload = parse_json_from_text(completed.stdout)
+    if not payload:
+        payload = {"status": "failed", "docx_path": str(docx_path), "reason": "missing_json_stdout"}
+    payload["returncode"] = completed.returncode
+    payload["stderr"] = completed.stderr[-2000:]
+    return payload
+
+
+def run_word_field_update(docx_path: Path) -> dict[str, Any]:
+    if not UPDATE_WORD_FIELDS_WITH_COM:
+        return {"status": "skipped", "reason": "disabled_by_runtime_profile", "docx_path": str(docx_path)}
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["UPDATE_WORD_FIELDS_DOCX_PATH"] = str(docx_path.resolve())
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(PROJECT_DIR / "scripts" / "update_word_fields.py")],
+            cwd=str(PROJECT_DIR),
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            timeout=WORD_FIELD_UPDATE_TIMEOUT_SECONDS,
+            env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return {
+            "status": "timeout",
+            "docx_path": str(docx_path),
+            "timeout_seconds": WORD_FIELD_UPDATE_TIMEOUT_SECONDS,
+            "stdout": (exc.stdout or "")[-2000:] if isinstance(exc.stdout, str) else "",
+            "stderr": (exc.stderr or "")[-2000:] if isinstance(exc.stderr, str) else "",
+        }
+    payload = parse_json_from_text(completed.stdout)
+    if not payload:
+        payload = {"status": "failed", "docx_path": str(docx_path), "reason": "missing_json_stdout"}
+    payload["returncode"] = completed.returncode
+    payload["stderr"] = completed.stderr[-2000:]
+    return payload
 
 
 def relative_project_path(path: Path) -> str:
@@ -591,26 +684,50 @@ def build_subject_word_report() -> dict[str, Any]:
     manifest = assembly_manifest.build_manifest(run_dir)
     narrative_assets = prepare_narrative_assets(run_dir)
     output_docx = configure_word_writer(run_dir, manifest, subject_summary)
+    append_stage_log(output_docx.parent, "word_replacement", "start")
     word_trial.main()
-    field_update_result = (
-        update_word_fields.update_word_fields(output_docx)
-        if UPDATE_WORD_FIELDS_WITH_COM
-        else {"status": "skipped", "reason": "disabled_by_runtime_profile"}
+    append_stage_log(output_docx.parent, "word_replacement", "done")
+    append_stage_log(output_docx.parent, "word_open_normalization", "start")
+    word_open_normalization = run_docx_normalization(output_docx)
+    append_stage_log(
+        output_docx.parent,
+        "word_open_normalization",
+        clean_text(word_open_normalization.get("status")) or "unknown",
     )
+    append_stage_log(output_docx.parent, "word_field_update", "start")
+    field_update_result = run_word_field_update(output_docx)
+    append_stage_log(output_docx.parent, "word_field_update", clean_text(field_update_result.get("status")) or "unknown")
+    append_stage_log(output_docx.parent, "post_field_media_refresh", "start")
     rows, _ = word_trial.split_slot_rows_by_manifest(word_trial.read_all_slot_mapping())
     post_field_media_log = word_trial.refresh_visible_figure_media(rows, output_docx)
+    post_field_layout_log = [
+        {
+            "slot": "post_field_trailing_table_empty_paragraph_xml",
+            "artifact_id": "",
+            "operation": "remove_trailing_table_empty_paragraph_in_docx_xml",
+            "status": "ok",
+            "removed_paragraphs": word_trial.remove_trailing_table_empty_paragraph_in_docx_xml(output_docx),
+        }
+    ]
+    append_stage_log(output_docx.parent, "post_field_media_refresh", "done")
+    append_stage_log(output_docx.parent, "post_field_audit", "start")
     post_field_audit_rows = word_trial.audit_replacements(rows, output_docx)
     word_trial.write_audit_files(post_field_audit_rows)
-    word_trial.append_replacement_log(post_field_media_log, post_field_audit_rows)
+    word_trial.append_replacement_log(post_field_media_log + post_field_layout_log, post_field_audit_rows)
+    append_stage_log(output_docx.parent, "post_field_audit", "done")
 
     qa_result = {}
     if RUN_WORD_QA:
+        append_stage_log(output_docx.parent, "word_qa", "start")
         qa_result = audit_word_report.audit_docx(
             output_docx,
             output_docx.parent / "qa",
             render=RUN_RENDER_QA,
         )
+        append_stage_log(output_docx.parent, "word_qa", clean_text(qa_result.get("overall_status")) or "unknown")
+    append_stage_log(output_docx.parent, "artifact_source_bundle", "start")
     artifact_source_bundle = export_artifact_source_bundle(run_dir, manifest, output_docx.parent)
+    append_stage_log(output_docx.parent, "artifact_source_bundle", "done")
 
     payload = {
         "generated_at": now_text(),
@@ -626,6 +743,7 @@ def build_subject_word_report() -> dict[str, Any]:
         "artifact_audit": subject_summary.get("subject_artifact_audit", {}),
         "artifact_source_bundle": artifact_source_bundle,
         "word_replacement_audit": str(word_trial.REPLACEMENT_AUDIT_JSON),
+        "word_open_normalization": word_open_normalization,
         "word_field_update": field_update_result,
         "word_qa": qa_result,
     }

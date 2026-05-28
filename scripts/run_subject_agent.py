@@ -52,6 +52,26 @@ RECOMMENDED_PYTHON = agent_runtime.resolve_project_path(
     Path(r"E:\conda_envs\graph-rag\python.exe"),
 )
 
+def ensure_wos_subject_paper_csv() -> dict[str, Any]:
+    candidates = [
+        path
+        for path in DATA_DIR.glob("*web of science*20260511.xlsx")
+        if path.is_file() and not path.name.startswith("~$")
+    ]
+    newest_source = max(candidates, key=lambda path: path.stat().st_mtime, default=None)
+    if newest_source is None:
+        return {"status": "missing_source_xlsx"}
+    if WOS_SUBJECT_PAPER_CSV.exists() and WOS_SUBJECT_PAPER_CSV.stat().st_mtime >= newest_source.stat().st_mtime:
+        return {"status": "fresh", "source_file": newest_source.name}
+    try:
+        import build_data_layer_v2
+
+        frame = build_data_layer_v2.build_wos_subject_paper_wide()
+        return {"status": "rebuilt", "source_file": newest_source.name, "rows": int(len(frame))}
+    except Exception as exc:
+        return {"status": "rebuild_failed", "source_file": newest_source.name, "error": str(exc)}
+
+
 # 这个脚本仍然不使用命令行传参；换学科优先改 configs/runtime/current_subject_request.json。
 # 下面保留显式变量兜底，方便用户直接阅读和局部调试。
 TARGET_UNIVERSITY = agent_runtime.request_value(SUBJECT_REQUEST, "target_university", "同济大学")
@@ -155,6 +175,14 @@ def supplement_allowed(row: dict[str, Any]) -> bool:
 
 def valid_mapping_value(value: Any) -> str:
     return public_supplements.valid_mapping_value(value)
+
+
+def canonical_the_area(value: Any) -> str:
+    area = valid_mapping_value(value)
+    if area and THE_WEIGHT_AREA_CROSSWALK_JSON.exists():
+        crosswalk = json.loads(THE_WEIGHT_AREA_CROSSWALK_JSON.read_text(encoding="utf-8"))
+        return valid_mapping_value(crosswalk.get(area, area))
+    return area
 
 
 def add_alias_values(subject: dict[str, Any], source: str, values: list[Any]) -> int:
@@ -401,23 +429,74 @@ def latest_source_rows(df: pd.DataFrame, source: str) -> pd.DataFrame:
     return source_df[source_df["ranking_year"] == latest_ranking].copy()
 
 
-def build_ranking_availability(records: pd.DataFrame) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def expected_ranking_area(subject: dict[str, Any], source: str) -> str:
+    override = subject.get("source_runtime_overrides", {}).get(source, {})
+    override_area = valid_mapping_value(override.get("ranking_subject_or_area"))
+    if override_area:
+        return canonical_the_area(override_area) if source == "THE" else override_area
+    if source == "软科":
+        return valid_mapping_value(subject.get("arwu_subject_name")) or clean_text(subject.get("target_subject"))
+    if source == "QS":
+        return (
+            valid_mapping_value(subject.get("qs_subject_name"))
+            or valid_mapping_value(public_supplements.qs_proxy(subject).get("proxy_subject_or_area"))
+            or clean_text(subject.get("target_subject"))
+        )
+    if source == "US News":
+        return valid_mapping_value(subject.get("usnews_subject_name")) or clean_text(subject.get("target_subject"))
+    if source == "THE":
+        return canonical_the_area(subject.get("the_subject_area")) or clean_text(subject.get("target_subject"))
+    return clean_text(subject.get("target_subject"))
+
+
+def source_area_candidates(subject: dict[str, Any], source: str) -> list[str]:
+    values = [expected_ranking_area(subject, source)]
+    values.extend(candidate_subject_areas(subject.get("source_runtime_overrides", {}).get(source, {}).get("weight_subject_or_area")))
+    if source == "THE":
+        values.extend(subject.get("alias_summary", {}).get(source, []))
+    candidates: list[str] = []
+    for value in ordered_unique([valid_mapping_value(item) for item in values]):
+        candidates.extend(candidate_subject_areas(value))
+    return ordered_unique(candidates)
+
+
+def filter_to_selected_source_area(df: pd.DataFrame, subject: dict[str, Any], source: str) -> pd.DataFrame:
+    if df.empty:
+        return df
+    candidate_keys = {normalize_key(value) for value in source_area_candidates(subject, source) if normalize_key(value)}
+    if not candidate_keys:
+        return df
+    masks = []
+    for column in ["ranking_subject_raw", "ranking_subject_norm", "ranking_subject_alias"]:
+        if column in df.columns:
+            masks.append(df[column].map(normalize_key).isin(candidate_keys))
+    if not masks:
+        return df
+    mask = masks[0]
+    for item in masks[1:]:
+        mask = mask | item
+    return df[mask].copy()
+
+
+def build_ranking_availability(subject: dict[str, Any], records: pd.DataFrame) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     summary: dict[str, Any] = {"sources_with_tongji": 0, "sources_with_peer_top200": 0}
     for source in RANKING_SOURCES:
         latest = latest_source_rows(records, source)
+        latest = filter_to_selected_source_area(latest, subject, source)
         tongji = latest[latest["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
         mainland = latest[latest.apply(is_mainland, axis=1)].copy() if not latest.empty else latest
         top200 = mainland[pd.to_numeric(mainland["rank_midpoint"], errors="coerce") <= TOP_RANK_MIDPOINT].copy()
         row = {
             "ranking_source": source,
+            "selected_ranking_subject_or_area": expected_ranking_area(subject, source),
             "latest_release_year": int(latest["release_year"].max()) if not latest.empty else "",
             "latest_ranking_year": int(latest["ranking_year"].max()) if not latest.empty else "",
             "latest_rows": len(latest),
             "tongji_latest_rows": len(tongji),
             "tongji_latest_rank": clean_text(tongji.iloc[0]["rank_raw"]) if not tongji.empty else "",
             "mainland_top200_rows": len(top200),
-            "data_status": "available" if not tongji.empty else "missing_tongji_latest",
+            "data_status": "available" if not tongji.empty else "missing_selected_subject_latest",
         }
         rows.append(row)
         if not tongji.empty:
@@ -442,7 +521,7 @@ def read_weight_data() -> pd.DataFrame:
 
 def weight_candidate_values(subject: dict[str, Any], source: str, records: pd.DataFrame | None = None) -> list[str]:
     overrides = subject.get("source_runtime_overrides", {}).get(source, {})
-    values: list[Any] = [overrides.get("weight_subject_or_area")]
+    values: list[Any] = [overrides.get("ranking_subject_or_area"), overrides.get("weight_subject_or_area")]
     if source == "软科":
         values.extend([subject.get("arwu_subject_name"), TARGET_SUBJECT])
     elif source == "QS":
@@ -467,6 +546,24 @@ def weight_candidate_values(subject: dict[str, Any], source: str, records: pd.Da
     for value in ordered_unique([valid_mapping_value(value) for value in values]):
         candidates.extend(candidate_subject_areas(value))
     return ordered_unique(candidates)
+
+
+def latest_tongji_ranking_subject_area(records: pd.DataFrame, source: str) -> str:
+    if records is None or records.empty:
+        return ""
+    latest = latest_source_rows(records, source)
+    if latest.empty:
+        return ""
+    tongji = latest[latest["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
+    if tongji.empty:
+        return ""
+    tongji["_rank_sort"] = pd.to_numeric(tongji.get("rank_midpoint", pd.Series(dtype=str)), errors="coerce")
+    broad_keys = {"engineering", "工程", "工程学", "natural sciences", "physical sciences", "social sciences"}
+    tongji["_broad_subject"] = tongji.get("ranking_subject_raw", pd.Series([""] * len(tongji))).map(
+        lambda value: 1 if clean_text(value).lower() in broad_keys else 0
+    )
+    tongji = tongji.sort_values(["_broad_subject", "_rank_sort"], ascending=[True, True], na_position="last")
+    return clean_text(tongji.iloc[0].get("ranking_subject_raw", ""))
 
 
 def find_weight_subset(weights: pd.DataFrame, source: str, candidates: list[str]) -> tuple[pd.DataFrame, str]:
@@ -513,11 +610,13 @@ def attach_runtime_public_supplements(subject: dict[str, Any], records: pd.DataF
     strategy = public_supplements.usnews_weight_strategy()
     if strategy.get("prefer_actual_ranking_subject"):
         weights = read_weight_data()
-        candidates = weight_candidate_values(subject, "US News", records)
+        actual_ranking_area = latest_tongji_ranking_subject_area(records, "US News")
+        candidates = ordered_unique(candidate_subject_areas(actual_ranking_area) + weight_candidate_values(subject, "US News", records))
         subset, matched_area = find_weight_subset(weights, "US News", candidates)
         requires_disclosure = bool(strategy.get("requires_disclosure_when_inferred"))
         if not subset.empty and (proxy_allowed() or not requires_disclosure):
             subject["source_runtime_overrides"]["US News"] = {
+                "ranking_subject_or_area": actual_ranking_area or matched_area,
                 "weight_subject_or_area": matched_area,
                 "proxy_level": "actual_matched_ranking_subject",
                 "requires_disclosure": requires_disclosure,
@@ -592,7 +691,10 @@ def build_indicator_availability(subject: dict[str, Any]) -> list[dict[str, Any]
     for source in RANKING_SOURCES:
         alias_values = set(aliases.get(source, []))
         source_df = indicators[indicators["ranking_source"] == source].copy()
-        if alias_values:
+        selected_source_df = filter_to_selected_source_area(source_df, subject, source)
+        if not selected_source_df.empty or source_area_candidates(subject, source):
+            source_df = selected_source_df
+        elif alias_values:
             source_df = source_df[source_df["ranking_subject_raw"].isin(alias_values) | source_df["ranking_subject_norm"].isin(alias_values)].copy()
         else:
             source_df = source_df[source_df["ranking_subject_raw"].isin([TARGET_SUBJECT]) | source_df["ranking_subject_norm"].isin([TARGET_SUBJECT])].copy()
@@ -740,6 +842,7 @@ def build_agent_decision_summary(source_rows: list[dict[str, Any]], readiness_ro
 
 
 def detect_paper_metric_sources() -> dict[str, Any]:
+    preprocess_status = ensure_wos_subject_paper_csv()
     keywords = ["论文", "被引", "CNCI", "篇均", "高被引", "国际合著", "国际合作", "WOS", "Web of Science", "InCites", "ESI"]
     matches = []
     for path in DATA_DIR.glob("*"):
@@ -749,16 +852,6 @@ def detect_paper_metric_sources() -> dict[str, Any]:
         if any(keyword.lower() in name.lower() for keyword in keywords):
             matches.append(name)
     external_matches = []
-    cwts_field_mapping = {}
-    if CWTS_SUBJECT_FIELD_CROSSWALK_CSV.exists():
-        crosswalk = pd.read_csv(CWTS_SUBJECT_FIELD_CROSSWALK_CSV, dtype=str, encoding="utf-8-sig").fillna("")
-        if "ministry_subject_code" in crosswalk.columns:
-            matched = crosswalk[crosswalk["ministry_subject_code"].astype(str).str.zfill(4) == TARGET_SUBJECT_CODE]
-            if not matched.empty:
-                cwts_field_mapping = matched.iloc[0].to_dict()
-    if CWTS_CHINA_ALL_FIELDS_CSV.exists() and cwts_field_mapping.get("cwts_field"):
-        external_matches.append(str(CWTS_CHINA_ALL_FIELDS_CSV.relative_to(PROJECT_DIR)))
-        external_matches.append(str(CWTS_SUBJECT_FIELD_CROSSWALK_CSV.relative_to(PROJECT_DIR)))
     wos_subject_rows = 0
     wos_subject_available = False
     if WOS_SUBJECT_PAPER_CSV.exists():
@@ -770,12 +863,13 @@ def detect_paper_metric_sources() -> dict[str, Any]:
             if wos_subject_available:
                 external_matches.insert(0, str(WOS_SUBJECT_PAPER_CSV.relative_to(PROJECT_DIR)))
     return {
-        "has_paper_metric_source": len(matches) > 0 or len(external_matches) > 0 or wos_subject_available,
-        "preferred_source": "wos_subject_paper_metrics" if wos_subject_available else "cwts_broad_field_proxy" if external_matches else "raw_data_scan_only",
+        "has_paper_metric_source": wos_subject_available,
+        "preferred_source": "wos_subject_paper_metrics" if wos_subject_available else "missing_wos_subject_paper_metrics",
         "matched_files": matches,
         "external_matched_files": external_matches,
         "wos_subject_rows": wos_subject_rows,
-        "cwts_field_mapping": cwts_field_mapping,
+        "wos_preprocess_status": preprocess_status,
+        "subject_code_match_rule": "extract leading 4 digits from 教育部一级学科 and compare to target_subject_code",
     }
 
 
@@ -796,8 +890,6 @@ def build_artifact_readiness(
     weight_by_source = {row["ranking_source"]: row for row in weight_rows}
     indicator_by_source = {row["ranking_source"]: row for row in indicator_rows}
     external_status_by_artifact = load_external_gap_status()
-    if ARWU_PUBLIC_TONGJI_LONG_CSV.exists():
-        external_status_by_artifact["table_01_arwu_tongji_indicator_history"] = "ready_from_arwu_gras_public_web_common"
     if TARGET_SUBJECT_CODE != "0701":
         math_only_artifacts = {
             "figure_05_usnews_indicator_weight",
@@ -826,9 +918,14 @@ def build_artifact_readiness(
     def has_indicator_years(source: str, min_years: int) -> bool:
         return int(indicator_by_source.get(source, {}).get("year_count") or 0) >= min_years
 
+    if not has_tongji("软科"):
+        external_status_by_artifact.pop("table_01_arwu_tongji_indicator_history", None)
+    elif ARWU_PUBLIC_TONGJI_LONG_CSV.exists():
+        external_status_by_artifact["table_01_arwu_tongji_indicator_history"] = "ready_from_arwu_gras_public_web_common"
+
     has_paper_metrics = bool(paper_metric_sources.get("has_paper_metric_source"))
     overview_source_count = sum(has_tongji(s) for s in RANKING_SOURCES)
-    commonality_source_count = sum((has_weight(s) or has_indicators(s)) for s in RANKING_SOURCES)
+    commonality_source_count = sum(has_tongji(s) and (has_weight(s) or has_indicators(s)) for s in RANKING_SOURCES)
     readiness_specs = [
         (
             "figure_01_tongji_subject_ranking_overview",
@@ -842,19 +939,19 @@ def build_artifact_readiness(
             "chart",
             "指标共性图",
             commonality_source_count >= 2,
-            f"至少两个榜单有权重或同济分项指标即可生成共性图；当前可用 {commonality_source_count} 个榜单，缺权重来源按指标覆盖数量展示。",
+            f"至少两个有同济最新综合排名的榜单具备权重或同济分项指标即可生成共性图；当前可用 {commonality_source_count} 个榜单，未形成同济最新排名的榜单不纳入主图。",
         ),
-        ("figure_03_arwu_indicator_weight", "chart", "软科权重图", has_weight("软科"), "需要软科对应口径权重。"),
-        ("figure_04_qs_indicator_weight", "chart", "QS 权重图", has_weight("QS"), "需要 QS 对应口径权重。"),
-        ("figure_05_usnews_indicator_weight", "chart", "US News 权重图", has_weight("US News"), "需要 US News 对应口径权重。"),
-        ("figure_06_the_indicator_weight", "chart", "THE 权重图", has_weight("THE"), "需要 THE 对应领域权重。"),
+        ("figure_03_arwu_indicator_weight", "chart", "软科权重图", has_tongji("软科") and has_weight("软科"), "需要软科对应口径权重，且同济在该口径下有最新综合排名。"),
+        ("figure_04_qs_indicator_weight", "chart", "QS 权重图", has_tongji("QS") and has_weight("QS"), "需要 QS 对应口径权重，且同济在该口径下有最新综合排名；否则不纳入主报告权重图。"),
+        ("figure_05_usnews_indicator_weight", "chart", "US News 权重图", has_tongji("US News") and has_weight("US News"), "需要 US News 对应口径权重，且同济在该口径下有最新综合排名。"),
+        ("figure_06_the_indicator_weight", "chart", "THE 权重图", has_tongji("THE") and has_weight("THE"), "需要 THE 对应领域权重，且同济在该口径下有最新综合排名。"),
         ("figure_07_all_rankings_history", "chart", "四大排名历史趋势", sum(has_tongji(s) for s in RANKING_SOURCES) >= 1, "至少一个榜单有同济历史排名即可生成历史图；单榜单时用于展示当前可核验历史，缺失榜单不补造。"),
         ("table_04_mainland_rank_band_distribution", "table", "内地高校位次分布", sum(has_peer(s) for s in RANKING_SOURCES) >= 2, "需要各榜单最新内地高校排名样本。"),
         ("table_05_arwu_mainland_peer_ranking", "table", "软科 peer 排名表", has_peer("软科"), "需要软科前200内地高校样本。"),
         ("table_06_usnews_mainland_peer_ranking", "table", "US News peer 排名表", has_peer("US News"), "需要 US News 前200内地高校样本。"),
         ("table_07_qs_mainland_peer_ranking", "table", "QS peer 排名表", has_peer("QS"), "需要 QS 前200内地高校样本。"),
         ("table_08_the_mainland_peer_ranking", "table", "THE peer 排名表", has_peer("THE"), "需要 THE 前200内地高校样本。"),
-        ("table_01_arwu_tongji_indicator_history", "table", "软科同济分项指标历史表", has_indicator_years("软科", 2), "模板要求多年历史；当前若只有单年，只能降级为最新年表。"),
+        ("table_01_arwu_tongji_indicator_history", "table", "软科同济分项指标历史表", has_tongji("软科") and has_indicator_years("软科", 2), "需要同济在软科对应口径下有最新综合排名，并具备软科多年分项指标；否则不使用近邻学科或外部候选口径替代。"),
         ("table_02_usnews_tongji_indicator_history", "table", "US News 同济分项指标历史表", has_indicator_years("US News", 2), "模板要求多年历史；当前若只有单年，只能降级为最新年表。"),
         ("figure_10_usnews_indicator_history_trend", "chart", "US News 分项指标历史趋势图", has_indicator_years("US News", 2), "趋势图需要 US News 多年分项指标。"),
         ("table_03_the_tongji_indicator_history", "table", "THE 分项指标历史表", has_indicator_years("THE", 2), "需要 THE 同济分项指标多年份数据。"),
@@ -862,10 +959,10 @@ def build_artifact_readiness(
         ("figure_10_qs_peer_indicator_relative_rank", "chart", "QS peer 分项相对排名", has_peer("QS") and has_indicators("QS"), "需要 QS peer 样本和最新年分项指标；多年趋势另需多年度分项指标。"),
         ("figure_11_usnews_peer_indicator_relative_rank", "chart", "US News peer 分项相对排名", has_peer("US News") and has_indicators("US News"), "需要 peer 样本和分项指标。"),
         ("figure_12_the_peer_indicator_relative_rank", "chart", "THE peer 分项相对排名", has_peer("THE") and has_indicators("THE"), "需要 peer 样本和分项指标。"),
-        ("figure_13_paper_output_citation_relative_rank", "chart", "论文及被引总量相对排名图", has_paper_metrics, "需要独立论文指标数据源，不能由排名表臆造。"),
-        ("figure_14_paper_cnci_cpp_relative_rank", "chart", "CNCI 及篇均被引相对排名图", has_paper_metrics, "需要 CNCI 与篇均被引字段。"),
-        ("figure_15_paper_highly_cited_relative_rank", "chart", "高被引 TOP 论文量相对排名图", has_paper_metrics, "需要 TOP1%/TOP10% 高被引论文字段。"),
-        ("figure_16_paper_international_collab_relative_rank", "chart", "国际合著论文占比相对排名图", has_paper_metrics, "需要国际合著论文数或占比字段。"),
+        ("figure_13_paper_output_citation_relative_rank", "chart", "论文及被引总量相对排名图", has_paper_metrics, "需要 WoS 37校论文数据中存在当前教育部一级学科代码，不能由排名表或宽口径代理数据臆造。"),
+        ("figure_14_paper_cnci_cpp_relative_rank", "chart", "CNCI 及篇均被引相对排名图", has_paper_metrics, "需要 WoS 37校论文数据中存在当前教育部一级学科代码，并含 CNCI 与篇均被引字段。"),
+        ("figure_15_paper_highly_cited_relative_rank", "chart", "高被引 TOP 论文量相对排名图", has_paper_metrics, "需要 WoS 37校论文数据中存在当前教育部一级学科代码，并含 TOP1%/TOP10% 高被引论文字段。"),
+        ("figure_16_paper_international_collab_relative_rank", "chart", "国际合著论文占比相对排名图", has_paper_metrics, "需要 WoS 37校论文数据中存在当前教育部一级学科代码，并含国际合作论文数或占比字段。"),
         ("table_09_peer_full_ranking_history_appendix", "table", "对标高校排名历史附表", sum(has_peer(s) for s in RANKING_SOURCES) >= 2, "由各榜单 peer 表和历史排名合并生成。"),
     ]
     critical_artifacts = {
@@ -879,6 +976,8 @@ def build_artifact_readiness(
     for artifact_id, artifact_type, label, ready, note in readiness_specs:
         external_status = external_status_by_artifact.get(artifact_id, "")
         readiness_scope = "direct_data"
+        if artifact_id.startswith("figure_1") and "paper_" in artifact_id and not has_paper_metrics:
+            external_status = ""
         if external_status and external_status != "candidate_indirect_not_auto_merge":
             ready = True
             note = f"{note} external_data补源状态：{external_status}。"
@@ -1180,7 +1279,7 @@ def run_subject_agent() -> dict[str, Any]:
     records = combine_ranking_records(query_ranking_records(subject["subject_id"]), query_supplemental_ranking_records(subject))
     subject = attach_runtime_public_supplements(subject, records)
     request_info = write_current_request(run_dir, subject)
-    ranking_rows, ranking_summary = build_ranking_availability(records)
+    ranking_rows, ranking_summary = build_ranking_availability(subject, records)
     weight_rows = build_weight_availability(subject, records)
     indicator_rows = build_indicator_availability(subject)
     paper_metric_sources = detect_paper_metric_sources()

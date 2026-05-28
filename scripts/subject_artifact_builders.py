@@ -114,6 +114,18 @@ def clean_text(value: Any) -> str:
     return "" if text.lower() == "nan" else text
 
 
+def clean_rank_display(value: Any) -> str:
+    text = clean_text(value)
+    if not text:
+        return ""
+    return re.sub(r"#+\s*(?=\d)", "", text).strip()
+
+
+def display_ranking_source(source: Any) -> str:
+    text = clean_text(source)
+    return "U.S. News" if text in {"US News", "U.S. News", "U.S.News"} else text
+
+
 def ordered_unique(values: list[Any]) -> list[str]:
     seen = set()
     rows: list[str] = []
@@ -128,6 +140,14 @@ def ordered_unique(values: list[Any]) -> list[str]:
 
 def valid_mapping_value(value: Any) -> str:
     return public_supplements.valid_mapping_value(value)
+
+
+def canonical_the_area(value: Any) -> str:
+    area = valid_mapping_value(value)
+    if area and THE_WEIGHT_AREA_CROSSWALK_JSON.exists():
+        crosswalk = json.loads(THE_WEIGHT_AREA_CROSSWALK_JSON.read_text(encoding="utf-8"))
+        return valid_mapping_value(crosswalk.get(area, area))
+    return area
 
 
 def display_missing_label(value: str = "missing") -> str:
@@ -253,6 +273,16 @@ def load_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
 def text_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> tuple[int, int]:
     box = draw.textbbox((0, 0), text, font=font)
     return box[2] - box[0], box[3] - box[1]
+
+
+def ellipsize_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: float) -> str:
+    if text_size(draw, text, font)[0] <= max_width:
+        return text
+    suffix = "..."
+    keep = text
+    while keep and text_size(draw, keep + suffix, font)[0] > max_width:
+        keep = keep[:-1]
+    return (keep + suffix) if keep else suffix
 
 
 def draw_center(
@@ -586,6 +616,34 @@ def read_external_csv(path: Path) -> pd.DataFrame:
     return pd.read_csv(path, dtype=str, encoding="utf-8-sig").fillna("")
 
 
+def ensure_wos_subject_paper_csv() -> dict[str, Any]:
+    candidates = [
+        path
+        for path in DATA_DIR.glob("*web of science*20260511.xlsx")
+        if path.is_file() and not path.name.startswith("~$")
+    ]
+    newest_source = max(candidates, key=lambda path: path.stat().st_mtime, default=None)
+    if newest_source is None:
+        return {"status": "missing_source_xlsx"}
+    if WOS_SUBJECT_PAPER_CSV.exists() and WOS_SUBJECT_PAPER_CSV.stat().st_mtime >= newest_source.stat().st_mtime:
+        return {"status": "fresh", "source_file": newest_source.name}
+    try:
+        import build_data_layer_v2
+
+        frame = build_data_layer_v2.build_wos_subject_paper_wide()
+        return {
+            "status": "rebuilt",
+            "source_file": newest_source.name,
+            "rows": int(len(frame)),
+        }
+    except Exception as exc:
+        return {
+            "status": "rebuild_failed",
+            "source_file": newest_source.name,
+            "error": str(exc),
+        }
+
+
 def numeric_series(df: pd.DataFrame, column: str) -> pd.Series:
     if column not in df.columns:
         return pd.Series(dtype=float)
@@ -605,7 +663,7 @@ def is_tongji_name(value: Any) -> bool:
 
 def expected_weight_area(subject: dict[str, Any], source: str) -> str:
     override = subject.get("source_runtime_overrides", {}).get(source, {})
-    override_area = valid_mapping_value(override.get("weight_subject_or_area"))
+    override_area = valid_mapping_value(override.get("weight_subject_or_area")) or valid_mapping_value(override.get("ranking_subject_or_area"))
     if override_area:
         return override_area
     if source == "软科":
@@ -630,7 +688,7 @@ def expected_ranking_area(subject: dict[str, Any], source: str) -> str:
     override = subject.get("source_runtime_overrides", {}).get(source, {})
     override_area = valid_mapping_value(override.get("ranking_subject_or_area"))
     if override_area:
-        return override_area
+        return canonical_the_area(override_area) if source == "THE" else override_area
     if source == "软科":
         aliases = public_supplements.arwu_public_aliases(subject)
         return (
@@ -651,8 +709,42 @@ def expected_ranking_area(subject: dict[str, Any], source: str) -> str:
             or clean_text(subject.get("target_subject"))
         )
     if source == "THE":
-        return valid_mapping_value(subject.get("the_subject_area")) or clean_text(subject.get("target_subject"))
+        return canonical_the_area(subject.get("the_subject_area")) or clean_text(subject.get("target_subject"))
     return clean_text(subject.get("target_subject"))
+
+
+def source_area_candidates(subject: dict[str, Any], source: str) -> list[str]:
+    values: list[Any] = [expected_ranking_area(subject, source), expected_weight_area(subject, source)]
+    if source == "THE":
+        values.extend(subject_alias_values(subject, source))
+    candidates: list[str] = []
+    for value in ordered_unique([valid_mapping_value(item) for item in values]):
+        candidates.extend(candidate_subject_areas(value))
+    return ordered_unique(candidates)
+
+
+def filter_to_selected_source_area(df: pd.DataFrame, subject: dict[str, Any], source: str) -> pd.DataFrame:
+    if df.empty:
+        return df
+    candidate_keys = {normalize_text_key(value) for value in source_area_candidates(subject, source) if normalize_text_key(value)}
+    if not candidate_keys:
+        return df
+    masks = []
+    for column in ["ranking_subject_raw", "ranking_subject_norm", "ranking_subject_alias"]:
+        if column in df.columns:
+            masks.append(df[column].map(normalize_text_key).isin(candidate_keys))
+    if not masks:
+        return df
+    mask = masks[0]
+    for item in masks[1:]:
+        mask = mask | item
+    matched = df[mask].copy()
+    return matched
+
+
+def latest_selected_source_rows(records: pd.DataFrame, subject: dict[str, Any], source: str) -> pd.DataFrame:
+    latest = latest_source_rows(records, source)
+    return filter_to_selected_source_area(latest, subject, source)
 
 
 def source_title_subject_label(subject: dict[str, Any], source: str) -> str:
@@ -726,6 +818,9 @@ def normalize_commonality_group(value: Any) -> str:
 def filter_indicators_for_subject(indicators: pd.DataFrame, subject: dict[str, Any], source: str) -> pd.DataFrame:
     aliases = subject_alias_values(subject, source)
     df = indicators[indicators["ranking_source"] == source].copy()
+    selected = filter_to_selected_source_area(df, subject, source)
+    if not selected.empty and len(selected) < len(df):
+        return selected
     if aliases:
         df = df[df["ranking_subject_raw"].isin(aliases) | df["ranking_subject_norm"].isin(aliases)].copy()
     return df
@@ -809,7 +904,7 @@ def render_cards(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
     font_meta = load_font(19)
     draw.text((85, 52), f"同济大学{subject_name}学科国际排名概览", font=font_title, fill="#16202A")
     available_sources = [source for source in RANKING_SOURCES if not df[df["ranking_source"] == source].empty]
-    subtitle = "四大国际排名最新发布年份口径，排名区间保留原始表达" if len(available_sources) >= 4 else "按当前可核验来源展示，缺失榜单不强行补齐"
+    subtitle = "四大国际排名最新发布年份口径；每张卡片列出该榜单实际学科/领域口径" if len(available_sources) >= 4 else "按当前可核验来源展示；每张卡片列出实际学科/领域口径，缺失榜单不强行补齐"
     draw.text((85, 102), subtitle, font=font_sub, fill="#5A6573")
     card_w, card_h, gap = 330, 420, 42
     total_w = len(available_sources) * card_w + max(0, len(available_sources) - 1) * gap
@@ -823,9 +918,9 @@ def render_cards(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
         color = SOURCE_COLORS[source]
         draw.rounded_rectangle((x, y, x + card_w, y + card_h), radius=18, fill="#F8FAFC", outline="#D8DEE8", width=2)
         draw.rectangle((x, y, x + card_w, y + 12), fill=color)
-        source_label = "U.S. News" if source == "US News" else source
+        source_label = display_ranking_source(source)
         draw.text((x + 30, y + 42), source_label, font=font_source, fill=color)
-        draw.text((x + 30, y + 118), clean_text(item["rank_raw"]), font=font_rank, fill="#111827")
+        draw.text((x + 30, y + 118), clean_rank_display(item["rank_raw"]), font=font_rank, fill="#111827")
         draw.text((x + 30, y + 214), f"发布年份：{int(item['release_year'])}", font=font_meta, fill="#374151")
         draw.text((x + 30, y + 252), f"排名年份：{int(item['ranking_year'])}", font=font_meta, fill="#374151")
         draw.text((x + 30, y + 292), f"排名口径：{clean_text(item['ranking_subject_raw'])}"[:24], font=font_meta, fill="#4B5563")
@@ -840,15 +935,21 @@ def build_figure_01(run_dir: Path, subject: dict[str, Any], records: pd.DataFram
     out = artifact_dir(run_dir, artifact_id)
     rows = []
     traces = []
+    df = dedupe_records(records)
+    tongji_all = df[df["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
+    tongji_all = dedupe_subject_rows_by_period(tongji_all, subject)
+    tongji_all = supplement_the_tongji_history(tongji_all, subject)
     for source in RANKING_SOURCES:
-        latest = latest_source_rows(records, source)
-        tongji = latest[latest["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
-        if tongji.empty:
+        source_rows = tongji_all[tongji_all["ranking_source"] == source].copy()
+        source_rows = filter_to_selected_source_area(source_rows, subject, source)
+        if source_rows.empty:
             continue
-        tongji = dedupe_subject_rows_by_period(tongji, subject)
-        item = tongji.iloc[0].to_dict()
+        source_rows["_sort_ranking_year"] = pd.to_numeric(source_rows.get("ranking_year", pd.Series(dtype=str)), errors="coerce")
+        source_rows["_sort_release_year"] = pd.to_numeric(source_rows.get("release_year", pd.Series(dtype=str)), errors="coerce")
+        source_rows = source_rows.sort_values(["_sort_ranking_year", "_sort_release_year"], ascending=[False, False])
+        item = source_rows.iloc[0].drop(labels=["_sort_ranking_year", "_sort_release_year"], errors="ignore").to_dict()
         rows.append(item)
-        traces.extend(tongji.to_dict("records"))
+        traces.extend(source_rows.drop(columns=["_sort_ranking_year", "_sort_release_year"], errors="ignore").to_dict("records"))
     chart_df = pd.DataFrame(rows)
     trace_df = pd.DataFrame(traces)
     chart_df.to_csv(out / "chart_data.csv", index=False, encoding="utf-8-sig")
@@ -859,14 +960,13 @@ def build_figure_01(run_dir: Path, subject: dict[str, Any], records: pd.DataFram
 
 
 def render_history(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
-    image = Image.new("RGB", (1600, 920), "#FFFFFF")
+    image = Image.new("RGB", (1700, 940), "#FFFFFF")
     draw = ImageDraw.Draw(image)
     font_title = load_font(42, True)
     font_sub = load_font(24)
     font_axis = load_font(24, True)
     font_label = load_font(22, True)
-    left, top, right, bottom = 138, 148, 1348, 748
-    draw.text((72, 38), f"同济大学{subject_name}学科四大国际排名历史趋势", font=font_title, fill="#16202A")
+    left, top, right, bottom = 138, 148, 1248, 748
     draw.text((72, 92), "排名区间按中间位次绘图，数值越小表示排名越靠前", font=font_sub, fill="#5A6573")
     df = df.copy()
     axis_years = pd.to_numeric(df.get("ranking_year", pd.Series(dtype=str)), errors="coerce")
@@ -876,6 +976,9 @@ def render_history(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
     df = df.dropna(subset=["_history_axis_year", "rank_midpoint"]).copy()
     years = sorted(int(x) for x in df["_history_axis_year"].dropna().unique())
     values = [to_float(x) for x in df["rank_midpoint"].dropna()]
+    available_sources = [source for source in RANKING_SOURCES if not df[df["ranking_source"] == source].empty]
+    title_scope = "四大国际排名" if len(available_sources) >= 4 else "可用国际排名"
+    draw.text((72, 38), f"同济大学{subject_name}学科{title_scope}历史趋势", font=font_title, fill="#16202A")
     if not years or not values:
         save_png(image, out_path)
         return
@@ -897,29 +1000,74 @@ def render_history(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
     for year in years:
         x = xp(year)
         draw_center(draw, (x - 48, bottom + 18, x + 48, bottom + 54), str(year), font_axis, "#52606D")
-    for source, group in df.groupby("ranking_source"):
+    label_items: list[dict[str, Any]] = []
+    for source in available_sources:
+        group = df[df["ranking_source"] == source].copy()
+        if group.empty:
+            continue
         group = group.sort_values(["_history_axis_year", "release_year"])
         color = SOURCE_COLORS.get(source, "#333333")
         points = [(xp(int(row["_history_axis_year"])), yp(float(row["rank_midpoint"]))) for _, row in group.iterrows()]
         if len(points) > 1:
             draw.line(points, fill=color, width=6)
-        label_offsets = {
-            "软科": (16, 10),
-            "QS": (16, 18),
-            "US News": (16, -40),
-            "THE": (16, -30),
-        }
-        dx, dy = label_offsets.get(source, (16, -28))
-        for (_, row), (x, y) in zip(group.iterrows(), points):
+        point_count = len(points)
+        for point_index, ((_, row), (x, y)) in enumerate(zip(group.iterrows(), points)):
             draw.ellipse((x - 12, y - 12, x + 12, y + 12), fill=color, outline="#FFFFFF", width=3)
-            label = clean_text(row["rank_raw"])
-            draw_text_label(draw, x + dx, max(top + 2, y + dy), label, font_label, color)
-    lx, ly = 1384, 170
-    for idx, source in enumerate(RANKING_SOURCES):
+            if point_index in {0, point_count - 1}:
+                label_items.append(
+                    {
+                        "source": source,
+                        "year": int(row["_history_axis_year"]),
+                        "x": x,
+                        "y": y,
+                        "label": clean_text(row["rank_raw"]),
+                        "color": color,
+                    }
+                )
+
+    placed_label_boxes: list[tuple[float, float, float, float]] = []
+
+    def box_overlaps(candidate: tuple[float, float, float, float]) -> bool:
+        c_left, c_top, c_right, c_bottom = candidate
+        for p_left, p_top, p_right, p_bottom in placed_label_boxes:
+            if c_right < p_left or c_left > p_right or c_bottom < p_top or c_top > p_bottom:
+                continue
+            return True
+        return False
+
+    def candidate_label_box(item: dict[str, Any], x: float, y: float) -> tuple[float, float, float, float]:
+        tw, th = text_size(draw, item["label"], font_label)
+        return x - 6, y - 4, x + tw + 6, y + th + 4
+
+    preferred_offsets = {
+        "软科": [-44, -72, 18, 46],
+        "QS": [20, -44, 48, -72],
+        "US News": [-44, 20, -72, 48],
+        "THE": [20, 48, -44, -72],
+    }
+    for item in sorted(label_items, key=lambda value: (value["year"], value["y"])):
+        dx = 16 if item["x"] < right - 190 else -126
+        offsets = preferred_offsets.get(item["source"], [-44, 20, 48, -72])
+        chosen_x = item["x"] + dx
+        chosen_y = min(max(top + 4, item["y"] + offsets[0]), bottom - 30)
+        chosen_box = candidate_label_box(item, chosen_x, chosen_y)
+        for dy in offsets:
+            target_y = min(max(top + 4, item["y"] + dy), bottom - 30)
+            candidate = candidate_label_box(item, chosen_x, target_y)
+            if not box_overlaps(candidate):
+                chosen_y = target_y
+                chosen_box = candidate
+                break
+        placed_label_boxes.append(chosen_box)
+        draw_text_label(draw, chosen_x, chosen_y, item["label"], font_label, item["color"])
+
+    lx, ly = 1292, 168
+    for idx, source in enumerate(available_sources):
         y = ly + idx * 58
         color = SOURCE_COLORS[source]
         draw.line((lx, y + 16, lx + 48, y + 16), fill=color, width=7)
-        draw.text((lx + 62, y), source, font=font_axis, fill="#374151")
+        source_label = display_ranking_source(source)
+        draw.text((lx + 62, y), source_label, font=font_axis, fill="#374151")
     save_png(image, out_path)
 
 
@@ -1014,6 +1162,13 @@ def build_figure_07(run_dir: Path, subject: dict[str, Any], records: pd.DataFram
     tongji = df[df["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
     tongji = dedupe_subject_rows_by_period(tongji, subject)
     tongji = supplement_the_tongji_history(tongji, subject)
+    parts = []
+    for source in RANKING_SOURCES:
+        source_rows = tongji[tongji["ranking_source"] == source].copy()
+        source_rows = filter_to_selected_source_area(source_rows, subject, source)
+        if not source_rows.empty:
+            parts.append(source_rows)
+    tongji = pd.concat(parts, ignore_index=True, sort=False).fillna("") if parts else tongji.iloc[0:0].copy()
     tongji = tongji.sort_values(["ranking_source", "ranking_year", "release_year"])
     tongji.to_csv(out / "chart_data.csv", index=False, encoding="utf-8-sig")
     tongji.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
@@ -1633,10 +1788,10 @@ def build_weight_artifact(run_dir: Path, subject: dict[str, Any], source: str, a
     if source in {"US News", "THE"}:
         tree_df = build_weight_tree_data(df)
         tree_df.to_csv(out / "chart_tree_data.csv", index=False, encoding="utf-8-sig")
-        render_weight_tree(tree_df, f"{title_source}{clean_text(subject['target_subject'])}指标权重", out / "chart.png")
+        render_weight_tree(tree_df, f"{title_source}{area}口径指标权重", out / "chart.png")
         chart_type = "hierarchical weight tree"
     else:
-        render_weight(plot_df, f"{title_source}{clean_text(subject['target_subject'])}指标权重", out / "chart.png")
+        render_weight(plot_df, f"{title_source}{area}口径指标权重", out / "chart.png")
         chart_type = "donut weight chart"
     write_common_outputs(
         out,
@@ -1656,6 +1811,19 @@ def build_weight_artifact(run_dir: Path, subject: dict[str, Any], source: str, a
     return {"artifact_id": artifact_id, "status": "generated", "rows": len(df), "output_dir": str(out)}
 
 
+def ranked_sources_with_tongji_latest(run_dir: Path) -> set[str]:
+    path = run_dir / "ranking_availability.csv"
+    if not path.exists():
+        return set(RANKING_SOURCES)
+    df = read_external_csv(path)
+    if df.empty or "ranking_source" not in df.columns:
+        return set(RANKING_SOURCES)
+    if "tongji_latest_rows" not in df.columns:
+        return set(RANKING_SOURCES)
+    rows = df[pd.to_numeric(df["tongji_latest_rows"], errors="coerce").fillna(0) > 0]
+    return {clean_text(value) for value in rows["ranking_source"].tolist() if clean_text(value)}
+
+
 def render_commonality_flow(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
     image = Image.new("RGB", (1600, 940), "#FFFFFF")
     draw = ImageDraw.Draw(image)
@@ -1663,19 +1831,21 @@ def render_commonality_flow(df: pd.DataFrame, subject_name: str, out_path: Path)
     font_sub = load_font(20)
     font_node = load_font(20, True)
     font_small = load_font(15)
-    draw.text((70, 42), f"{subject_name}学科四大国际排名指标共性", font=font_title, fill="#16202A")
-    draw.text((70, 88), "按指标组归并；有权重时使用权重百分比，缺权重时使用指标覆盖数量", font=font_sub, fill="#5A6573")
+    present_sources = [source for source in RANKING_SOURCES if source in set(df["ranking_source"].map(clean_text))]
+    source_count_text = "四大国际排名" if len(present_sources) >= 4 else f"{len(present_sources)}类可用国际排名"
+    draw.text((70, 42), f"{subject_name}学科{source_count_text}指标共性", font=font_title, fill="#16202A")
+    draw.text((70, 88), "仅纳入已有同济最新综合排名的榜单；按指标组归并展示权重或分项覆盖", font=font_sub, fill="#5A6573")
 
     groups = sorted(df["indicator_group"].dropna().unique().tolist(), key=lambda g: (-df[df["indicator_group"] == g]["link_value"].sum(), g))
-    source_y = {source: 190 + idx * 150 for idx, source in enumerate(RANKING_SOURCES)}
+    source_y = {source: 220 + idx * 170 for idx, source in enumerate(present_sources)}
     group_step = min(92, 590 // max(1, len(groups)))
     group_y = {group: 155 + idx * group_step for idx, group in enumerate(groups)}
     sx, gx = 155, 1120
-    for source in RANKING_SOURCES:
+    for source in present_sources:
         color = SOURCE_COLORS[source]
         y = source_y[source]
         draw.rounded_rectangle((sx, y, sx + 210, y + 70), radius=12, fill="#F8FAFC", outline=color, width=3)
-        draw_center(draw, (sx, y, sx + 210, y + 70), source, font_node, color)
+        draw_center(draw, (sx, y, sx + 210, y + 70), display_ranking_source(source), font_node, color)
     for group in groups:
         color = GROUP_COLORS.get(group, "#9AA4B2")
         y = group_y[group]
@@ -1691,7 +1861,7 @@ def render_commonality_flow(df: pd.DataFrame, subject_name: str, out_path: Path)
         y2 = group_y.get(group, 155) + 31
         width = max(2, min(16, int(to_float(row["link_value"]) / 4) + 2))
         draw.line((sx + 210, y1, gx, y2), fill=color, width=width)
-    draw.text((70, 850), "注：US News 若缺少对应口径权重，本图仅展示分项指标覆盖关系，不解释为权重。", font=font_small, fill="#697586")
+    draw.text((70, 850), "注：未形成同济最新综合排名的榜单不纳入本图，避免方法权重与实际排名口径混用。", font=font_small, fill="#697586")
     save_png(image, out_path)
 
 
@@ -1701,7 +1871,10 @@ def build_figure_02(run_dir: Path, subject: dict[str, Any]) -> dict[str, Any]:
     weights = read_weights()
     indicators = read_indicators()
     parts = []
+    ranked_sources = ranked_sources_with_tongji_latest(run_dir)
     for source in RANKING_SOURCES:
+        if source not in ranked_sources:
+            continue
         subset, area = find_weight_subset(weights, source, candidate_weight_areas(subject, source))
         if subset.empty and source == "THE":
             subset, area = find_weight_subset(weights, source, ["自然科学"])
@@ -2392,7 +2565,7 @@ def build_table_04(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
     rows = []
     peer_records = []
     for source in RANKING_SOURCES:
-        latest = latest_source_rows(records, source)
+        latest = latest_selected_source_rows(records, subject, source)
         mainland = latest[latest.apply(is_mainland, axis=1)].copy() if not latest.empty else latest
         mainland["_rank_midpoint_num"] = pd.to_numeric(mainland["rank_midpoint"], errors="coerce")
         top200 = mainland[mainland["_rank_midpoint_num"] <= TOP_RANK_MIDPOINT].copy()
@@ -2417,7 +2590,7 @@ def build_table_04(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
 
 def build_peer_table(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame, source: str, artifact_id: str) -> dict[str, Any]:
     out = artifact_dir(run_dir, artifact_id)
-    latest = latest_source_rows(records, source)
+    latest = latest_selected_source_rows(records, subject, source)
     mainland = latest[latest.apply(is_mainland, axis=1)].copy() if not latest.empty else latest
     top = mainland[pd.to_numeric(mainland["rank_midpoint"], errors="coerce") <= TOP_RANK_MIDPOINT].copy()
     top, duplicate_rows = dedupe_university_rows(top, subject, source)
@@ -2426,7 +2599,7 @@ def build_peer_table(run_dir: Path, subject: dict[str, Any], records: pd.DataFra
         return {"artifact_id": artifact_id, "status": "skipped", "reason": f"no {source} top200 mainland peers"}
     full_top = top.copy()
     top = compact_peer_scope_for_word(top)
-    source_records = records[records["ranking_source"] == source].copy()
+    source_records = filter_to_selected_source_area(records[records["ranking_source"] == source].copy(), subject, source)
     table, history = build_peer_history_matrix(source_records, top, source)
     if table.empty:
         return {"artifact_id": artifact_id, "status": "skipped", "reason": f"no {source} peer history"}
@@ -2555,12 +2728,26 @@ def filter_external_subject_history(df: pd.DataFrame, subject: dict[str, Any], s
     en_keys = df.get("ranking_subject_en", pd.Series([""] * len(df))).map(normalize_subject_history_key)
     norm_keys = df.get("ranking_subject_norm", pd.Series([""] * len(df))).map(normalize_subject_history_key)
     preferred = clean_text(subject.get("usnews_subject_name" if source_name == "US News" else "arwu_subject_name"))
-    preferred_keys = {normalize_subject_history_key(preferred)} if preferred else set()
-    preferred_df = df[raw_keys.isin(preferred_keys) | en_keys.isin(preferred_keys) | norm_keys.isin(preferred_keys)].copy()
-    if not preferred_df.empty:
-        preferred_keys.update(preferred_df.get("ranking_subject_en", pd.Series(dtype=str)).map(normalize_subject_history_key).tolist())
-        preferred_keys.update(preferred_df.get("ranking_subject_raw", pd.Series(dtype=str)).map(normalize_subject_history_key).tolist())
-        return df[raw_keys.isin(preferred_keys) | en_keys.isin(preferred_keys) | norm_keys.isin(preferred_keys)].copy()
+    override = subject.get("source_runtime_overrides", {}).get(source_name, {})
+    preferred_values: list[Any] = [
+        override.get("ranking_subject_or_area"),
+        override.get("weight_subject_or_area"),
+        subject.get("target_subject"),
+        preferred,
+    ]
+    preferred_values.extend(candidate_subject_areas(preferred))
+    preferred_values.extend(candidate_subject_areas(override.get("ranking_subject_or_area")))
+    preferred_values.extend(candidate_subject_areas(override.get("weight_subject_or_area")))
+    for preferred_value in ordered_unique([valid_mapping_value(value) for value in preferred_values]):
+        preferred_key = normalize_subject_history_key(preferred_value)
+        if not preferred_key:
+            continue
+        preferred_df = df[(raw_keys == preferred_key) | (en_keys == preferred_key) | (norm_keys == preferred_key)].copy()
+        if not preferred_df.empty:
+            matched_keys = {preferred_key}
+            matched_keys.update(preferred_df.get("ranking_subject_en", pd.Series(dtype=str)).map(normalize_subject_history_key).tolist())
+            matched_keys.update(preferred_df.get("ranking_subject_raw", pd.Series(dtype=str)).map(normalize_subject_history_key).tolist())
+            return df[raw_keys.isin(matched_keys) | en_keys.isin(matched_keys) | norm_keys.isin(matched_keys)].copy()
 
     aliases = {normalize_subject_history_key(value) for value in subject_alias_values(subject, source_name)}
     aliases.update(normalize_subject_history_key(value) for value in [subject.get("target_subject"), preferred] if clean_text(value))
@@ -2650,7 +2837,26 @@ def build_arwu_public_indicator_history_table(run_dir: Path, subject: dict[str, 
 
 
 def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None:
-    image = Image.new("RGB", (1900, 940), "#FFFFFF")
+    plot = df.copy()
+    plot["ranking_year"] = pd.to_numeric(plot["ranking_year"], errors="coerce")
+    if "indicator_value_num" in plot.columns:
+        numeric_values = pd.to_numeric(plot["indicator_value_num"], errors="coerce")
+    else:
+        numeric_values = pd.Series([None] * len(plot), index=plot.index, dtype="float64")
+    fallback_values = pd.to_numeric(
+        plot.get("indicator_value", pd.Series(dtype=str)).astype(str).str.replace("#", "", regex=False).str.replace(",", "", regex=False),
+        errors="coerce",
+    )
+    plot["_plot_value"] = numeric_values.fillna(fallback_values)
+    plot = plot.dropna(subset=["ranking_year", "_plot_value"])
+    indicators = plot["indicator_name"].drop_duplicates().tolist()
+    years = sorted(int(x) for x in plot["ranking_year"].dropna().unique())
+    if len(indicators) > 8:
+        cols = 3
+        rows = math.ceil(len(indicators) / cols)
+        image = Image.new("RGB", (1900, 178 + rows * 246), "#FFFFFF")
+    else:
+        image = Image.new("RGB", (1900, 940), "#FFFFFF")
     draw = ImageDraw.Draw(image)
     font_title = load_font(40, True)
     font_sub = load_font(23)
@@ -2658,17 +2864,57 @@ def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None
     font_label = load_font(19, True)
     draw.text((62, 36), title, font=font_title, fill="#16202A")
     draw.text((62, 88), "U.S. News 分项指标排名趋势，数值越小表示相对排名越靠前", font=font_sub, fill="#5A6573")
-    plot = df.copy()
-    plot["ranking_year"] = pd.to_numeric(plot["ranking_year"], errors="coerce")
-    plot["indicator_value_num"] = pd.to_numeric(plot["indicator_value"], errors="coerce")
-    plot = plot.dropna(subset=["ranking_year", "indicator_value_num"])
-    indicators = plot["indicator_name"].drop_duplicates().tolist()[:8]
-    years = sorted(int(x) for x in plot["ranking_year"].dropna().unique())
     if not years or not indicators:
         save_png(image, out_path)
         return
+    max_v = max(400, int(math.ceil(plot["_plot_value"].max() / 100.0) * 100))
+    palette = ["#315D9C", "#C64B46", "#3C8D5A", "#7B5CA8", "#D68A35", "#6B7280", "#C85D7B", "#4C72B0", "#059669", "#A855F7", "#0F766E", "#B45309"]
+
+    if len(indicators) > 8:
+        mini_w, mini_h = 520, 152
+        start_x, start_y = 92, 158
+        gap_x, gap_y = 92, 76
+
+        def mini_xp(year: int, left: int) -> float:
+            return left + (year - min(years)) / max(1, max(years) - min(years)) * mini_w
+
+        def mini_yp(value: float, top: int) -> float:
+            return top + value / max(1, max_v) * mini_h
+
+        for idx, indicator in enumerate(indicators):
+            col = idx % cols
+            row = idx // cols
+            left = start_x + col * (mini_w + gap_x)
+            top = start_y + row * (mini_h + gap_y)
+            right = left + mini_w
+            bottom = top + mini_h
+            color = palette[idx % len(palette)]
+            draw.rounded_rectangle((left - 22, top - 40, right + 24, bottom + 48), radius=18, fill="#FFFFFF", outline="#E5E7EB", width=2)
+            draw_text_box(draw, (left - 10, top - 34, right + 16, top - 4), clean_text(indicator), font_label, "#243241", "left", max_lines=1)
+            for tick in range(0, max_v + 1, 200):
+                y = mini_yp(tick, top)
+                draw.line((left, y, right, y), fill="#EEF2F6", width=2)
+                if tick in {0, max_v}:
+                    draw_text_right(draw, left - 10, y - 9, str(tick), load_font(15, True), "#697586")
+            draw.line((left, top, left, bottom), fill="#A0AAB7", width=2)
+            draw.line((left, bottom, right, bottom), fill="#A0AAB7", width=2)
+            group = plot[plot["indicator_name"] == indicator].sort_values("ranking_year")
+            points = [(mini_xp(int(item["ranking_year"]), left), mini_yp(float(item["_plot_value"]), top)) for _, item in group.iterrows()]
+            if len(points) > 1:
+                draw.line(points, fill=color, width=5)
+            for point_x, point_y in points:
+                draw.ellipse((point_x - 8, point_y - 8, point_x + 8, point_y + 8), fill=color, outline="#FFFFFF", width=2)
+            if points:
+                last_row = group.iloc[-1]
+                draw.text((points[-1][0] + 8, max(top, points[-1][1] - 14)), f"{float(last_row['_plot_value']):g}", font=load_font(16, True), fill=color)
+            for year in years:
+                x = mini_xp(year, left)
+                draw_center(draw, (x - 34, bottom + 10, x + 34, bottom + 36), str(year), load_font(16, True), "#52606D")
+        draw.text((62, image.height - 44), f"注：本图以小多图展示全部 {len(indicators)} 个分项指标，避免多线叠加造成遮挡；纵轴统一为排名数值。", font=load_font(18), fill="#697586")
+        save_png(image, out_path)
+        return
+
     left, top, right, bottom = 142, 150, 1320, 770
-    max_v = max(400, int(math.ceil(plot["indicator_value_num"].max() / 100.0) * 100))
 
     def xp(year: int) -> float:
         return left + (year - min(years)) / max(1, max(years) - min(years)) * (right - left)
@@ -2685,11 +2931,10 @@ def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None
     for year in years:
         x = xp(year)
         draw_center(draw, (x - 48, bottom + 18, x + 48, bottom + 54), str(year), font_axis, "#52606D")
-    palette = ["#315D9C", "#C64B46", "#3C8D5A", "#7B5CA8", "#D68A35", "#6B7280", "#C85D7B", "#4C72B0"]
     for idx, indicator in enumerate(indicators):
         color = palette[idx % len(palette)]
         group = plot[plot["indicator_name"] == indicator].sort_values("ranking_year")
-        points = [(xp(int(row["ranking_year"])), yp(float(row["indicator_value_num"]))) for _, row in group.iterrows()]
+        points = [(xp(int(row["ranking_year"])), yp(float(row["_plot_value"]))) for _, row in group.iterrows()]
         if len(points) > 1:
             draw.line(points, fill=color, width=6)
         for x, y in points:
@@ -2713,13 +2958,23 @@ def build_usnews_indicator_history_trend(run_dir: Path, subject: dict[str, Any])
     df.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
     render_indicator_trend(df, f"U.S. News {clean_text(subject['target_subject'])}同济分项指标历史趋势", out / "chart.png")
     years = sorted(pd.to_numeric(df["ranking_year"], errors="coerce").dropna().astype(int).unique().tolist())
+    indicator_count = int(df["indicator_name"].map(clean_text).replace("", pd.NA).dropna().nunique()) if "indicator_name" in df.columns else 0
+    ranking_subjects = sorted({clean_text(value) for value in df.get("ranking_subject_raw", pd.Series(dtype=str)).tolist() if clean_text(value)})
     write_common_outputs(
         out,
         artifact_id,
         "chart",
         len(df),
         len(df),
-        {"ranking_source": "US News", "years": years, "external_source": str(USNEWS_HISTORY_CSV)},
+        {
+            "ranking_source": "US News",
+            "years": years,
+            "indicator_count": indicator_count,
+            "ranking_subjects": ranking_subjects,
+            "rendering_strategy": "all_indicator_small_multiples" if indicator_count > 8 else "single_panel_all_indicators",
+            "numeric_value_source": "indicator_value_num_with_cleaned_indicator_value_fallback",
+            "external_source": str(USNEWS_HISTORY_CSV),
+        },
     )
     return {"artifact_id": artifact_id, "status": "generated", "rows": len(df), "output_dir": str(out)}
 
@@ -2782,10 +3037,13 @@ def read_current_run_peer_scope(run_dir: Path) -> pd.DataFrame:
 
 
 def select_wos_peer_rows(run_dir: Path, subject: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any]]:
+    preprocess_status = ensure_wos_subject_paper_csv()
     mapping = {
         "source_system": "Web of Science subject paper metrics",
         "source_file": str(WOS_SUBJECT_PAPER_CSV),
-        "scope_type": "ministry_first_level_subject",
+        "source_workbook_status": preprocess_status,
+        "scope_type": "wos_37_double_first_class_universities_by_ministry_subject_code",
+        "expected_university_count": 37,
         "evidence_level": "derived_from_local_workbook",
         "requires_disclosure": "no",
     }
@@ -2823,36 +3081,14 @@ def select_wos_peer_rows(run_dir: Path, subject: dict[str, Any]) -> tuple[pd.Dat
     for column in metric_columns:
         if column in df.columns:
             df[column] = pd.to_numeric(df[column], errors="coerce")
-    peers = read_current_run_peer_scope(run_dir)
-    peer_names_en = set(peers.get("university_name_en", pd.Series(dtype=str)).dropna().astype(str).str.lower().str.strip())
-    peer_names_cn = set(peers.get("university_name_cn", pd.Series(dtype=str)).dropna().astype(str).str.strip())
-    matched = pd.DataFrame()
-    if "university_name_en" in df.columns and peer_names_en:
-        matched = df[df["university_name_en"].astype(str).str.lower().str.strip().isin(peer_names_en)].copy()
-        matched["matched_current_peer_by_en"] = True
-    if "university_name_cn" in df.columns and peer_names_cn:
-        matched_cn = df[df["university_name_cn"].astype(str).str.strip().isin(peer_names_cn)].copy()
-        matched_cn["matched_current_peer_by_cn"] = True
-        matched = pd.concat([matched, matched_cn], ignore_index=True, sort=False)
-    if not matched.empty:
-        matched = matched.drop_duplicates(subset=["university_name_cn", "university_name_en", "ministry_subject_code"])
-        matched["matched_current_subject_peer"] = True
-    tongji = df[
-        df.get("university_name_cn", pd.Series([""] * len(df))).apply(is_tongji_name)
-        | df.get("university_name_en", pd.Series([""] * len(df))).apply(is_tongji_name)
-    ].copy()
-    if not tongji.empty:
-        tongji["matched_current_subject_peer"] = True
-        matched = pd.concat([matched, tongji], ignore_index=True, sort=False).drop_duplicates(
-            subset=["university_name_cn", "university_name_en", "ministry_subject_code"]
-        )
-    if matched.empty:
-        matched = df.copy()
-        matched["matched_current_subject_peer"] = False
-    mapping["matched_peer_rows"] = int(len(matched))
+    df["included_in_wos_37_scope"] = True
+    df["matched_current_subject_peer"] = True
+    mapping["matched_peer_rows"] = int(len(df))
     mapping["field_rows"] = int(len(df))
+    mapping["university_count"] = int(df.get("university_name_cn", pd.Series(dtype=str)).nunique())
     mapping["paper_field"] = clean_text(df.iloc[0].get("paper_field", "")) if not df.empty else ""
-    return matched, mapping
+    mapping["subject_code_match_rule"] = "extract leading 4 digits from 教育部一级学科 and compare to ministry_subject_code"
+    return df, mapping
 
 
 def select_cwts_peer_rows(run_dir: Path, subject: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any]]:
@@ -2903,39 +3139,45 @@ def rank_for_metric(df: pd.DataFrame, metric: str, higher_better: bool = True) -
 
 
 def render_paper_bar_chart(df: pd.DataFrame, title: str, metrics: list[tuple[str, str]], out_path: Path, note: str) -> None:
-    image = Image.new("RGB", (1780, 980), "#FFFFFF")
+    row_count = max(1, len(df))
+    image_h = max(980, min(1800, 250 + row_count * 30))
+    image = Image.new("RGB", (1780, image_h), "#FFFFFF")
     draw = ImageDraw.Draw(image)
     font_title = load_font(42, True)
     font_sub = load_font(23)
-    font_label = load_font(23, True)
-    font_small = load_font(21, True)
+    font_label = load_font(19, True)
+    font_small = load_font(18, True)
     draw.text((58, 30), title, font=font_title, fill="#16202A")
     draw_text_box(draw, (52, 78, 1710, 126), note, font_sub, "#5A6573", "left", max_lines=2)
     panels = len(metrics)
     panel_w = int((1600 - (panels - 1) * 54) / max(1, panels))
-    panel_h = 760
-    top = 164
+    panel_h = image_h - 260
+    top = 196
     for idx, (metric, label) in enumerate(metrics):
         panel_left = 70 + idx * (panel_w + 50)
         panel_right = panel_left + panel_w
         values = pd.to_numeric(df[metric], errors="coerce").fillna(0)
-        top_df = df.assign(_value=values).sort_values("_value", ascending=False).head(14).copy()
-        tongji_rows = df[df.apply(lambda row: is_tongji_name(short_university_name(row)) or is_tongji_name(row.get("University", "")), axis=1)].assign(_value=values)
-        if not tongji_rows.empty and not top_df.index.isin(tongji_rows.index).any():
-            top_df = pd.concat([top_df.iloc[:13], tongji_rows.head(1)]).copy()
+        top_df = df.assign(_value=values).sort_values("_value", ascending=False).copy()
         max_v = max(1.0, float(top_df["_value"].max()))
         draw.text((panel_left, top - 42), label, font=load_font(28, True), fill="#1F2933")
-        bar_h = min(44, int(panel_h / max(1, len(top_df)) - 8))
+        draw.text((panel_right - 150, top - 36), f"{len(top_df)}所高校", font=font_small, fill="#697586")
+        row_step = max(22, min(32, int(panel_h / max(1, len(top_df)))))
+        bar_h = max(10, min(20, row_step - 10))
+        bar_left = panel_left + 182
+        bar_right = panel_right - 112
         for ridx, (_, row) in enumerate(top_df.iterrows()):
-            y = top + ridx * (bar_h + 12)
+            y = top + ridx * row_step
             name = short_university_name(row)
             value = float(row["_value"])
-            bar_w = (panel_w - 250) * value / max_v
+            bar_w = max(3.0, (bar_right - bar_left) * value / max_v) if value > 0 else 0
             color = "#C64B46" if is_tongji_name(name) or is_tongji_name(row.get("University", "")) else "#315D9C"
             label_fill = "#C64B46" if color == "#C64B46" else "#374151"
-            draw.text((panel_left, y + 6), name[:12], font=font_label, fill=label_fill)
-            draw.rounded_rectangle((panel_left + 180, y, panel_left + 180 + bar_w, y + bar_h), radius=7, fill=color)
-            draw.text((panel_right - 96, y + 6), f"{value:.1f}", font=font_small, fill=label_fill)
+            label_text = ellipsize_text(draw, name, font_label, bar_left - panel_left - 12)
+            draw.text((panel_left, y), label_text, font=font_label, fill=label_fill)
+            if bar_w > 0:
+                draw.rounded_rectangle((bar_left, y + 2, bar_left + bar_w, y + 2 + bar_h), radius=4, fill=color)
+            value_text = f"{value:,.0f}" if abs(value) >= 100 else f"{value:.1f}"
+            draw_text_right(draw, panel_right - 6, y, value_text, font_small, label_fill)
     save_png(image, out_path)
 
 
@@ -3096,36 +3338,34 @@ def build_subject_paper_artifact(run_dir: Path, subject: dict[str, Any], artifac
     df, paper_mapping = select_wos_peer_rows(run_dir, subject)
     source_kind = "wos"
     if df.empty:
-        df, paper_mapping = select_cwts_peer_rows(run_dir, subject)
-        source_kind = "cwts"
-    if df.empty:
-        return {"artifact_id": artifact_id, "status": "skipped", "reason": "missing WOS subject data and CWTS broad-field proxy data"}
+        reason = clean_text(paper_mapping.get("reason")) or "missing WOS subject data for this ministry subject code"
+        return {"artifact_id": artifact_id, "status": "skipped", "reason": reason, "source_kind": "wos"}
 
-    title_prefix = "对标高校"
+    title_prefix = "当前学科 WoS 论文表现（37校对比）"
     if source_kind == "wos":
-        note_prefix = f"Web of Science 一级学科口径：{clean_text(paper_mapping.get('paper_field'))}；原表未提供统计年份字段。"
+        note_prefix = f"口径：{clean_text(paper_mapping.get('paper_field'))}；每行代表该学科下的一所高校，非学校整体论文汇总。"
         metric_map = {
             "figure_13_paper_output_citation_relative_rank": {
                 "metrics": [("WOS_documents", "论文总量"), ("times_cited", "总被引")],
-                "title": f"{title_prefix}论文及被引总量相对表现",
+                "title": f"{title_prefix}：论文及被引总量",
                 "note": note_prefix,
                 "renderer": "bar",
             },
             "figure_14_paper_cnci_cpp_relative_rank": {
                 "metrics": [("citation_impact", "篇均被引"), ("CNCI", "CNCI")],
-                "title": f"{title_prefix}篇均被引与 CNCI 相对表现",
+                "title": f"{title_prefix}：篇均被引与 CNCI",
                 "note": note_prefix,
                 "renderer": "scatter",
             },
             "figure_15_paper_highly_cited_relative_rank": {
                 "metrics": [("documents_top_1", "前1%论文数"), ("highly_cited_papers", "ESI高被引论文数")],
-                "title": f"{title_prefix}高被引论文相对表现",
+                "title": f"{title_prefix}：高被引论文",
                 "note": note_prefix,
                 "renderer": "bar",
             },
             "figure_16_paper_international_collab_relative_rank": {
                 "metrics": [("international_documents", "国际合作论文数"), ("pct_international_documents", "国际合作论文占比")],
-                "title": f"{title_prefix}国际合作论文相对表现",
+                "title": f"{title_prefix}：国际合作论文",
                 "note": note_prefix,
                 "renderer": "bar",
             },
@@ -3176,6 +3416,7 @@ def build_subject_paper_artifact(run_dir: Path, subject: dict[str, Any], artifac
         "period",
         "matched_current_math_peer",
         "matched_current_subject_peer",
+        "included_in_wos_37_scope",
     ]
     data_cols = base_cols + [item for metric, _ in metrics for item in [metric, f"{metric}_relative_rank"] if item in df.columns]
     data_cols = [col for col in data_cols if col in df.columns]
@@ -3355,9 +3596,9 @@ def build_subject_run_artifacts(
 
     if "table_03_the_tongji_indicator_history" in ready_ids:
         append_builder_result(results, "table_03_the_tongji_indicator_history", lambda: build_the_indicator_history(run_dir, subject))
-    if ARWU_PUBLIC_TONGJI_LONG_CSV.exists():
+    if "table_01_arwu_tongji_indicator_history" in ready_ids and ARWU_PUBLIC_TONGJI_LONG_CSV.exists():
         append_builder_result(results, "table_01_arwu_tongji_indicator_history", lambda: build_arwu_public_indicator_history_table(run_dir, subject))
-    elif ARWU_HISTORY_CSV.exists():
+    elif "table_01_arwu_tongji_indicator_history" in ready_ids and ARWU_HISTORY_CSV.exists():
         append_builder_result(
             results,
             "table_01_arwu_tongji_indicator_history",

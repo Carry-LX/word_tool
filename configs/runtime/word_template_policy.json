@@ -21,7 +21,7 @@
     },
     "partial_sources_after_supplement": {
       "template_mode": "partial",
-      "allow_all_ready_artifacts": false,
+      "allow_all_ready_artifacts": true,
       "requires_disclosure": true,
       "narrative_tone": "limited_evidence"
     },
@@ -33,7 +33,7 @@
     },
     "fallback_partial": {
       "template_mode": "partial",
-      "allow_all_ready_artifacts": false,
+      "allow_all_ready_artifacts": true,
       "requires_disclosure": true,
       "narrative_tone": "limited_evidence"
     }

@@ -30,6 +30,24 @@ USE_DEMO_NARRATIVE_RESULT = False
 RUN_WORD_QA = True
 RUN_RENDER_QA = True
 UPDATE_WORD_FIELDS_WITH_COM = True
+NORMALIZE_DOCX_FOR_WORD_OPEN = True
+
+
+def env_bool(name: str, default: bool) -> bool:
+    text = os.environ.get(name)
+    if text is None:
+        return default
+    return text.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+RUN_SUBJECT_AGENT_FIRST = env_bool("RUN_SUBJECT_AGENT_FIRST", RUN_SUBJECT_AGENT_FIRST)
+BUILD_NARRATIVE_BUNDLE = env_bool("BUILD_NARRATIVE_BUNDLE", BUILD_NARRATIVE_BUNDLE)
+GENERATE_NARRATIVE_WITH_LLM = env_bool("GENERATE_NARRATIVE_WITH_LLM", GENERATE_NARRATIVE_WITH_LLM)
+USE_DEMO_NARRATIVE_RESULT = env_bool("USE_DEMO_NARRATIVE_RESULT", USE_DEMO_NARRATIVE_RESULT)
+RUN_WORD_QA = env_bool("RUN_WORD_QA", RUN_WORD_QA)
+RUN_RENDER_QA = env_bool("RUN_RENDER_QA", RUN_RENDER_QA)
+UPDATE_WORD_FIELDS_WITH_COM = env_bool("UPDATE_WORD_FIELDS_WITH_COM", UPDATE_WORD_FIELDS_WITH_COM)
+NORMALIZE_DOCX_FOR_WORD_OPEN = env_bool("NORMALIZE_DOCX_FOR_WORD_OPEN", NORMALIZE_DOCX_FOR_WORD_OPEN)
 
 
 def now_text() -> str:
@@ -59,7 +77,8 @@ def coverage_row_for_code(code: str) -> dict[str, Any]:
 
 def write_request_from_code(code: str) -> Path:
     row = coverage_row_for_code(code)
-    subject = clean_text(row.get("source_subject_name") or row.get("ministry_subject_name"))
+    subject = clean_text(row.get("ministry_subject_name")) or clean_text(row.get("source_subject_name"))
+    source_subject = clean_text(row.get("source_subject_name")) or subject
     payload = {
         "generated_at": now_text(),
         "request": {
@@ -72,7 +91,7 @@ def write_request_from_code(code: str) -> Path:
             "ranking_sources": RANKING_SOURCES,
             "allow_area_mapping": ALLOW_AREA_MAPPING,
             "proxy_policy": PROXY_POLICY,
-            "source_subject_name": subject,
+            "source_subject_name": source_subject,
             "source_generation_status": clean_text(row.get("generation_status_code_after_supplement")),
             "source_proxy_note": clean_text(row.get("supplement_proxy_note")),
         },
@@ -91,6 +110,7 @@ def configure_word_report_module(module: Any) -> None:
     module.RUN_WORD_QA = RUN_WORD_QA
     module.RUN_RENDER_QA = RUN_RENDER_QA
     module.UPDATE_WORD_FIELDS_WITH_COM = UPDATE_WORD_FIELDS_WITH_COM
+    module.NORMALIZE_DOCX_FOR_WORD_OPEN = NORMALIZE_DOCX_FOR_WORD_OPEN
 
 
 def main() -> None:

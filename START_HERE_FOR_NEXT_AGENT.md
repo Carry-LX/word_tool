@@ -1,5 +1,62 @@
 # 接手入口：表格数据分析 Agent
 
+## 2026-05-28 Word 自动生成链路交接
+
+本轮工作重点已经从“Word 前图表产物”推进到“按学科生成完整 Word 报告”，并围绕 `1401 集成电路科学与工程` 做了多轮问题收敛。后续接手时请先按本节理解当前状态。
+
+### 最新可核查样例
+
+- 最新学科运行目录：`outputs/subject_agent_runs/20260528_155621_1401_集成电路科学与工程`
+- 最新 Word 输出：`outputs/full_word_reports/20260528_155621_1401_集成电路科学与工程/同济大学集成电路科学与工程_学科国际排名发展分析.docx`
+- 最新 Word QA：`outputs/full_word_reports/20260528_155621_1401_集成电路科学与工程/qa/word_qa_report.json`
+- 最新系统体检：`outputs/agent_system_audit/latest/agent_system_readiness.json`
+
+最新 1401 渲染结果：`render_status=ok`，15 页，无空白页、无 sparse page。剩余 `wide_tables_need_visual_review` 是宽表人工视觉复核提示，不是页面变宽、图文错位或数据缺失错误。
+
+### 本轮已修正的关键问题
+
+- 排名口径统一：严格使用当前学科在预处理映射表和运行期决策里选定的榜单口径；没有同济最新综合排名的来源不再进入主图或强行补齐。
+- QS/软科无直接口径时不再用近邻口径替代：以 1401 为例，QS 不再混用“数据科学与人工智能”和“电子与电气工程”；软科外部候选口径 `Electrical & Electronic Engineering` 不再进入正文的软科分项历史表。
+- 图文对应关系修正：无可核验图表的来源小节会从对标高校整体分析、分指标分析、排名历史分析中移除，避免“只有标题/图题没有图”或图跑到下一节。
+- 图表位置修正：U.S.News、THE 分指标图会重新锚定到对应图题前，避免插入到论文章节或错误小节。
+- 论文数据来源修正：论文章只使用 37 校 Web of Science 一级学科论文数据。若该一级学科没有记录，只写缺失说明，不使用学校整体论文数据或宽口径代理数据。
+- 排名显示清洗：正文和表格中的 `#9`、`=30` 等来源标记会清洗为普通数字。
+- `U.S.News` 显示修正：Word 正文中将 `U.S.News` 拆成单独西文字体 run，避免中文排版把它显示成 `U. S. News`。
+- 页面版式修正：生成后统一 section 页面几何，所有 section 恢复竖向 A4 和一致页边距，避免目录和正文继承横向宽版面。
+
+### 当前主要脚本入口
+
+- 批量或单学科 Word 生成入口：`scripts/run_batch_reports.py`
+- 学科事实、口径、artifact readiness 决策：`scripts/run_subject_agent.py`
+- 图表/表格产物构建：`scripts/subject_artifact_builders.py`
+- Word 模板替换、后处理、页面几何修正：`scripts/build_word_replacement_trial.py`
+- 系统体检：`scripts/audit_agent_system_readiness.py`
+
+当前单学科验证命令示例：
+
+```powershell
+E:\conda_envs\graph-rag\python.exe -c "import sys; from pathlib import Path; sys.path.insert(0, str(Path('scripts').resolve())); import run_batch_reports as r; r.ONLY_CODES=['1401']; r.UPDATE_WORD_FIELDS_WITH_COM=False; r.NORMALIZE_DOCX_FOR_WORD_OPEN=False; r.main()"
+E:\conda_envs\graph-rag\python.exe scripts/audit_agent_system_readiness.py
+```
+
+### 接手时优先检查
+
+1. 先看 `outputs/subject_agent_runs/20260528_155621_1401_集成电路科学与工程/artifact_readiness.csv`，确认哪些 artifact 是 ready，哪些是 disclosed missing。
+2. 再看 `outputs/subject_agent_runs/20260528_155621_1401_集成电路科学与工程/source_decision_matrix.csv`，确认各榜单是否有同济最新综合位次。
+3. 对 Word 版式问题，优先检查 `scripts/build_word_replacement_trial.py` 中的这些后处理函数：
+   - `normalize_evidence_backed_source_sections`
+   - `repair_peer_indicator_figure_anchors`
+   - `normalize_missing_paper_section`
+   - `normalize_section_page_geometry`
+4. 若继续做全学科批量生成，不要直接一次全量生成交付；先抽样跑若干典型学科，检查 `word_qa_report.json`、渲染页 PNG、`agent_system_readiness.json`。
+
+### 仍需注意的边界
+
+- `soft/QS/THE/US News` 的“学科口径”必须以运行期决策和预处理映射结果为准，不能在不同章节各自找近邻口径。
+- 外部补源只能在同济有可核验综合排名或人工确认的情况下进入正文；否则只能作为候选或缺口说明。
+- 37 校 WoS 论文数据按教育部一级学科代码匹配。没有匹配记录时必须说明缺失，不要回退到学校整体论文数据。
+- 当前 Git 分支为 `codex/agent-overall-optimization`。本项目 Git 主要用于本地备份，不要主动 push。
+
 ## 2026-05-11 共性补源更新
 
 本项目已经新增两类可迁移补源，不再只围绕数学样例：

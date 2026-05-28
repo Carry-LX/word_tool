@@ -86,9 +86,11 @@ def update_word_fields(docx_path: Path) -> dict[str, Any]:
 
 if __name__ == "__main__":
     import json
+    import os
     import sys
 
-    if len(sys.argv) != 2:
-        raise SystemExit("Usage: python scripts/update_word_fields.py <docx_path>")
-    payload = update_word_fields(Path(sys.argv[1]))
+    docx_value = sys.argv[1] if len(sys.argv) == 2 else os.environ.get("UPDATE_WORD_FIELDS_DOCX_PATH", "")
+    if not str(docx_value).strip():
+        raise SystemExit("Set UPDATE_WORD_FIELDS_DOCX_PATH or pass a DOCX path.")
+    payload = update_word_fields(Path(docx_value))
     print(json.dumps(payload, ensure_ascii=False, indent=2))

@@ -13,13 +13,17 @@ from zipfile import ZIP_DEFLATED, ZipFile
 from xml.etree import ElementTree as ET
 
 from docx import Document
+from docx.enum.section import WD_ORIENT
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
 from docx.shared import Emu, Pt, RGBColor
+from lxml import etree
 from PIL import Image
+
+import sanitize_docx_ooxml_namespaces
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -27,6 +31,7 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DOCX = PROJECT_DIR / "data" / "同济大学XX学科的国际排名发展分析-2026年5月.docx"
 SLOT_MAPPING_CSV = PROJECT_DIR / "configs" / "template_slot_inventory" / "logical_slot_artifact_mapping.csv"
 NARRATIVE_MAPPING_JSON = PROJECT_DIR / "configs" / "template_slot_inventory" / "narrative_paragraph_mapping.json"
+RANKING_SOURCES = ["软科", "QS", "US News", "THE"]
 
 # 这里显式指定本次试跑使用哪一次学科产物。正常报告请通过 build_subject_word_report.py 注入。
 SUBJECT_RUN_DIR = PROJECT_DIR / "outputs" / "subject_agent_runs" / "_set_subject_run_dir_via_build_subject_word_report"
@@ -135,11 +140,25 @@ def read_target_subject_payload() -> dict[str, Any]:
     return {}
 
 
+def canonical_the_area(value: Any) -> str:
+    area = clean_text(value)
+    crosswalk_path = PROJECT_DIR / "configs" / "runtime" / "the_weight_area_crosswalk.json"
+    if area and crosswalk_path.exists():
+        crosswalk = json.loads(crosswalk_path.read_text(encoding="utf-8"))
+        return clean_text(crosswalk.get(area, area))
+    return area
+
+
 def read_target_subject_area() -> str:
     payload = read_target_subject_payload()
     resolved = payload.get("resolved_subject", {})
     value = str(resolved.get("the_subject_area", "")).strip()
-    return value or "自然科学"
+    overrides = resolved.get("source_runtime_overrides", {})
+    if not value and isinstance(overrides, dict):
+        the_override = overrides.get("THE", {})
+        if isinstance(the_override, dict):
+            value = clean_text(the_override.get("weight_subject_or_area")) or clean_text(the_override.get("ranking_subject_or_area"))
+    return canonical_the_area(value) or "自然科学"
 
 
 def artifact_png_path(artifact_id: str) -> Path | None:
@@ -628,10 +647,10 @@ def replace_subject_placeholder_text(text: str, subject_name: str, the_subject_a
     result = result.replace("图8、软科排名前200位内地高校分项指标相对排名", "图9、软科排名前200位内地高校分项指标相对排名")
     result = result.replace("图7、U.S.News排名前200位内地高校分项指标相对排名", "图10、U.S.News排名前200位内地高校分项指标相对排名")
     result = result.replace("图9、THE排名前200位内地高校分项指标相对排名", "图11、THE排名前200位内地高校分项指标相对排名")
-    result = result.replace("图10、37所内地高校论文及被引总量及相对排名", "图12、37所内地高校论文及被引总量及相对排名")
-    result = result.replace("图11、37所内地高校论文CNCI及篇均被引数及相对排名", "图13、37所内地高校论文CNCI及篇均被引数及相对排名")
-    result = result.replace("图12、37所内地高校高被引TOP论文量及相对排名", "图14、37所内地高校高被引TOP论文量及相对排名")
-    result = result.replace("图13、37所内地高校国际合著论文占比及相对排名", "图15、37所内地高校国际合著论文占比及相对排名")
+    result = result.replace("图10、37所内地高校论文及被引总量及相对排名", f"图12、37所高校{subject_label}学科论文及被引总量相对排名")
+    result = result.replace("图11、37所内地高校论文CNCI及篇均被引数及相对排名", f"图13、37所高校{subject_label}学科论文CNCI及篇均被引相对排名")
+    result = result.replace("图12、37所内地高校高被引TOP论文量及相对排名", f"图14、37所高校{subject_label}学科高被引论文相对排名")
+    result = result.replace("图13、37所内地高校国际合著论文占比及相对排名", f"图15、37所高校{subject_label}学科国际合作论文相对排名")
     result = result.replace(f"表3、{subject_label}在软科排名中的细分指标排名历史", f"表1、{subject_label}在软科排名中的细分指标排名历史")
     result = result.replace(f"表4、{subject_label}在THE排名中的细分指标排名历史", f"表3、{subject_label}在THE排名中的细分指标排名历史")
     result = result.replace("2025年发布的四大国际排名中内地高校的位次分布如下", "当前最新四大国际排名中内地高校的位次分布如下")
@@ -766,10 +785,14 @@ def excluded_slot_note(row: dict[str, str]) -> str:
     artifact_id = clean_text(row.get("artifact_id", ""))
     section = clean_text(row.get("section", ""))
     artifact_key = artifact_id.lower()
-    if "qs_mainland_peer_ranking" in artifact_key or "qs_peer_indicator_relative_rank" in artifact_key:
+    if "qs_indicator_weight" in artifact_key:
+        return ""
+    if "qs_mainland_peer_ranking" in artifact_key:
+        return f"当前{subject_name}学科暂无可核验的 QS 前200内地高校对标样本，本报告不生成该榜单对标表；相关同行分析以已生成图表为准。"
+    if "qs_peer_indicator_relative_rank" in artifact_key:
         return ""
     if "qs" in artifact_key or "QS" in section:
-        return f"当前{subject_name}学科暂无可直接用于本报告的 QS 学科排名或分项指标数据，待补充 QS 口径后再生成对应图表。"
+        return f"当前{subject_name}学科暂无可直接用于本报告该位置的 QS 学科排名或分项指标数据，待补充 QS 对应口径后再生成对应图表。"
     if "usnews_indicator_weight" in artifact_id:
         return f"当前{subject_name}学科暂无 U.S. News 官方对应口径权重数据，本报告仅保留已有 U.S. News 排名与分项历史，不套用其他学科权重图。"
     if "arwu_tongji_indicator_history" in artifact_key:
@@ -787,6 +810,8 @@ def excluded_slot_note(row: dict[str, str]) -> str:
         return f"当前{subject_name}学科仅覆盖部分国际榜单最新排名，概览图按可用榜单生成；缺失榜单不作强行补齐。"
     if "commonality" in artifact_id:
         return f"当前{subject_name}学科仅覆盖部分榜单权重或分项指标，本报告按可用来源说明指标共性，不强行补齐缺失榜单。"
+    if "paper_" in artifact_key:
+        return ""
     return ""
 
 
@@ -827,7 +852,7 @@ def insert_note_after_heading(paragraph: Paragraph, note: str) -> None:
     run = inserted.add_run(note)
     run.font.name = "SimSun"
     run._element.rPr.rFonts.set(qn("w:eastAsia"), "SimSun")
-    run.font.size = Pt(12)
+    run.font.size = Pt(14)
 
 
 def remove_paragraph(paragraph: Paragraph) -> None:
@@ -1001,8 +1026,20 @@ def first_present(row: dict[str, str], keys: list[str]) -> str:
     return ""
 
 
+def ordered_unique(values: list[Any]) -> list[str]:
+    seen = set()
+    rows: list[str] = []
+    for value in values:
+        text = clean_text(value)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        rows.append(text)
+    return rows
+
+
 def to_number(value: Any) -> float | None:
-    text = clean_text(value).replace(",", "")
+    text = clean_rank_display(value).replace(",", "")
     if not text or text in {"-", "未上榜", "未发布"}:
         return None
     try:
@@ -1011,18 +1048,39 @@ def to_number(value: Any) -> float | None:
         return None
 
 
+def clean_rank_display(value: Any) -> str:
+    text = clean_text(value)
+    if not text:
+        return ""
+    text = re.sub(r"#+\s*(?=\d)", "", text)
+    text = re.sub(r"=+\s*(?=\d)", "", text)
+    return text.strip()
+
+
 def format_number(value: Any, digits: int = 1) -> str:
     number = to_number(value)
     if number is None:
-        return clean_text(value)
+        return clean_rank_display(value)
     if abs(number - round(number)) < 1e-8:
         return str(int(round(number)))
     return f"{number:.{digits}f}"
 
 
+def normalize_brand_text(text: str) -> str:
+    replacement = re.sub(r"U\s*\\?\.?\s*S\s*\\?\.?\s*News", "U.S.News", text)
+    replacement = re.sub(r"US\s+News", "U.S.News", replacement)
+    replacement = replacement.replace("U.S. News", "U.S.News")
+    replacement = replacement.replace("U.S.News学科", "U.S.News 学科")
+    replacement = replacement.replace("U.S.News排名", "U.S.News 排名")
+    replacement = replacement.replace("U.S.News分项", "U.S.News 分项")
+    replacement = replacement.replace("U.S.News指标", "U.S.News 指标")
+    replacement = re.sub(r"U\.S\.News(?=[\u4e00-\u9fff])", "U.S.News ", replacement)
+    return replacement
+
+
 def display_source_name(value: Any) -> str:
     source = clean_text(value)
-    if source == "US News":
+    if normalize_brand_text(source) == "U.S.News":
         return "U.S. News"
     return source
 
@@ -1045,6 +1103,33 @@ def source_runtime_override_value(source: str, key: str, default: str = "") -> s
     return clean_text(source_override.get(key, "")) or default
 
 
+def report_subject_label_for_source(source: str, default: str = "") -> str:
+    if source == "软科":
+        return arwu_public_subject_label(default)
+    if source == "QS":
+        return (
+            source_runtime_override_value("QS", "ranking_subject_or_area")
+            or source_runtime_override_value("QS", "weight_subject_or_area")
+            or resolved_subject_value("qs_subject_name")
+            or default
+        )
+    if source in {"US News", "U.S. News"}:
+        return (
+            source_runtime_override_value("US News", "ranking_subject_or_area")
+            or source_runtime_override_value("US News", "weight_subject_or_area")
+            or resolved_subject_value("usnews_subject_name")
+            or default
+        )
+    if source == "THE":
+        return canonical_the_area(
+            source_runtime_override_value("THE", "ranking_subject_or_area")
+            or source_runtime_override_value("THE", "weight_subject_or_area")
+            or resolved_subject_value("the_subject_area")
+            or default
+        )
+    return default
+
+
 def is_missing_subject_label(value: str) -> bool:
     normalized = re.sub(r"\s+", "", clean_text(value))
     return normalized in {"", "-", "None", "none", "nan", "NaN", "\u65e0", "\u6682\u65e0", "\u65e0\u76f4\u63a5\u53e3\u5f84"}
@@ -1061,7 +1146,7 @@ def tongji_data_row(rows: list[dict[str, str]]) -> dict[str, str]:
 
 def rank_text(row: dict[str, str]) -> str:
     raw = first_present(row, ["rank_raw", "world_rank_raw"])
-    return raw or format_number(row.get("rank_midpoint", ""))
+    return clean_rank_display(raw) or format_number(row.get("rank_midpoint", ""))
 
 
 def summarize_overview(artifact_id: str) -> str:
@@ -1069,22 +1154,28 @@ def summarize_overview(artifact_id: str) -> str:
     if not rows:
         return ""
     parts = []
+    scope_parts = []
     for row in rows:
         source = clean_text(row.get("ranking_source", ""))
         subject = clean_text(row.get("ranking_subject_raw", ""))
+        if source in {"THE", "US News", "U.S. News"}:
+            subject = canonical_the_area(subject) or subject
         year = first_present(row, ["ranking_year", "release_year"])
         rank = rank_text(row)
         if source and rank:
             subject_part = f"{subject}" if subject else "对应学科"
             parts.append(f"{display_source_name(source)} {year}年{subject_part}第{rank}")
+        if source and subject:
+            scope_parts.append(f"{display_source_name(source)}：{subject}")
     if not parts:
         return ""
     source_count = len(parts)
     scope = "四类国际学科排名" if source_count >= 4 else f"{source_count}类可用国际学科排名"
+    scope_text = f"当前实际采用口径分别为：{'；'.join(ordered_unique(scope_parts))}。" if scope_parts else ""
     return (
         f"同济大学{read_target_subject_name()}学科在{scope}中形成最新记录："
         + "，".join(parts)
-        + "。未覆盖榜单不作强行补齐，解读时应同时说明榜单口径差异和数据缺口。"
+        + f"。{scope_text}未覆盖榜单不作强行补齐，解读时应同时说明榜单口径差异和数据缺口。"
     )
 
 
@@ -1116,17 +1207,23 @@ def summarize_weight(artifact_id: str) -> str:
         return ""
     group_text = "、".join(f"{name}{value:.1f}%" for name, value in top_groups)
     source_name = display_source_name(source)
+    subject_label = subject or read_target_subject_name()
+    source_status_key = "US News" if source_name == "U.S. News" else source_name
+    if not source_has_tongji_latest(source_status_key):
+        return (
+            f"{source_name} 在{subject_label}口径下的权重前三为{group_text}。"
+            f"当前事实层尚未匹配到同济大学在该{source_name}口径下的最新综合位次，"
+            "因此本图仅用于理解该榜单公开评价方法，不用于判断同济综合排名变化。"
+        )
     if source_name == "QS":
-        return f"QS 在{subject or read_target_subject_name()}口径下，学术声誉和雇主声誉合计占比较高，权重前三为{group_text}。因此 QS 位次提升不能只解释为论文指标改善，还需要同步观察国际同行声誉和雇主评价的积累。"
+        return f"QS 在{subject_label}口径下，学术声誉和雇主声誉合计占比较高，权重前三为{group_text}。因此 QS 位次提升不能只解释为论文指标改善，还需要同步观察国际同行声誉和雇主评价的积累。"
     if source_name == "U.S. News":
-        return f"U.S. News 在{subject or read_target_subject_name()}口径下，权重前三为{group_text}，科研产出和引用影响构成主要评价基础。后续分析应重点看高被引占比、标准化引文影响和国际合作是否支撑综合位次。"
+        return f"U.S. News 在{subject_label}口径下，权重前三为{group_text}，科研产出和引用影响构成主要评价基础。后续分析应重点看高被引占比、标准化引文影响和国际合作是否支撑综合位次。"
     if source_name == "THE":
-        return f"THE 在{subject or read_target_subject_name()}口径下权重前三为{group_text}，评价重心较均衡地分布在研究环境、教学和研究质量。该口径下，单纯提升论文规模不足以解释排名变化，还需要看研究质量和国际化维度。"
+        return f"THE 在{subject_label}口径下权重前三为{group_text}，评价重心较均衡地分布在研究环境、教学和研究质量。该口径下，单纯提升论文规模不足以解释排名变化，还需要看研究质量和国际化维度。"
     if source_name == "软科":
-        if not source_has_tongji_latest("软科"):
-            return f"软科在{subject or read_target_subject_name()}口径下的权重前三为{group_text}，更偏向科研产出、国际合作和高水平成果。当前事实层尚未匹配到同济大学在该软科口径下的最新综合位次，因此本图仅用于理解软科公开口径的评价重心，不用于判断同济软科排名变化。"
-        return f"软科在{subject or read_target_subject_name()}口径下的权重前三为{group_text}，更偏向科研产出、国际合作和高水平成果。对同济而言，后续应把综合位次变化与高水平论文、论文影响力和一流师资等分项共同判断。"
-    return f"{source_name}在{subject or read_target_subject_name()}口径下的权重主要集中在{group_text}，应与同济大学对应分项表现联动解读。"
+        return f"软科在{subject_label}口径下的权重前三为{group_text}，更偏向科研产出、国际合作和高水平成果。对同济而言，后续应把综合位次变化与高水平论文、论文影响力和一流师资等分项共同判断。"
+    return f"{source_name}在{subject_label}口径下的权重主要集中在{group_text}，应与同济大学对应分项表现联动解读。"
 
 
 def summarize_commonality(artifact_id: str) -> str:
@@ -1141,10 +1238,11 @@ def summarize_commonality(artifact_id: str) -> str:
         if group and weight is not None:
             totals[group] = totals.get(group, 0.0) + weight
     top_groups = sorted(totals.items(), key=lambda item: item[1], reverse=True)[:3]
+    source_scope = "四类排名" if source_count >= 4 else f"{source_count or '多'}类可用排名"
     if top_groups:
         group_text = "、".join(f"{name}{value:.1f}%" for name, value in top_groups)
-        return f"四类排名的指标并非简单重复，{source_count or 4}个榜单的共同重心主要集中在{group_text}。这意味着后续建设不能只追逐单一综合名次，而应区分科研影响、声誉评价和国际化等不同路径。"
-    return "四类排名在科研影响、声誉评价、国际化和教学环境等维度上存在交叉，但各榜单权重差异明显。同济的优势和短板需要放回具体榜单口径中判断，避免把综合名次变化解释成单一能力变化。"
+        return f"{source_scope}的指标并非简单重复，共同重心主要集中在{group_text}。这意味着后续建设不能只追逐单一综合名次，而应区分科研影响、声誉评价和国际化等不同路径。"
+    return f"{source_scope}在科研影响、声誉评价、国际化和教学环境等维度上存在交叉，但各榜单权重差异明显。同济的优势和短板需要放回具体榜单口径中判断，避免把综合名次变化解释成单一能力变化。"
 
 
 def summarize_history(artifact_id: str) -> str:
@@ -1209,7 +1307,8 @@ def summarize_peer_indicator(artifact_id: str) -> str:
     weak = "、".join(name for _, name, _ in ranked[-2:] if name)
     peer_size = first_present(ranked[0][2], ["peer_scope_size", "comparison_scope_size"])
     source = "软科" if "figure_09" in artifact_id else "QS" if "figure_10_qs" in artifact_id else "U.S. News" if "figure_11" in artifact_id else "THE"
-    return f"{source}分项对标共覆盖{peer_size or '若干'}所内地高校。同济大学相对靠前的指标主要是{strong or '部分优势项'}，相对靠后的指标主要是{weak or '部分短板项'}，建设工作应优先把这些短板与榜单权重结合判断。"
+    subject_label = subject_label_from_artifact_rows(rows, report_subject_label_for_source(source.replace("U.S. News", "US News"), read_target_subject_name()))
+    return f"{source}{subject_label}口径分项对标共覆盖{peer_size or '若干'}所内地高校。同济大学相对靠前的指标主要是{strong or '部分优势项'}，相对靠后的指标主要是{weak or '部分短板项'}，建设工作应优先把这些短板与榜单权重结合判断。"
 
 
 def summarize_peer_table(artifact_id: str) -> str:
@@ -1218,18 +1317,20 @@ def summarize_peer_table(artifact_id: str) -> str:
         return ""
     source = "软科" if "table_05" in artifact_id else "U.S. News" if "table_06" in artifact_id else "QS" if "table_07" in artifact_id else "THE" if "table_08" in artifact_id else ""
     full_rows = read_artifact_rows(artifact_id, "latest_peer_records_full_top200.csv")
+    subject_label = subject_label_from_artifact_rows(full_rows, read_target_subject_name())
+    source_scope = f"{source}{subject_label}口径" if source and subject_label else f"{source}最新口径"
     displayed_count = len(rows)
     full_count = len(full_rows) or displayed_count
     tongji = next((row for row in rows if "同济" in "".join(row.values())), {})
-    display_note = f"正文列示前{displayed_count}所" if full_count > displayed_count else f"正文列示全部{displayed_count}所"
+    display_note = f"受篇幅限制，正文列示排名靠前的{displayed_count}所内地高校"
     if tongji:
         values = [value for key, value in tongji.items() if key not in {"序号", "学校名称", "省份"} and value]
         latest_value = values[-1] if values else ""
-        return f"{source}最新口径下进入前200位的内地高校共{full_count}所，{display_note}。同济大学历年记录为{'、'.join(values[:4])}，最新位次为{latest_value}；与头部高校相比仍有梯队差距，但可通过连续位次变化判断追赶速度。"
+        return f"{source_scope}下，{display_note}。同济大学历年记录为{'、'.join(values[:4])}，最新位次为{latest_value}；与头部高校相比仍有梯队差距，但可通过连续位次变化判断追赶速度。"
     if source == "软科" and not source_has_tongji_latest("软科"):
         subject_label = arwu_public_subject_label(read_target_subject_name())
-        return f"软科{subject_label}口径下进入前200位的内地高校共{full_count}所，{display_note}。当前事实层尚未匹配到同济大学在该软科口径下的最新综合位次，因此该表仅用于观察头部高校格局，不用于判断同济软科位次或竞争梯队。"
-    return f"{source}最新口径下进入前200位的内地高校共{full_count}所，{display_note}。该表的重点不是罗列名单，而是识别头部高校集中度和同济所处的竞争梯队。"
+        return f"软科{subject_label}口径下，{display_note}。当前事实层尚未匹配到同济大学在该软科口径下的最新综合位次，因此该表仅用于观察头部高校格局，不用于判断同济软科位次或竞争梯队。"
+    return f"{source_scope}下，{display_note}。该表的重点不是罗列名单，而是识别头部高校集中度和同济所处的竞争梯队。"
 
 
 def summarize_distribution(artifact_id: str) -> str:
@@ -1238,15 +1339,23 @@ def summarize_distribution(artifact_id: str) -> str:
         return ""
     totals = [row for row in rows if clean_text(row.get("位次区间", "")) == "1-200合计"]
     if totals:
-        total_text = "，".join(f"{row.get('榜单')} {row.get('高校数量')}所" for row in totals)
+        source_scope = "四类榜单" if len(totals) >= 4 else f"{len(totals)}类可用榜单"
         sorted_totals = sorted(
             totals,
             key=lambda row: to_number(row.get("高校数量", "")) or 0,
             reverse=True,
         )
-        largest = sorted_totals[0].get("榜单", "") if sorted_totals else ""
-        smallest = sorted_totals[-1].get("榜单", "") if sorted_totals else ""
-        return f"按学校去重后，四类榜单前200位内地高校规模差异明显：{total_text}。{largest}样本更适合观察完整梯队，{smallest}样本更集中反映头部高校竞争；后续对标分析需避免把不同榜单的样本规模直接等同。"
+        positive_totals = [row for row in sorted_totals if (to_number(row.get("高校数量", "")) or 0) > 0]
+        missing_sources = [clean_text(row.get("榜单", "")) for row in sorted_totals if (to_number(row.get("高校数量", "")) or 0) <= 0]
+        missing_text = f"{'、'.join(missing_sources)}暂未形成前200内地高校样本。" if missing_sources else ""
+        if len(positive_totals) >= 2:
+            largest = clean_text(positive_totals[0].get("榜单", ""))
+            smallest = clean_text(positive_totals[-1].get("榜单", ""))
+            return f"按学校去重后，{source_scope}前200位内地高校样本规模存在差异。{largest}样本更适合观察完整梯队，{smallest}样本规模较小，主要用于观察可核验头部样本；{missing_text}正文表格受篇幅限制仅展示排名靠前高校，后续对标分析需避免把不同榜单的样本规模直接等同。"
+        if positive_totals:
+            source = clean_text(positive_totals[0].get("榜单", ""))
+            return f"按学校去重后，当前主要由{source}提供可核验前200内地高校样本；{missing_text}正文表格受篇幅限制仅展示排名靠前高校，后续对标分析应把已有样本和缺失榜单分开说明。"
+        return f"按学校去重后，{source_scope}暂未形成可用的前200位内地高校样本。后续需先补齐对应榜单口径，再开展同行梯队比较。"
     return ""
 
 
@@ -1303,15 +1412,17 @@ def summarize_paper(artifact_id: str, segment_key: str) -> str:
     tongji = tongji_data_row(rows)
     if not tongji:
         return ""
+    paper_field = first_present(tongji, ["paper_field", "Field"])
+    field_text = f"在{paper_field}口径下，" if paper_field else "在当前教育部一级学科口径下，"
     if "figure_13" in artifact_id:
         docs = format_number(first_present(tongji, ["WOS_documents", "P"]))
         docs_rank = format_number(first_present(tongji, ["WOS_documents_relative_rank", "P_relative_rank"]))
         cited = format_number(first_present(tongji, ["times_cited", "TCS"]))
         cited_rank = format_number(first_present(tongji, ["times_cited_relative_rank", "TCS_relative_rank"]))
-        source_label = "Web of Science 学科论文数据" if first_present(tongji, ["WOS_documents"]) else "CWTS 宽领域代理数据"
+        source_label = "Web of Science 当前学科论文数据" if first_present(tongji, ["WOS_documents"]) else "当前学科论文数据"
         if docs and docs_rank and cited and cited_rank:
-            return f"{source_label}中，同济大学论文量为{docs}篇，在对标高校中排第{docs_rank}；总被引为{cited}次，排第{cited_rank}。这说明规模和影响力需要结合观察，不能只用论文数量判断学科竞争力。"
-        return f"{source_label}已生成论文规模与引用影响对标图；该口径用于观察相对位置，具体数值以图表数据为准。"
+            return f"{source_label}中，{field_text}同济大学论文量为{docs}篇，在37校同学科样本中排第{docs_rank}；总被引为{cited}次，排第{cited_rank}。这说明规模和影响力需要结合观察，不能只用论文数量判断学科竞争力。"
+        return f"{source_label}已生成当前学科论文规模与引用影响对标图；该口径用于观察同一学科下的相对位置，具体数值以图表数据为准。"
     if "figure_14" in artifact_id:
         if segment_key == "paper_quality_intro":
             return "论文质量部分重点观察 CNCI、篇均被引以及高被引论文相关指标。这些指标相较论文总量更能反映成果影响力，可用于判断学科论文产出的质量结构。"
@@ -1322,8 +1433,8 @@ def summarize_paper(artifact_id: str, segment_key: str) -> str:
         cnci_label = "CNCI" if first_present(tongji, ["CNCI"]) else "MNCS"
         impact_label = "篇均被引" if first_present(tongji, ["citation_impact"]) else "MCS"
         if cnci and cnci_rank and impact and impact_rank:
-            return f"同济大学 {cnci_label} 为{cnci}，对标高校中排第{cnci_rank}；{impact_label} 为{impact}，排第{impact_rank}。该组指标更能反映论文质量和规范化影响力，是解释论文短板的重要依据。"
-        return "论文质量对标图已按可用口径生成，可用于识别规范化影响力和篇均影响力的相对位置。"
+            return f"{field_text}同济大学 {cnci_label} 为{cnci}，在37校同学科样本中排第{cnci_rank}；{impact_label} 为{impact}，排第{impact_rank}。该组指标更能反映论文质量和规范化影响力，是解释论文短板的重要依据。"
+        return "论文质量对标图已按当前学科口径生成，可用于识别规范化影响力和篇均影响力的相对位置。"
     if "figure_15" in artifact_id:
         top1 = format_number(first_present(tongji, ["documents_top_1", "P_top_1"]))
         top10 = format_number(first_present(tongji, ["documents_top_10", "P_top_10"]))
@@ -1332,15 +1443,15 @@ def summarize_paper(artifact_id: str, segment_key: str) -> str:
         r10 = format_number(first_present(tongji, ["documents_top_10_relative_rank", "P_top_10_relative_rank"]))
         highly_cited_rank = format_number(first_present(tongji, ["highly_cited_papers_relative_rank"]))
         if top10 and r10:
-            return f"高被引论文方面，同济大学 Top 1%论文数为{top1}、相对排名第{r1}，Top 10%论文数为{top10}、相对排名第{r10}。高影响力成果表现应与 CNCI 和篇均被引共同分析。"
+            return f"高被引论文方面，{field_text}同济大学 Top 1%论文数为{top1}、37校同学科样本中相对排名第{r1}，Top 10%论文数为{top10}、相对排名第{r10}。高影响力成果表现应与 CNCI 和篇均被引共同分析。"
         if highly_cited and highly_cited_rank:
-            return f"高被引论文方面，同济大学 Top 1%论文数为{top1}、相对排名第{r1}，高被引论文数为{highly_cited}、相对排名第{highly_cited_rank}。高影响力成果表现应与 CNCI 和篇均被引共同分析。"
-        return f"高被引论文方面，同济大学 Top 1%论文数为{top1}、相对排名第{r1}。高影响力成果表现应与 CNCI 和篇均被引共同分析。"
+            return f"高被引论文方面，{field_text}同济大学 Top 1%论文数为{top1}、37校同学科样本中相对排名第{r1}，高被引论文数为{highly_cited}、相对排名第{highly_cited_rank}。高影响力成果表现应与 CNCI 和篇均被引共同分析。"
+        return f"高被引论文方面，{field_text}同济大学 Top 1%论文数为{top1}、37校同学科样本中相对排名第{r1}。高影响力成果表现应与 CNCI 和篇均被引共同分析。"
     if "figure_16" in artifact_id:
         intl = format_number(first_present(tongji, ["international_documents", "P_int_collab"]))
         pct = format_number(first_present(tongji, ["pct_international_documents", "PP_int_collab"]), 1)
         rank = format_number(first_present(tongji, ["international_documents_relative_rank", "P_int_collab_relative_rank"]))
-        return f"国际合作方面，同济大学国际合著论文为{intl}篇，占比{pct}%，对标高校中排第{rank}。该指标体现国际合作网络活跃度，也会影响部分国际榜单的国际化评价。"
+        return f"国际合作方面，{field_text}同济大学国际合作论文为{intl}篇，占比{pct}%，在37校同学科样本中排第{rank}。该指标体现当前学科国际合作网络活跃度，也会影响部分国际榜单的国际化评价。"
     return ""
 
 
@@ -1656,6 +1767,16 @@ def insert_image_after_paragraph(document: Document, paragraph: Paragraph, image
     inserted.add_run().add_picture(str(image_path), width=Emu(content_width_emu(document)))
 
 
+def insert_image_before_paragraph(document: Document, paragraph: Paragraph, image_path: Path) -> None:
+    new_element = OxmlElement("w:p")
+    paragraph._element.addprevious(new_element)
+    inserted = Paragraph(new_element, paragraph._parent)
+    inserted.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    inserted.paragraph_format.space_before = 0
+    inserted.paragraph_format.space_after = 0
+    inserted.add_run().add_picture(str(image_path), width=Emu(content_width_emu(document)))
+
+
 def insert_caption_after_paragraph(paragraph: Paragraph, caption_text: str) -> Paragraph:
     new_element = OxmlElement("w:p")
     paragraph._element.addnext(new_element)
@@ -1939,6 +2060,7 @@ def insert_qs_peer_indicator_figure(document: Document) -> list[dict[str, Any]]:
     qs_subject_label = (
         source_runtime_override_value("QS", "ranking_subject_or_area")
         or source_runtime_override_value("QS", "weight_subject_or_area")
+        or resolved_subject_value("qs_subject_name", "")
         or subject_name
     )
     indicator_count = len(rows)
@@ -2000,7 +2122,7 @@ def insert_qs_peer_indicator_figure(document: Document) -> list[dict[str, Any]]:
     set_paragraph_text_with_template_style(target, summary, paragraph_run_style(target))
     insert_image_after_paragraph(document, target, image_path)
     image_paragraph = Paragraph(target._p.getnext(), target._parent)
-    insert_caption_after_paragraph(image_paragraph, f"图10、QS排名前200位内地高校{subject_name}分项指标相对排名")
+    insert_caption_after_paragraph(image_paragraph, f"图10、QS排名前200位内地高校{qs_subject_label}口径分项指标相对排名")
     return [
         {
             "slot": "qs_peer_indicator_insert",
@@ -2619,6 +2741,157 @@ def summarize_qs_comprehensive_history_for_residual_text(subject_name: str, qs_s
     )
 
 
+def subject_label_from_artifact_rows(rows: list[dict[str, str]], default: str = "") -> str:
+    keys = [
+        "ranking_subject_raw",
+        "ranking_subject_or_area",
+        "ranking_subject_alias",
+        "ranking_subject",
+        "subject_name",
+        "Field",
+    ]
+    for row in rows:
+        value = first_present(row, keys)
+        if value and not is_missing_subject_label(value):
+            return canonical_the_area(value) or value
+    return default
+
+
+def source_history_rows(source: str) -> list[dict[str, str]]:
+    return [
+        row
+        for row in read_artifact_rows("figure_07_all_rankings_history", "chart_data.csv")
+        if clean_text(row.get("ranking_source", "")) == source
+    ]
+
+
+def summarize_source_history_for_residual_text(source: str, subject_name: str) -> str:
+    rows = source_history_rows(source)
+    if not rows:
+        return ""
+    rows = sorted(rows, key=lambda row: to_number(row.get("ranking_year", "")) or to_number(row.get("release_year", "")) or 0)
+    first = rows[0]
+    latest = rows[-1]
+    first_year = int(to_number(first.get("ranking_year", "")) or to_number(first.get("release_year", "")) or 0)
+    latest_year = int(to_number(latest.get("ranking_year", "")) or to_number(latest.get("release_year", "")) or 0)
+    first_mid = to_number(first.get("rank_midpoint", ""))
+    latest_mid = to_number(latest.get("rank_midpoint", ""))
+    source_label = display_source_name(source)
+    subject_label = subject_label_from_artifact_rows(rows, subject_name)
+    if first_mid is not None and latest_mid is not None and len(rows) >= 2:
+        direction = "明显提升" if latest_mid < first_mid else "有所回落" if latest_mid > first_mid else "基本稳定"
+        return (
+            f"{source_label} 已形成可核验的综合位次历史序列，当前采用“{subject_label}”口径："
+            f"{first_year}年为{rank_text(first)}，{latest_year}年为{rank_text(latest)}，"
+            f"区间中位位次约由{first_mid:g}变为{latest_mid:g}，整体{direction}。"
+            "该变化可用于观察综合竞争位置；分项归因仍需回到该榜单自己的指标口径，避免跨榜单直接套用。"
+        )
+    latest_year_text = f"{latest_year}年" if latest_year else "最新年份"
+    return (
+        f"{source_label} 学科排名已有{subject_name}学科综合位次记录，当前采用“{subject_label}”口径，"
+        f"{latest_year_text}位次为{rank_text(latest)}。该结果可用于观察综合竞争位置，分项原因需以对应榜单指标为边界。"
+    )
+
+
+def source_peer_table_artifact_id(source: str) -> str:
+    return {
+        "软科": "table_05_arwu_mainland_peer_ranking",
+        "US News": "table_06_usnews_mainland_peer_ranking",
+        "QS": "table_07_qs_mainland_peer_ranking",
+        "THE": "table_08_the_mainland_peer_ranking",
+    }.get(source, "")
+
+
+def source_peer_indicator_artifact_id(source: str) -> str:
+    return {
+        "软科": "figure_09_arwu_peer_indicator_relative_rank",
+        "QS": "figure_10_qs_peer_indicator_relative_rank",
+        "US News": "figure_11_usnews_peer_indicator_relative_rank",
+        "THE": "figure_12_the_peer_indicator_relative_rank",
+    }.get(source, "")
+
+
+def source_indicator_history_artifact_ids(source: str) -> list[str]:
+    return {
+        "软科": ["table_01_arwu_tongji_indicator_history"],
+        "US News": ["table_02_usnews_tongji_indicator_history", "figure_10_usnews_indicator_history_trend"],
+        "QS": [],
+        "THE": ["table_03_the_tongji_indicator_history"],
+    }.get(source, [])
+
+
+def source_unavailable_text(source: str, subject_name: str, context: str) -> str:
+    source_label = display_source_name(source)
+    if context == "history":
+        return f"当前{subject_name}学科暂无可核验的 {source_label} 综合位次历史序列，本节不使用其他榜单或代理口径替代；待补充对应数据后再展开趋势分析。"
+    if context == "peer_table":
+        return f"当前{subject_name}学科暂无可核验的 {source_label} 前200内地高校对标样本，本报告不生成该榜单对标表；相关同行分析以已生成图表为准。"
+    if context == "peer_indicator":
+        return f"当前{subject_name}学科暂无可核验的 {source_label} 分项指标相对排名图，本报告不借用其他榜单图表；待补充对应分项数据后再纳入对标分析。"
+    return f"当前{subject_name}学科暂无可核验的 {source_label} 对应数据，待补充后再纳入分析。"
+
+
+def summarize_source_peer_table_for_residual_text(source: str, subject_name: str) -> str:
+    artifact_id = source_peer_table_artifact_id(source)
+    if not artifact_id or not read_artifact_rows(artifact_id, "table_matrix.csv"):
+        return source_unavailable_text(source, subject_name, "peer_table")
+    return summarize_peer_table(artifact_id)
+
+
+def summarize_source_peer_indicator_for_residual_text(source: str, subject_name: str) -> str:
+    artifact_id = source_peer_indicator_artifact_id(source)
+    if not artifact_id or not read_artifact_rows(artifact_id, "chart_data.csv"):
+        return source_unavailable_text(source, subject_name, "peer_indicator")
+    return summarize_peer_indicator(artifact_id)
+
+
+def source_has_report_evidence(source: str) -> bool:
+    if source_history_rows(source):
+        return True
+    table_id = source_peer_table_artifact_id(source)
+    if table_id and read_artifact_rows(table_id, "table_matrix.csv"):
+        return True
+    figure_id = source_peer_indicator_artifact_id(source)
+    if figure_id and read_artifact_rows(figure_id, "chart_data.csv"):
+        return True
+    return False
+
+
+def available_source_phrase() -> str:
+    labels = [display_source_name(source) for source in RANKING_SOURCES if source_has_report_evidence(source)]
+    if not labels:
+        return "当前可核验"
+    if len(labels) == 1:
+        return labels[0]
+    return "、".join(labels)
+
+
+def paragraph_source_context(document: Document, paragraph_index: int) -> str:
+    for index in range(paragraph_index, -1, -1):
+        text = re.sub(r"\s+", "", paragraph_text(document.paragraphs[index]))
+        if not text:
+            continue
+        if "对标高校论文指标分析" in text or re.match(r"^[六七八九十]+、", text):
+            return ""
+        if "THE" in text and "学科排名" in text and (is_heading_paragraph(text) or "、" in text[:5]):
+            return "THE"
+        if ("U.S.News" in text or "U.S.News" in text.replace(" ", "") or "U.S.News" in text or "U.S.News" in text) and "学科排名" in text:
+            return "US News"
+        if ("U.S.News" in text.replace(" ", "") or "U.S.News" in text or "U.S.News" in text or "U.S.News" in text) and is_heading_paragraph(text):
+            return "US News"
+        if ("U.S.News" in text.replace(" ", "") or "U.S.News" in text or "U.S.News" in text or "U.S.News" in text) and "排名" in text:
+            return "US News"
+        if "U.S.News" in text.replace(" ", "") or "U.S.News" in text or "U.S.News" in text or "U.S.News" in text:
+            return "US News"
+        if "QS" in text and "学科排名" in text and (is_heading_paragraph(text) or "、" in text[:5]):
+            return "QS"
+        if "软科" in text and "学科排名" in text and (is_heading_paragraph(text) or "、" in text[:5]):
+            return "软科"
+        if re.match(r"^[一二三四五六七八九十]+、", text):
+            return ""
+    return ""
+
+
 def replace_residual_template_paragraphs(document: Document) -> int:
     subject_name = read_target_subject_name()
     qs_direct_subject_name = resolved_subject_value("qs_subject_name", "")
@@ -2627,13 +2900,13 @@ def replace_residual_template_paragraphs(document: Document) -> int:
         or source_runtime_override_value("QS", "weight_subject_or_area")
     )
     qs_subject_name = qs_runtime_subject_name or ("" if is_missing_subject_label(qs_direct_subject_name) else qs_direct_subject_name) or subject_name
-    qs_available = not is_missing_subject_label(qs_subject_name)
+    qs_available = source_has_tongji_latest("QS")
     qs_history_summary = summarize_qs_comprehensive_history_for_residual_text(subject_name, qs_subject_name)
     qs_history_text = (
         qs_history_summary
-        or f"当前 QS 学科排名可用于观察{subject_name}学科综合位次和同行梯队，但本地数据暂未形成可与 U.S. News、THE 直接对应的多年分项历史表；因此本节主要把 QS 作为综合趋势参考。"
+        or f"当前 QS {qs_subject_name}口径可用于观察{subject_name}学科综合位次和同行梯队，但本地数据暂未形成可与 U.S. News、THE 直接对应的多年分项历史表；因此本节主要把 QS 作为综合趋势参考。"
         if qs_available
-        else f"当前{subject_name}学科暂无 QS 直接学科排名历史口径，本节不使用其他学科或宽泛领域替代；待补充 QS 口径后再纳入综合趋势比较。"
+        else f"当前{subject_name}学科暂无可核验的 QS 同济最新综合排名记录，本节不使用其他 QS 学科或近邻口径替代；待补充对应排名和分项数据后再纳入综合趋势比较。"
     )
     qs_peer_rows = read_artifact_rows("table_07_qs_mainland_peer_ranking", "table_matrix.csv")
     qs_peer_count = len(qs_peer_rows)
@@ -2649,34 +2922,52 @@ def replace_residual_template_paragraphs(document: Document) -> int:
         else f"当前{subject_name}学科暂无 QS 分项指标相对排名图，本报告不借用其他口径图表；待补充 QS 分项数据后再纳入对标分析。"
     )
     qs_has_report_evidence = bool(qs_history_summary or qs_peer_rows or qs_relative_rows)
+    the_history_text = (
+        summarize_source_history_for_residual_text("THE", subject_name)
+        or source_unavailable_text("THE", subject_name, "history")
+    )
+    the_peer_text = summarize_source_peer_table_for_residual_text("THE", subject_name)
+    the_relative_text = summarize_source_peer_indicator_for_residual_text("THE", subject_name)
     arwu_has_tongji = source_has_tongji_latest("软科")
     arwu_label = arwu_public_subject_label(subject_name)
+    source_phrase = available_source_phrase()
     conclusion_text = (
-        f"综合 QS、U.S. News、THE 和论文指标看，同济大学{subject_name}学科在 U.S. News 中位次靠前，QS 和 THE 持续提升；软科仅保留{arwu_label}公开口径样本，暂不能判断同济软科位次变化。后续重点提升 CNCI、篇均被引和高被引论文表现。"
+        f"综合{source_phrase}学科排名和论文指标看，同济大学{subject_name}学科已有若干可核验优势，也存在论文质量、声誉评价或国际合作等需要继续拆解的环节；软科仅保留{arwu_label}公开口径样本，暂不能过度归因同济软科位次变化。后续重点提升 CNCI、篇均被引和高被引论文表现。"
         if qs_has_report_evidence and not arwu_has_tongji
-        else f"综合四类学科排名和论文指标看，同济大学{subject_name}学科在 U.S. News 中位次相对靠前，QS 和 THE 呈上升趋势；软科和论文质量指标仍需跟踪。下一阶段应把综合排名改善转化为论文质量、声誉评价和国际合作的同步提升。"
+        else f"综合{source_phrase}学科排名和论文指标看，同济大学{subject_name}学科的综合位次、同行梯队和论文指标并不完全同步。下一阶段应把综合排名改善转化为论文质量、声誉评价和国际合作的同步提升。"
         if qs_has_report_evidence
-        else f"综合当前可核验的学科排名和论文指标看，同济大学{subject_name}学科在 U.S. News 中位次相对靠前，软科、THE 和论文质量指标仍有提升空间；QS 待补齐直接口径后再纳入判断。"
+        else f"综合当前可核验的学科排名和论文指标看，同济大学{subject_name}学科仍需把已有图表证据和缺失榜单口径分开说明；待补齐直接口径后再纳入跨榜单判断。"
     )
     suggestion_text = (
         f"后续将 QS 声誉、U.S. News 科研影响、THE 研究质量与国际化拆成年度任务；软科{arwu_label}口径待补齐同济位次和分项后再归因。"
         if qs_has_report_evidence and not arwu_has_tongji
         else "针对软科、QS 和 THE，应将高水平成果、声誉评价、研究质量和国际化拆成年度任务，并以 CNCI、篇均被引和高被引论文占比作为共性质量抓手。"
         if qs_has_report_evidence
-        else "针对软科和 THE，应关注高水平成果、研究质量与国际展望；QS 声誉指标待直接口径补齐后再纳入建设清单。"
+        else "针对软科和 THE，应关注高水平成果、研究质量与国际展望；QS 待选定口径排名补齐后再单独纳入分析。"
     )
+    source_context_replacements = {
+        "THE排名在2023年更新指标体系后研究质量、国际展望相对排名比较低": {
+            "QS": qs_history_text,
+            "THE": the_history_text,
+            "": the_history_text,
+        },
+        "2025年发布的THE世界排名中中国内地高校有13所进入前200位": {
+            "QS": qs_peer_text,
+            "THE": the_peer_text,
+            "": the_peer_text,
+        },
+        "2025年THE排名前200位的3所内地高校": {
+            "QS": qs_relative_text,
+            "THE": the_relative_text,
+            "": the_relative_text,
+        },
+    }
     replacements = [
         (
-            "THE排名在2023年更新指标体系后研究质量、国际展望相对排名比较低",
-            qs_history_text,
-        ),
-        (
-            "2025年发布的THE世界排名中中国内地高校有13所进入前200位",
-            qs_peer_text,
-        ),
-        (
-            "2025年THE排名前200位的3所内地高校",
-            qs_relative_text,
+            "QS学科排名指标中，学术声誉和雇主声誉占比较重，达60%。",
+            qs_history_text
+            if not qs_available
+            else "QS 学科排名强调声誉、雇主评价和论文影响等维度，解读时需与当前采用口径下的综合位次和分项指标同步判断。",
         ),
         (
             "综合分析三大世界排名的数据",
@@ -2692,8 +2983,20 @@ def replace_residual_template_paragraphs(document: Document) -> int:
         ),
     ]
     changed = 0
-    for paragraph in document.paragraphs:
+    for paragraph_index, paragraph in enumerate(document.paragraphs):
         text = paragraph_text(paragraph)
+        context = paragraph_source_context(document, paragraph_index)
+        replaced = False
+        for marker, by_context in source_context_replacements.items():
+            if marker not in text:
+                continue
+            replacement = by_context.get(context) or by_context.get("")
+            set_paragraph_text_with_template_style(paragraph, replacement, paragraph_run_style(paragraph))
+            changed += 1
+            replaced = True
+            break
+        if replaced:
+            continue
         for marker, replacement in replacements:
             if marker in text:
                 set_paragraph_text_with_template_style(paragraph, replacement, paragraph_run_style(paragraph))
@@ -2702,21 +3005,313 @@ def replace_residual_template_paragraphs(document: Document) -> int:
     return changed
 
 
+def iter_all_paragraphs(document: Document) -> list[Paragraph]:
+    paragraphs = list(document.paragraphs)
+    for table in document.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                paragraphs.extend(cell.paragraphs)
+    return paragraphs
+
+
 def normalize_report_brand_names(document: Document) -> int:
     changed = 0
-    for paragraph in document.paragraphs:
+    for paragraph in iter_all_paragraphs(document):
         text = paragraph_text(paragraph)
         if not text:
             continue
-        replacement = re.sub(r"U\.\s*S\.\s*News", "U.S. News", text)
-        replacement = re.sub(r"US News(?=\d|\s|排名|学科|分项|中|、|，|。|$)", "U.S. News", replacement)
-        replacement = replacement.replace("U.S. News学科", "U.S. News 学科")
-        replacement = replacement.replace("U.S. News排名", "U.S. News 排名")
-        replacement = replacement.replace("U.S. News分项", "U.S. News 分项")
+        replacement = normalize_brand_text(text)
         if replacement != text:
             set_paragraph_text_with_template_style(paragraph, replacement, paragraph_run_style(paragraph))
             changed += 1
     return changed
+
+
+def apply_run_style(run: Any, template_style: dict[str, Any]) -> None:
+    run.font.name = template_style.get("font_name") or "仿宋_GB2312"
+    run.font.size = template_style.get("font_size") or Pt(14)
+    run.bold = bool(template_style.get("bold"))
+    run.italic = bool(template_style.get("italic"))
+    run.underline = template_style.get("underline")
+    east_asia = template_style.get("east_asia") or run.font.name
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), east_asia)
+
+
+def apply_usnews_brand_run_font(document: Document) -> int:
+    changed = 0
+    for paragraph in iter_all_paragraphs(document):
+        text = paragraph_text(paragraph)
+        normalized = normalize_brand_text(text)
+        if "U.S.News" not in normalized:
+            continue
+        template_style = paragraph_run_style(paragraph)
+        for run in list(paragraph.runs):
+            paragraph._p.remove(run._element)
+        for part in re.split(r"(U\.S\.News)", normalized):
+            if not part:
+                continue
+            run = paragraph.add_run(part)
+            apply_run_style(run, template_style)
+            if part == "U.S.News":
+                run.font.name = "Times New Roman"
+                run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+        changed += 1
+    return changed
+
+
+def normalize_rank_prefix_markers(document: Document) -> int:
+    changed = 0
+    for paragraph in iter_all_paragraphs(document):
+        text = paragraph_text(paragraph)
+        if not text or ("#" not in text and "=" not in text):
+            continue
+        replacement = clean_rank_display(text)
+        if replacement != text:
+            set_paragraph_text_with_template_style(paragraph, replacement, paragraph_run_style(paragraph))
+            changed += 1
+    return changed
+
+
+def normalize_inline_image_paragraph_alignment(document: Document) -> int:
+    changed = 0
+    for paragraph in iter_all_paragraphs(document):
+        if not paragraph._element.xpath(".//w:drawing"):
+            continue
+        if paragraph.alignment != WD_ALIGN_PARAGRAPH.CENTER:
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            changed += 1
+    return changed
+
+
+def normalize_section_page_geometry(document: Document) -> int:
+    if not document.sections:
+        return 0
+    template = document.sections[0]
+    target_values = {
+        "page_width": template.page_width,
+        "page_height": template.page_height,
+        "left_margin": template.left_margin,
+        "right_margin": template.right_margin,
+        "top_margin": template.top_margin,
+        "bottom_margin": template.bottom_margin,
+        "header_distance": template.header_distance,
+        "footer_distance": template.footer_distance,
+    }
+    changed = 0
+    for section in document.sections[1:]:
+        if section.orientation != WD_ORIENT.PORTRAIT:
+            section.orientation = WD_ORIENT.PORTRAIT
+            changed += 1
+        for attr, expected in target_values.items():
+            if getattr(section, attr) != expected:
+                setattr(section, attr, expected)
+                changed += 1
+    return changed
+
+
+def paragraph_has_image(paragraph: Paragraph) -> bool:
+    return bool(paragraph._element.xpath(".//w:drawing"))
+
+
+def paragraph_is_heading1(paragraph: Paragraph) -> bool:
+    return getattr(getattr(paragraph, "style", None), "name", "") == "Heading 1"
+
+
+def find_heading1_index(document: Document, marker: str) -> int | None:
+    for index, paragraph in enumerate(document.paragraphs):
+        text = clean_text(paragraph_text(paragraph))
+        if paragraph_is_heading1(paragraph) and marker in text:
+            return index
+    return None
+
+
+def next_heading1_index(document: Document, start_index: int) -> int:
+    for index in range(start_index + 1, len(document.paragraphs)):
+        if paragraph_is_heading1(document.paragraphs[index]):
+            return index
+    return len(document.paragraphs)
+
+
+def remove_image_paragraphs_between(document: Document, start_index: int, end_index: int) -> int:
+    changed = 0
+    for paragraph in list(document.paragraphs[start_index + 1 : end_index]):
+        if paragraph_has_image(paragraph):
+            remove_paragraph(paragraph)
+            changed += 1
+    return changed
+
+
+def find_caption_by_keywords(document: Document, required_keywords: list[str]) -> Paragraph | None:
+    required = [normalize_brand_text(clean_text(item)) for item in required_keywords if clean_text(item)]
+    for paragraph in document.paragraphs:
+        text = normalize_brand_text(clean_text(paragraph_text(paragraph)))
+        if not is_caption_paragraph(text):
+            continue
+        if all(keyword in text for keyword in required):
+            return paragraph
+    return None
+
+
+def repair_peer_indicator_figure_anchors(document: Document) -> int:
+    section_start = find_heading1_index(document, "对标高校分指标分析")
+    if section_start is None:
+        return 0
+    section_end = next_heading1_index(document, section_start)
+    changed = remove_image_paragraphs_between(document, section_start, section_end)
+    repairs = [
+        ("figure_11_usnews_peer_indicator_relative_rank", ["U.S. News", "分项指标相对排名"]),
+        ("figure_12_the_peer_indicator_relative_rank", ["THE", "分项指标相对排名"]),
+    ]
+    for artifact_id, keywords in repairs:
+        image_path = artifact_png_path(artifact_id)
+        caption = find_caption_by_keywords(document, keywords)
+        if image_path is None or caption is None:
+            continue
+        insert_image_before_paragraph(document, caption, image_path)
+        changed += 1
+    return changed
+
+
+def paragraph_is_heading2(paragraph: Paragraph) -> bool:
+    return getattr(getattr(paragraph, "style", None), "name", "") == "Heading 2"
+
+
+def source_from_subsection_heading(text: str) -> str:
+    normalized = normalize_brand_text(clean_text(text))
+    compact = re.sub(r"\s+", "", normalized)
+    if not compact:
+        return ""
+    if "U.S.News" in compact or "USNews" in compact:
+        return "US News"
+    if "QS" in compact:
+        return "QS"
+    if "THE" in compact:
+        return "THE"
+    if "软科" in compact:
+        return "软科"
+    return ""
+
+
+def source_subsection_has_evidence(source: str, context: str) -> bool:
+    if context == "peer_table":
+        artifact_id = source_peer_table_artifact_id(source)
+        return bool(artifact_id and read_artifact_rows(artifact_id, "table_matrix.csv"))
+    if context == "peer_indicator":
+        artifact_id = source_peer_indicator_artifact_id(source)
+        return bool(artifact_id and read_artifact_rows(artifact_id, "chart_data.csv"))
+    if context == "indicator_history":
+        if not source_has_tongji_latest(source):
+            return False
+        artifact_ids = source_indicator_history_artifact_ids(source)
+        if source == "US News":
+            return any(read_artifact_rows(artifact_id, "table_matrix.csv") or read_artifact_rows(artifact_id, "chart_data.csv") for artifact_id in artifact_ids)
+        return any(read_artifact_rows(artifact_id, "table_matrix.csv") for artifact_id in artifact_ids)
+    return True
+
+
+def remove_block_elements_until(paragraph: Paragraph, stop_paragraph: Paragraph | None) -> int:
+    parent = paragraph._p.getparent()
+    if parent is None:
+        return 0
+    current = paragraph._p
+    stop_element = stop_paragraph._p if stop_paragraph is not None else None
+    removed = 0
+    while current is not None and current is not stop_element:
+        next_current = current.getnext()
+        parent.remove(current)
+        removed += 1
+        current = next_current
+    return removed
+
+
+def renumber_heading2_between(document: Document, start_index: int, end_index: int) -> int:
+    changed = 0
+    ordinal = 1
+    for paragraph in document.paragraphs[start_index + 1 : end_index]:
+        if not paragraph_is_heading2(paragraph):
+            continue
+        text = paragraph_text(paragraph)
+        replacement = re.sub(r"^\s*\d+\s*[、.．]\s*", f"{ordinal}、", text, count=1)
+        if replacement != text:
+            set_paragraph_text_with_template_style(paragraph, replacement, paragraph_run_style(paragraph))
+            changed += 1
+        ordinal += 1
+    return changed
+
+
+def remove_empty_source_subsections(document: Document, section_marker: str, context: str) -> int:
+    section_start = find_heading1_index(document, section_marker)
+    if section_start is None:
+        return 0
+    changed = 0
+    while True:
+        section_end = next_heading1_index(document, section_start)
+        removed = False
+        paragraphs = document.paragraphs
+        for index in range(section_start + 1, section_end):
+            paragraph = paragraphs[index]
+            if not paragraph_is_heading2(paragraph):
+                continue
+            source = source_from_subsection_heading(paragraph_text(paragraph))
+            if not source or source_subsection_has_evidence(source, context):
+                continue
+            next_index = section_end
+            for probe in range(index + 1, section_end):
+                if paragraph_is_heading2(paragraphs[probe]) or paragraph_is_heading1(paragraphs[probe]):
+                    next_index = probe
+                    break
+            stop_paragraph = paragraphs[next_index] if next_index < len(paragraphs) else None
+            changed += remove_block_elements_until(paragraph, stop_paragraph)
+            removed = True
+            break
+        if not removed:
+            break
+    section_start = find_heading1_index(document, section_marker)
+    if section_start is None:
+        return changed
+    section_end = next_heading1_index(document, section_start)
+    changed += renumber_heading2_between(document, section_start, section_end)
+    return changed
+
+
+def normalize_evidence_backed_source_sections(document: Document) -> int:
+    return (
+        remove_empty_source_subsections(document, "排名历史发展分析", "indicator_history")
+        + remove_empty_source_subsections(document, "对标高校整体分析", "peer_table")
+        + remove_empty_source_subsections(
+            document,
+            "对标高校分指标分析",
+            "peer_indicator",
+        )
+    )
+
+
+def paper_artifacts_available() -> bool:
+    artifact_ids = [
+        "figure_13_paper_output_citation_relative_rank",
+        "figure_14_paper_cnci_cpp_relative_rank",
+        "figure_15_paper_highly_cited_relative_rank",
+        "figure_16_paper_international_collab_relative_rank",
+    ]
+    return any((SUBJECT_RUN_DIR / "artifacts" / artifact_id / "chart_data.csv").exists() for artifact_id in artifact_ids)
+
+
+def normalize_missing_paper_section(document: Document) -> int:
+    if paper_artifacts_available():
+        return 0
+    section_start = find_heading1_index(document, "对标高校论文指标分析")
+    if section_start is None:
+        return 0
+    section_end = next_heading1_index(document, section_start)
+    for paragraph in list(document.paragraphs[section_start + 1 : section_end]):
+        remove_paragraph(paragraph)
+    note = (
+        f"当前 Web of Science 37校论文数据中未匹配到{read_target_subject_name()}学科对应记录，"
+        "本报告不使用学校整体论文数据或宽口径代理数据替代；待补充该一级学科论文数据后，再生成论文总量、CNCI、"
+        "高被引论文和国际合作等对标图表。"
+    )
+    insert_note_after_heading(document.paragraphs[section_start], note)
+    return 1
 
 
 def proxy_label_replacements(text: str, subject_name: str) -> str:
@@ -2730,7 +3325,11 @@ def proxy_label_replacements(text: str, subject_name: str) -> str:
         }
         for old, new in replacements.items():
             result = result.replace(old, new)
-    qs_label = source_runtime_override_value("QS", "ranking_subject_or_area") or source_runtime_override_value("QS", "weight_subject_or_area")
+    qs_label = (
+        source_runtime_override_value("QS", "ranking_subject_or_area")
+        or source_runtime_override_value("QS", "weight_subject_or_area")
+        or resolved_subject_value("qs_subject_name")
+    )
     if qs_label and qs_label != subject_name:
         replacements = {
             f"QS学科排名{subject_name}指标权重": f"QS学科排名{qs_label}口径指标权重",
@@ -2844,6 +3443,47 @@ def remove_trailing_empty_final_section(document: Document) -> int:
     return 1
 
 
+def remove_trailing_table_empty_paragraph_in_docx_xml(docx_path: Path) -> int:
+    """Remove the final empty paragraph that Word may push onto a blank page after a wide table."""
+    temp_docx = docx_path.with_suffix(".tmp.docx")
+    changed = 0
+    w_ns = NS["w"]
+
+    def local_name(element: Any) -> str:
+        return etree.QName(element).localname
+
+    def is_empty_nonsection_paragraph(element: Any) -> bool:
+        if local_name(element) != "p":
+            return False
+        text = "".join(element.xpath(".//w:t/text()", namespaces=NS)).strip()
+        if text:
+            return False
+        blocked_children = element.xpath(
+            ".//w:sectPr | .//w:drawing | .//w:pict | .//w:object | .//w:br",
+            namespaces=NS,
+        )
+        return not blocked_children
+
+    with ZipFile(docx_path, "r") as zin, ZipFile(temp_docx, "w", ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            if item.filename == "word/document.xml":
+                root = etree.fromstring(data)
+                body = root.find(f"{{{w_ns}}}body")
+                if body is not None:
+                    children = list(body)
+                    if len(children) >= 3 and local_name(children[-1]) == "sectPr":
+                        maybe_empty = children[-2]
+                        previous = children[-3]
+                        if local_name(previous) == "tbl" and is_empty_nonsection_paragraph(maybe_empty):
+                            body.remove(maybe_empty)
+                            changed = 1
+                            data = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
+            zout.writestr(item, data)
+    temp_docx.replace(docx_path)
+    return changed
+
+
 def replace_subject_placeholders_in_xml_parts(docx_path: Path, subject_name: str, the_subject_area: str = "") -> int:
     temp_docx = docx_path.with_suffix(".tmp.docx")
     changed_members = 0
@@ -2907,22 +3547,7 @@ def scale_embedded_image(docx_path: Path, target_member: str, scale: float) -> i
 
 
 def embedded_image_width_ratio(row: dict[str, str]) -> float:
-    artifact_id = row.get("artifact_id", "")
-    if artifact_id in {"figure_03_arwu_indicator_weight", "figure_04_qs_indicator_weight"}:
-        return 0.76
-    if artifact_id == "figure_06_the_indicator_weight":
-        return 0.90
-    if artifact_id == "figure_16_paper_international_collab_relative_rank":
-        return 0.74
-    if "peer_indicator" in artifact_id:
-        return 1.0
-    if artifact_id.startswith(("figure_13", "figure_14", "figure_15", "figure_16")):
-        return 1.0
-    if "indicator_weight" in artifact_id:
-        return 1.0
-    if "commonality" in artifact_id or "history" in artifact_id:
-        return 1.0
-    return 0.94
+    return 1.0
 
 
 def set_embedded_image_extent(docx_path: Path, target_member: str, width_emu: int, height_emu: int) -> int:
@@ -3030,6 +3655,27 @@ def compact_final_recommendation_section(document: Document) -> int:
         return 0
 
     changed = 0
+    section_end = next_heading1_index(document, start_index)
+    body_paragraphs = [
+        paragraph
+        for paragraph in document.paragraphs[start_index + 1 : section_end]
+        if clean_text(paragraph_text(paragraph)) and not paragraph_is_heading1(paragraph)
+    ]
+    if body_paragraphs:
+        compact_text = (
+            f"综合当前可核验图表，同济大学{read_target_subject_name()}学科应把已有证据与缺失榜单口径分开判断；"
+            "后续重点提升标准化引文影响、高被引论文占比和国际合作论文质量，待补齐直接口径后再开展跨榜单归因。"
+        )
+        set_paragraph_text_with_template_style(body_paragraphs[0], compact_text, paragraph_run_style(body_paragraphs[0]))
+        changed += 1
+        for paragraph in body_paragraphs[1:]:
+            remove_paragraph(paragraph)
+            changed += 1
+    section_end = next_heading1_index(document, start_index)
+    for paragraph in list(document.paragraphs[start_index + 1 : section_end]):
+        if not clean_text(paragraph_text(paragraph)) and not paragraph_has_image(paragraph):
+            remove_paragraph(paragraph)
+            changed += 1
     for paragraph in document.paragraphs[start_index:]:
         text = re.sub(r"\s+", "", paragraph_text(paragraph))
         if changed > 0 and is_word_heading1(paragraph) and not any(token in text for token in heading_tokens):
@@ -3142,11 +3788,19 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     qs_history_table_insertions = insert_qs_history_table(document)
     qs_peer_indicator_insertions = insert_qs_peer_indicator_figure(document)
     brand_name_changes = normalize_report_brand_names(document)
+    rank_prefix_changes = normalize_rank_prefix_markers(document)
     proxy_label_changes = normalize_proxy_labels(document)
     cover_title_changes = normalize_cover_title(document)
     virtual_table_insertions = insert_virtual_native_tables(document, rows)
+    evidence_section_changes = normalize_evidence_backed_source_sections(document)
+    peer_figure_anchor_repairs = repair_peer_indicator_figure_anchors(document)
+    missing_paper_section_changes = normalize_missing_paper_section(document)
+    brand_name_changes += normalize_report_brand_names(document)
+    rank_prefix_changes += normalize_rank_prefix_markers(document)
+    image_alignment_changes = normalize_inline_image_paragraph_alignment(document)
     figure_caption_renumbers = renumber_figure_captions(document)
     table_caption_renumbers = renumber_table_captions(document)
+    usnews_brand_run_changes = apply_usnews_brand_run_font(document)
     removed_heading_page_breaks = remove_empty_page_breaks_before_heading1(document)
     inserted_toc_page_breaks = ensure_page_break_before_first_body_heading(document)
     cover_main_spacing_changes = compact_cover_main_spacing(document)
@@ -3156,12 +3810,15 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     trailing_final_section_changes = remove_trailing_empty_final_section(document)
     table_geometry_changes = normalize_existing_table_geometry(document)
     final_recommendation_compactions = compact_final_recommendation_section(document)
+    section_page_geometry_changes = normalize_section_page_geometry(document)
     doc_content_width = content_width_emu(document)
     document.save(str(OUTPUT_DOCX))
 
     section_changes = normalize_odd_page_sections(OUTPUT_DOCX)
     xml_placeholder_changes = replace_subject_placeholders_in_xml_parts(OUTPUT_DOCX, subject_name, the_subject_area)
     image_extent_changes = normalize_embedded_image_extents(rows, OUTPUT_DOCX, doc_content_width)
+    namespace_sanitize_result = sanitize_docx_ooxml_namespaces.sanitize_docx(OUTPUT_DOCX)
+    trailing_table_empty_xml_changes = remove_trailing_table_empty_paragraph_in_docx_xml(OUTPUT_DOCX)
 
     return [
         {
@@ -3179,6 +3836,13 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "operation": "normalize_odd_page_sections",
             "status": "ok",
             "changed_sections": section_changes,
+        },
+        {
+            "slot": "section_page_geometry",
+            "artifact_id": "",
+            "operation": "normalize_section_page_geometry",
+            "status": "ok",
+            "changed_values": section_page_geometry_changes,
         },
         {
             "slot": "cover_section_break",
@@ -3261,6 +3925,48 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "changed_paragraphs": brand_name_changes,
         },
         {
+            "slot": "usnews_brand_runs",
+            "artifact_id": "",
+            "operation": "apply_usnews_brand_run_font",
+            "status": "ok",
+            "changed_paragraphs": usnews_brand_run_changes,
+        },
+        {
+            "slot": "rank_prefix_markers",
+            "artifact_id": "",
+            "operation": "normalize_rank_prefix_markers",
+            "status": "ok",
+            "changed_paragraphs": rank_prefix_changes,
+        },
+        {
+            "slot": "embedded_image_alignment",
+            "artifact_id": "",
+            "operation": "normalize_inline_image_paragraph_alignment",
+            "status": "ok",
+            "changed_paragraphs": image_alignment_changes,
+        },
+        {
+            "slot": "peer_indicator_figure_anchors",
+            "artifact_id": "",
+            "operation": "repair_peer_indicator_figure_anchors",
+            "status": "ok",
+            "changed_paragraphs": peer_figure_anchor_repairs,
+        },
+        {
+            "slot": "evidence_backed_source_sections",
+            "artifact_id": "",
+            "operation": "normalize_evidence_backed_source_sections",
+            "status": "ok",
+            "changed_paragraphs": evidence_section_changes,
+        },
+        {
+            "slot": "missing_paper_section",
+            "artifact_id": "",
+            "operation": "normalize_missing_paper_section",
+            "status": "ok",
+            "changed_sections": missing_paper_section_changes,
+        },
+        {
             "slot": "proxy_labels",
             "artifact_id": "",
             "operation": "normalize_proxy_labels",
@@ -3310,11 +4016,25 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "removed_sections": trailing_final_section_changes,
         },
         {
+            "slot": "trailing_table_empty_paragraph_xml",
+            "artifact_id": "",
+            "operation": "remove_trailing_table_empty_paragraph_in_docx_xml",
+            "status": "ok",
+            "removed_paragraphs": trailing_table_empty_xml_changes,
+        },
+        {
             "slot": "final_recommendation_section",
             "artifact_id": "",
             "operation": "compact_final_recommendation_section",
             "status": "ok",
             "changed_paragraphs": final_recommendation_compactions,
+        },
+        {
+            "slot": "ooxml_namespace_sanitize",
+            "artifact_id": "",
+            "operation": "sanitize_docx_ooxml_namespaces",
+            "status": namespace_sanitize_result.get("status", "unknown"),
+            "changed_members": len(namespace_sanitize_result.get("changed_members", [])),
         },
     ] + excluded_slot_cleanups + image_extent_changes
 
