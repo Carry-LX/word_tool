@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -23,6 +22,7 @@ TONGJI_SUBJECT_PROXY_SUPPLEMENT_CSV = PROJECT_DIR / "configs" / "runtime" / "ton
 
 DIM_SUBJECT_CSV = PROCESSED_DIR / "dim_subject.csv"
 DIM_SUBJECT_ALIAS_CSV = PROCESSED_DIR / "dim_subject_alias.csv"
+DIM_SUBJECT_MAPPING_EXPLAIN_CSV = PROCESSED_DIR / "dim_subject_mapping_explain.csv"
 FACT_RANKING_CSV = PROCESSED_DIR / "fact_ranking.csv"
 FACT_RANKING_SUBJECT_BRIDGE_CSV = PROCESSED_DIR / "fact_ranking_subject_bridge.csv"
 SQLITE_PATH = PROCESSED_DIR / "ranking.sqlite"
@@ -65,9 +65,21 @@ def split_alias_text(value: Any) -> list[str]:
     text = clean_text(raw_text)
     if not text:
         return []
+    no_split_aliases = {
+        "\u516c\u5171\u3001\u73af\u5883\u548c\u804c\u4e1a\u5065\u5eb7",
+    }
+    if text in no_split_aliases:
+        return [text]
 
-    candidates: list[str] = [text]
-    for part in re.split(r"[；;,/、，|\n]+", raw_text):
+    has_cjk = bool(re.search(r"[\u4e00-\u9fff]", raw_text))
+    separator_pattern = r"[；、，\n\r]+"
+    if has_cjk:
+        separator_pattern = r"[；;,/、，|\n\r]+"
+    has_separator = bool(re.search(separator_pattern, raw_text))
+    source_parts = re.split(separator_pattern, raw_text) if has_separator else [raw_text]
+
+    candidates: list[str] = []
+    for part in source_parts:
         item = clean_text(part)
         if not item:
             continue
@@ -276,17 +288,6 @@ def build_dim_subject() -> pd.DataFrame:
 
     dim["subject_id"] = dim["ministry_subject_code"].apply(lambda value: f"subject_{clean_text(value)}" if clean_text(value) else "")
 
-    for target, fallback in [
-        ("arwu_subject_name", "tongji_arwu_subject"),
-        ("qs_subject_name", "tongji_qs_subject"),
-        ("usnews_subject_name", "tongji_usnews_subject"),
-        ("the_subject_area", "tongji_the_area"),
-    ]:
-        dim[target] = dim.apply(
-            lambda row: clean_text(row[target]) or clean_text(row.get(fallback, "")),
-            axis=1,
-        )
-
     columns = [
         "subject_id",
         "ministry_category_code",
@@ -329,34 +330,38 @@ def infer_ranking_source(value: Any) -> str:
 
 
 def build_dim_subject_alias(dim_subject: pd.DataFrame) -> pd.DataFrame:
-    manual_config = load_manual_alias_config()
-    invalid_alias_values = {normalize_key(value) for value in manual_config.get("invalid_alias_values", [])}
+    invalid_alias_values = {normalize_key(value) for value in ["无", "暂无", "无对应", "不适用", "nan"]}
     mapping_sheet_reverse = read_sheet("教育部学科与四大国际学科排名映射关系.xlsx", "Sheet1")
-    protected_alias_norms_by_source: dict[str, set[str]] = defaultdict(set)
-    for _, row in mapping_sheet_reverse.iterrows():
-        source = infer_ranking_source(row.get("榜单名称"))
-        if not source:
-            continue
-        for column in [column for column in mapping_sheet_reverse.columns if clean_text(column).startswith("榜单学科")]:
-            alias_text = clean_text(row.get(column))
-            if alias_text and has_alias_separator(alias_text):
-                protected_alias_norms_by_source[source].add(normalize_key(alias_text))
-
     ministry_name_to_id = {
         normalize_key(row["ministry_subject_name"]): clean_text(row["subject_id"])
         for _, row in dim_subject.iterrows()
         if clean_text(row["ministry_subject_name"]) and clean_text(row["subject_id"])
     }
+    primary_alias_norms: dict[tuple[str, str], set[str]] = {}
+    for _, row in dim_subject.iterrows():
+        subject_id = clean_text(row["subject_id"])
+        for source, column in [
+            ("软科", "arwu_subject_name"),
+            ("QS", "qs_subject_name"),
+            ("US News", "usnews_subject_name"),
+            ("THE", "the_subject_area"),
+        ]:
+            norms = {normalize_key(alias) for alias in split_alias_text(row.get(column)) if clean_text(alias)}
+            primary_alias_norms[(subject_id, source)] = {norm for norm in norms if norm}
     aliases: list[dict[str, Any]] = []
 
-    def add_alias(subject_id: str, ranking_source: str, alias: Any, alias_type: str, source_note: str) -> None:
+    def add_alias(
+        subject_id: str,
+        ranking_source: str,
+        alias: Any,
+        alias_type: str,
+        source_note: str,
+        split_alias: bool = True,
+    ) -> None:
         text = clean_text(alias)
         if not subject_id or not ranking_source or not text:
             return
-        if normalize_key(text) in protected_alias_norms_by_source.get(ranking_source, set()):
-            alias_items = [text]
-        else:
-            alias_items = split_alias_text(text)
+        alias_items = split_alias_text(alias) if split_alias else [text]
         for item in alias_items:
             if not item or normalize_key(item) in invalid_alias_values:
                 continue
@@ -384,51 +389,6 @@ def build_dim_subject_alias(dim_subject: pd.DataFrame) -> pd.DataFrame:
         ]:
             add_alias(subject_id, source, row[column], "dim_subject_column", column)
 
-        the_area = clean_text(row["the_subject_area"])
-        the_aliases = {
-            "物理学": ["理学", "自然科学", "Physical Sciences"],
-            "艺术与人文": ["艺术与人文学", "Arts and Humanities"],
-            "临床健康": ["医学与健康", "临床与健康", "Medical and Health"],
-            "商业与经济": ["商业与经济学", "商业和经济学", "Business and Economics"],
-            "工程": ["工程学", "Engineering"],
-            "计算机科学": ["Computer Science"],
-            "生命科学": ["Life Sciences"],
-            "社会科学": ["Social Sciences"],
-            "教育学": ["Education"],
-            "心理学": ["Psychology"],
-            "法学": ["Law"],
-        }.get(the_area, [])
-        for alias in the_aliases:
-            add_alias(subject_id, "THE", alias, "manual_the_area_alias", "THE领域中文/英文别名")
-
-        for rule in manual_config.get("area_alias_rules", []):
-            column = clean_text(rule.get("dim_subject_column"))
-            value = clean_text(rule.get("dim_subject_value"))
-            if column and value and clean_text(row.get(column, "")) == value:
-                for alias in rule.get("aliases", []):
-                    add_alias(
-                        subject_id,
-                        clean_text(rule.get("ranking_source")),
-                        alias,
-                        "manual_config_area_alias",
-                        clean_text(rule.get("note")),
-                    )
-
-    known_subject_ids = set(dim_subject["subject_id"].map(clean_text))
-    for rule in manual_config.get("subject_alias_rules", []):
-        subject_id = clean_text(rule.get("subject_id"))
-        if subject_id not in known_subject_ids:
-            continue
-        ranking_source = clean_text(rule.get("ranking_source"))
-        for alias in rule.get("aliases", []):
-            add_alias(
-                subject_id,
-                ranking_source,
-                alias,
-                "manual_config_subject_alias",
-                clean_text(rule.get("note")),
-            )
-
     for _, row in mapping_sheet_reverse.iterrows():
         source = infer_ranking_source(row.get("榜单名称"))
         subject_names = split_mapping_subject_names(row.get("对应一级学科"))
@@ -436,30 +396,113 @@ def build_dim_subject_alias(dim_subject: pd.DataFrame) -> pd.DataFrame:
         for subject_name in subject_names:
             subject_id = ministry_name_to_id.get(normalize_key(subject_name), "")
             for alias_column in alias_columns:
-                add_alias(subject_id, source, row.get(alias_column), "mapping_sheet1", "教育部学科映射Sheet1")
+                alias_value = row.get(alias_column)
+                primary_norms = primary_alias_norms.get((subject_id, source), set())
+                alias_norms = {normalize_key(alias) for alias in split_alias_text(alias_value) if clean_text(alias)}
+                if source != "ministry" and not primary_norms:
+                    continue
+                if primary_norms and alias_norms and not (alias_norms & primary_norms):
+                    continue
+                add_alias(subject_id, source, alias_value, "mapping_sheet1", "教育部学科映射Sheet1", split_alias=False)
 
-    for file_name, sheet_name, source in [
-        ("2025-2026年度US News世界学科排名20251124.xlsx", "Sheet1", "US News"),
-        ("2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx", "全球排名", "US News"),
-        ("2026年QS世界学科排名20260326.xlsx", "数据", "QS"),
-        ("2025年QS世界大学学科排名20250313.xlsx", "明细数", "QS"),
-        ("世界大学学科排名THE（2022-2026年）20260123.xlsx", "数据", "THE"),
-    ]:
-        df = read_sheet(file_name, sheet_name)
-        for _, row in df.iterrows():
-            subject_cn = first_existing(row, ["学科中文", "学科", "Subject"])
-            subject_en = first_existing(row, ["学科英文", "Subject"])
-            source_subject_id = ""
-            for candidate_source in [source, "ministry"]:
-                source_subject_id = source_subject_id or ministry_name_to_id.get(normalize_key(subject_cn), "")
-            if not source_subject_id:
-                continue
-            add_alias(source_subject_id, source, subject_cn, "source_subject_cn", file_name)
-            add_alias(source_subject_id, source, subject_en, "source_subject_en", file_name)
+    columns = [
+        "subject_id",
+        "ranking_source",
+        "ranking_subject_alias",
+        "ranking_subject_norm",
+        "alias_type",
+        "source_note",
+    ]
+    if not aliases:
+        return pd.DataFrame(columns=columns)
 
-    alias_df = pd.DataFrame(aliases).drop_duplicates()
+    alias_df = pd.DataFrame(aliases, columns=columns).drop_duplicates()
+    alias_df = merge_alias_provenance(alias_df)
     alias_df = alias_df.sort_values(["ranking_source", "ranking_subject_norm", "subject_id", "alias_type"])
     return alias_df
+
+
+def unique_join(values: pd.Series) -> str:
+    unique_items: list[str] = []
+    for value in values:
+        text = clean_text(value)
+        if text and text not in unique_items:
+            unique_items.append(text)
+    return ";".join(unique_items)
+
+
+def first_clean_value(values: pd.Series) -> str:
+    for value in values:
+        text = clean_text(value)
+        if text:
+            return text
+    return ""
+
+
+def merge_alias_provenance(alias_df: pd.DataFrame) -> pd.DataFrame:
+    group_columns = ["subject_id", "ranking_source", "ranking_subject_norm"]
+    merged = (
+        alias_df.groupby(group_columns, dropna=False, sort=False)
+        .agg(
+            ranking_subject_alias=("ranking_subject_alias", first_clean_value),
+            alias_type=("alias_type", unique_join),
+            source_note=("source_note", unique_join),
+        )
+        .reset_index()
+    )
+    return merged[
+        [
+            "subject_id",
+            "ranking_source",
+            "ranking_subject_alias",
+            "ranking_subject_norm",
+            "alias_type",
+            "source_note",
+        ]
+    ]
+
+
+def build_dim_subject_mapping_explain(dim_subject: pd.DataFrame, dim_subject_alias: pd.DataFrame) -> pd.DataFrame:
+    source_columns = [
+        ("软科", "arwu_subject_name"),
+        ("QS", "qs_subject_name"),
+        ("US News", "usnews_subject_name"),
+        ("THE", "the_subject_area"),
+    ]
+    rows: list[dict[str, Any]] = []
+    for _, subject in dim_subject.iterrows():
+        subject_id = clean_text(subject.get("subject_id"))
+        if not subject_id:
+            continue
+        for ranking_source, mapping_column in source_columns:
+            aliases = dim_subject_alias[
+                (dim_subject_alias["subject_id"] == subject_id)
+                & (dim_subject_alias["ranking_source"] == ranking_source)
+            ].copy()
+            alias_list = [clean_text(value) for value in aliases["ranking_subject_alias"].tolist() if clean_text(value)]
+            alias_count = len(alias_list)
+            if alias_count == 0:
+                mapping_mode = "missing"
+            elif alias_count == 1:
+                mapping_mode = "one_to_one"
+            else:
+                mapping_mode = "one_to_many"
+            rows.append(
+                {
+                    "subject_id": subject_id,
+                    "ministry_subject_code": clean_text(subject.get("ministry_subject_code")),
+                    "ministry_subject_name": clean_text(subject.get("ministry_subject_name")),
+                    "ranking_source": ranking_source,
+                    "source_mapping_column": mapping_column,
+                    "source_mapping_text": clean_text(subject.get(mapping_column)),
+                    "mapping_mode": mapping_mode,
+                    "alias_count": alias_count,
+                    "alias_list": "；".join(alias_list),
+                    "alias_types": unique_join(aliases["alias_type"]) if not aliases.empty else "",
+                    "source_notes": unique_join(aliases["source_note"]) if not aliases.empty else "",
+                }
+            )
+    return pd.DataFrame(rows)
 
 
 def build_subject_lookup(dim_subject_alias: pd.DataFrame) -> dict[tuple[str, str], list[str]]:
@@ -863,6 +906,7 @@ def build_fact_ranking_subject_bridge(fact_ranking: pd.DataFrame, dim_subject_al
 def write_sqlite(
     dim_subject: pd.DataFrame,
     dim_subject_alias: pd.DataFrame,
+    dim_subject_mapping_explain: pd.DataFrame,
     fact_ranking: pd.DataFrame,
     fact_ranking_subject_bridge: pd.DataFrame,
 ) -> None:
@@ -871,6 +915,7 @@ def write_sqlite(
     with sqlite3.connect(SQLITE_PATH) as conn:
         dim_subject.to_sql("dim_subject", conn, index=False)
         dim_subject_alias.to_sql("dim_subject_alias", conn, index=False)
+        dim_subject_mapping_explain.to_sql("dim_subject_mapping_explain", conn, index=False)
         fact_ranking.to_sql("fact_ranking", conn, index=False)
         fact_ranking_subject_bridge.to_sql("fact_ranking_subject_bridge", conn, index=False)
         conn.execute("CREATE INDEX idx_fact_ranking_subject ON fact_ranking(subject_id)")
@@ -1113,14 +1158,16 @@ def main() -> None:
 
     dim_subject = build_dim_subject()
     dim_subject_alias = build_dim_subject_alias(dim_subject)
+    dim_subject_mapping_explain = build_dim_subject_mapping_explain(dim_subject, dim_subject_alias)
     fact_ranking = build_fact_ranking(dim_subject_alias)
     fact_ranking_subject_bridge = build_fact_ranking_subject_bridge(fact_ranking, dim_subject_alias)
 
     dim_subject.to_csv(DIM_SUBJECT_CSV, index=False, encoding="utf-8-sig")
     dim_subject_alias.to_csv(DIM_SUBJECT_ALIAS_CSV, index=False, encoding="utf-8-sig")
+    dim_subject_mapping_explain.to_csv(DIM_SUBJECT_MAPPING_EXPLAIN_CSV, index=False, encoding="utf-8-sig")
     fact_ranking.to_csv(FACT_RANKING_CSV, index=False, encoding="utf-8-sig")
     fact_ranking_subject_bridge.to_csv(FACT_RANKING_SUBJECT_BRIDGE_CSV, index=False, encoding="utf-8-sig")
-    write_sqlite(dim_subject, dim_subject_alias, fact_ranking, fact_ranking_subject_bridge)
+    write_sqlite(dim_subject, dim_subject_alias, dim_subject_mapping_explain, fact_ranking, fact_ranking_subject_bridge)
 
     summary = qa_reports(dim_subject, dim_subject_alias, fact_ranking, fact_ranking_subject_bridge)
     append_run_log(summary)

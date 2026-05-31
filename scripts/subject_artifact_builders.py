@@ -671,24 +671,23 @@ def expected_weight_area(subject: dict[str, Any], source: str) -> str:
     if source == "QS":
         return (
             valid_mapping_value(subject.get("qs_subject_name"))
-            or valid_mapping_value(public_supplements.qs_proxy(subject).get("proxy_subject_or_area"))
-            or clean_text(subject.get("target_subject"))
+            or source_alias_display(subject, source)
         )
     if source == "US News":
-        return valid_mapping_value(subject.get("usnews_subject_name")) or clean_text(subject.get("target_subject"))
+        return valid_mapping_value(subject.get("usnews_subject_name")) or source_alias_display(subject, source)
     area = valid_mapping_value(subject.get("the_subject_area"))
     if THE_WEIGHT_AREA_CROSSWALK_JSON.exists():
         crosswalk = json.loads(THE_WEIGHT_AREA_CROSSWALK_JSON.read_text(encoding="utf-8"))
         if area in crosswalk:
             return crosswalk[area]
-    return area or "自然科学"
+    return area or source_alias_display(subject, source)
 
 
 def expected_ranking_area(subject: dict[str, Any], source: str) -> str:
     override = subject.get("source_runtime_overrides", {}).get(source, {})
     override_area = valid_mapping_value(override.get("ranking_subject_or_area"))
     if override_area:
-        return canonical_the_area(override_area) if source == "THE" else override_area
+        return override_area
     if source == "软科":
         aliases = public_supplements.arwu_public_aliases(subject)
         return (
@@ -699,24 +698,34 @@ def expected_ranking_area(subject: dict[str, Any], source: str) -> str:
     if source == "QS":
         return (
             valid_mapping_value(subject.get("qs_subject_name"))
-            or valid_mapping_value(public_supplements.qs_proxy(subject).get("proxy_subject_or_area"))
-            or clean_text(subject.get("target_subject"))
+            or source_alias_display(subject, source)
         )
     if source == "US News":
         return (
             valid_mapping_value(subject.get("usnews_subject_name"))
             or valid_mapping_value(override.get("weight_subject_or_area"))
-            or clean_text(subject.get("target_subject"))
+            or source_alias_display(subject, source)
         )
     if source == "THE":
-        return canonical_the_area(subject.get("the_subject_area")) or clean_text(subject.get("target_subject"))
+        return valid_mapping_value(subject.get("the_subject_area")) or source_alias_display(subject, source)
     return clean_text(subject.get("target_subject"))
 
 
 def source_area_candidates(subject: dict[str, Any], source: str) -> list[str]:
+    override = subject.get("source_runtime_overrides", {}).get(source, {})
+    override_values = [
+        valid_mapping_value(override.get("ranking_subject_or_area")),
+        valid_mapping_value(override.get("weight_subject_or_area")),
+    ]
+    override_values = [value for value in ordered_unique(override_values) if value]
+    if override_values:
+        candidates: list[str] = []
+        for value in override_values:
+            candidates.extend(candidate_subject_areas(value))
+        return ordered_unique(candidates)
+
     values: list[Any] = [expected_ranking_area(subject, source), expected_weight_area(subject, source)]
-    if source == "THE":
-        values.extend(subject_alias_values(subject, source))
+    values.extend(subject_alias_values(subject, source))
     candidates: list[str] = []
     for value in ordered_unique([valid_mapping_value(item) for item in values]):
         candidates.extend(candidate_subject_areas(value))
@@ -728,7 +737,7 @@ def filter_to_selected_source_area(df: pd.DataFrame, subject: dict[str, Any], so
         return df
     candidate_keys = {normalize_text_key(value) for value in source_area_candidates(subject, source) if normalize_text_key(value)}
     if not candidate_keys:
-        return df
+        return df.iloc[0:0].copy()
     masks = []
     for column in ["ranking_subject_raw", "ranking_subject_norm", "ranking_subject_alias"]:
         if column in df.columns:
@@ -771,15 +780,24 @@ def subject_alias_values(subject: dict[str, Any], source: str) -> set[str]:
         value = valid_mapping_value(override.get(field))
         if value:
             values.add(value)
-    if source == "QS":
-        values.update(public_supplements.qs_proxy_aliases(subject))
     if source == "软科":
         values.update(public_supplements.arwu_public_aliases(subject))
-    values.update(public_supplements.source_aliases(subject, source))
-    target = clean_text(subject.get("target_subject"))
-    if target:
-        values.add(target)
+    for row in subject.get("public_supplements", []):
+        if clean_text(row.get("ranking_source")) != source:
+            continue
+        if bool(row.get("requires_disclosure")):
+            continue
+        for field in ["subject_or_area", "subject_or_area_en"]:
+            value = valid_mapping_value(row.get(field))
+            if value:
+                values.add(value)
     return values
+
+
+def source_alias_display(subject: dict[str, Any], source: str) -> str:
+    aliases = [valid_mapping_value(value) for value in subject.get("alias_summary", {}).get(source, [])]
+    aliases = [value for value in ordered_unique(aliases) if value]
+    return "、".join(aliases)
 
 
 def candidate_weight_areas(subject: dict[str, Any], source: str) -> list[str]:
@@ -807,6 +825,28 @@ def find_weight_subset(weights: pd.DataFrame, source: str, candidates: list[str]
             if not subset.empty:
                 return subset, mapped_area
     return pd.DataFrame(), candidates[0] if candidates else ""
+
+
+def latest_overview_subject_areas(run_dir: Path, source: str) -> list[str]:
+    path = run_dir / "artifacts" / "figure_01_tongji_subject_ranking_overview" / "chart_data.csv"
+    if not path.exists():
+        return []
+    df = read_external_csv(path)
+    if df.empty or "ranking_source" not in df.columns:
+        return []
+    source_df = df[df["ranking_source"].map(clean_text) == source].copy()
+    if source_df.empty:
+        return []
+    if "ranking_year" in source_df.columns:
+        source_df["_year_sort"] = pd.to_numeric(source_df["ranking_year"], errors="coerce")
+        source_df = source_df.sort_values("_year_sort", na_position="first")
+    values: list[str] = []
+    for row in reversed(source_df.to_dict("records")):
+        for column in ["ranking_subject_raw", "ranking_subject_alias", "source_ranking_subject_raw"]:
+            value = clean_text(row.get(column))
+            if value:
+                values.extend(candidate_subject_areas(value))
+    return ordered_unique(values)
 
 
 def normalize_commonality_group(value: Any) -> str:
@@ -1117,6 +1157,8 @@ def supplement_the_tongji_history(tongji: pd.DataFrame, subject: dict[str, Any])
     additions: list[dict[str, Any]] = []
     row = matched.iloc[0]
     source_file = paths[0].name
+    source_area = clean_text(row.get(area_col))
+    display_area = expected_ranking_area(subject, "THE") or source_area
     for column in history.columns:
         match = re.search(r"(20\d{2})国际排名", clean_text(column))
         if not match:
@@ -1134,7 +1176,7 @@ def supplement_the_tongji_history(tongji: pd.DataFrame, subject: dict[str, Any])
                 "ranking_source": "THE",
                 "release_year": year,
                 "ranking_year": year,
-                "ranking_subject_raw": clean_text(row.get(area_col)),
+                "ranking_subject_raw": display_area,
                 "university_name_cn": clean_text(subject.get("target_university")) or "同济大学",
                 "university_name_en": "Tongji University",
                 "country_or_region": "中国内地",
@@ -1146,7 +1188,8 @@ def supplement_the_tongji_history(tongji: pd.DataFrame, subject: dict[str, Any])
                 "source_file": source_file,
                 "source_sheet": "同济历史",
                 "source_row": int(row.name) + 2,
-                "ranking_subject_alias": clean_text(row.get(area_col)),
+                "ranking_subject_alias": display_area,
+                "source_ranking_subject_raw": source_area,
                 "alias_type": "the_tongji_history_sheet",
             }
         )
@@ -1770,11 +1813,18 @@ def build_weight_artifact(run_dir: Path, subject: dict[str, Any], source: str, a
     out = artifact_dir(run_dir, artifact_id)
     weights = read_weights()
     candidates = candidate_weight_areas(subject, source)
+    if source in {"QS", "US News"}:
+        candidates = ordered_unique(latest_overview_subject_areas(run_dir, source) + candidates)
     df, area = find_weight_subset(weights, source, candidates)
     if df.empty and source == "THE":
         df, area = find_weight_subset(weights, source, ["自然科学"])
     if df.empty:
         return {"artifact_id": artifact_id, "status": "skipped", "reason": f"missing weight: {source}/{area}"}
+    display_area = expected_ranking_area(subject, source) or area
+    if source in {"QS", "US News"} and display_area and area and normalize_text_key(display_area) != normalize_text_key(area):
+        df = df.copy()
+        df["source_ranking_subject_or_area"] = df["ranking_subject_or_area"]
+        df["ranking_subject_or_area"] = display_area
     plot_df = df
     if "indicator_level" in df.columns:
         first_level = df[df["indicator_level"] == "一级指标"].copy()
@@ -1788,10 +1838,10 @@ def build_weight_artifact(run_dir: Path, subject: dict[str, Any], source: str, a
     if source in {"US News", "THE"}:
         tree_df = build_weight_tree_data(df)
         tree_df.to_csv(out / "chart_tree_data.csv", index=False, encoding="utf-8-sig")
-        render_weight_tree(tree_df, f"{title_source}{area}口径指标权重", out / "chart.png")
+        render_weight_tree(tree_df, f"{title_source}{display_area or area}口径指标权重", out / "chart.png")
         chart_type = "hierarchical weight tree"
     else:
-        render_weight(plot_df, f"{title_source}{area}口径指标权重", out / "chart.png")
+        render_weight(plot_df, f"{title_source}{display_area or area}口径指标权重", out / "chart.png")
         chart_type = "donut weight chart"
     write_common_outputs(
         out,
@@ -1801,7 +1851,8 @@ def build_weight_artifact(run_dir: Path, subject: dict[str, Any], source: str, a
         len(df),
         {
             "ranking_source": source,
-            "ranking_subject_or_area": area,
+            "ranking_subject_or_area": display_area or area,
+            "source_ranking_subject_or_area": area,
             "candidate_subject_or_areas": candidates[:12],
             "plot_rows": len(plot_df),
             "plot_weight_total": float(plot_df["weight_percent"].sum()),
@@ -1895,7 +1946,7 @@ def build_figure_02(run_dir: Path, subject: dict[str, Any]) -> dict[str, Any]:
                 latest_ranking = tongji[tongji["release_year"] == latest_release]["ranking_year"].max()
                 tongji = tongji[(tongji["release_year"] == latest_release) & (tongji["ranking_year"] == latest_ranking)].copy()
                 tongji = tongji[tongji["metric_type"].isin(["score", "rank"])].copy()
-                tongji["ranking_subject_or_area"] = clean_text(subject.get("target_subject"))
+                tongji["ranking_subject_or_area"] = expected_ranking_area(subject, source) or clean_text(subject.get("target_subject"))
                 tongji["basis"] = "indicator_count_weight_missing"
                 tongji["link_value"] = 1.0
                 parts.append(tongji[["ranking_source", "ranking_subject_or_area", "indicator_name", "indicator_group", "basis", "link_value", "source_file", "source_sheet", "source_row"]])
@@ -2564,7 +2615,10 @@ def build_table_04(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
     bands = [(1, 50, "1-50"), (51, 100, "51-100"), (101, 200, "101-200")]
     rows = []
     peer_records = []
+    ranked_sources = ranked_sources_with_tongji_latest(run_dir)
     for source in RANKING_SOURCES:
+        if source not in ranked_sources:
+            continue
         latest = latest_selected_source_rows(records, subject, source)
         mainland = latest[latest.apply(is_mainland, axis=1)].copy() if not latest.empty else latest
         mainland["_rank_midpoint_num"] = pd.to_numeric(mainland["rank_midpoint"], errors="coerce")
@@ -2576,6 +2630,8 @@ def build_table_04(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
             count = len(top200[(top200["_rank_midpoint_num"] >= lo) & (top200["_rank_midpoint_num"] <= hi)])
             rows.append({"榜单": source, "位次区间": label, "高校数量": count})
         rows.append({"榜单": source, "位次区间": "1-200合计", "高校数量": len(top200)})
+    if not rows:
+        return {"artifact_id": artifact_id, "status": "skipped", "reason": "no ranked sources with Tongji latest records"}
     df = pd.DataFrame(rows)
     peer_df = pd.DataFrame(peer_records)
     df.to_csv(out / "table_data.csv", index=False, encoding="utf-8-sig")
@@ -2680,6 +2736,7 @@ def build_external_indicator_history_table(
         df = filter_external_subject_history(df, subject, source_name)
         if df.empty:
             return {"artifact_id": artifact_id, "status": "skipped", "reason": f"missing external history for subject: {source_name}/{clean_text(subject.get('target_subject'))}"}
+        df = normalize_external_history_subject_display(df, subject, source_name)
     df["ranking_year"] = pd.to_numeric(df["ranking_year"], errors="coerce")
     df["indicator_value_num"] = pd.to_numeric(df["indicator_value"], errors="coerce")
     df["display_indicator_name"] = df["indicator_name"].map(lambda value: canonical_indicator_name(source_name, value))
@@ -2754,6 +2811,21 @@ def filter_external_subject_history(df: pd.DataFrame, subject: dict[str, Any], s
     return df[raw_keys.isin(aliases) | en_keys.isin(aliases) | norm_keys.isin(aliases)].copy()
 
 
+def normalize_external_history_subject_display(df: pd.DataFrame, subject: dict[str, Any], source_name: str) -> pd.DataFrame:
+    if df.empty:
+        return df
+    display_area = expected_ranking_area(subject, source_name) or clean_text(subject.get("target_subject"))
+    if not display_area:
+        return df
+    result = df.copy()
+    if "ranking_subject_raw" in result.columns and "source_ranking_subject_raw" not in result.columns:
+        result["source_ranking_subject_raw"] = result["ranking_subject_raw"]
+    for column in ["ranking_subject_raw", "ranking_subject_norm", "ranking_subject_alias", "ranking_subject_or_area"]:
+        if column in result.columns:
+            result[column] = display_area
+    return result
+
+
 def english_alias_keys_for_subject(subject: dict[str, Any]) -> set[str]:
     subject_id = clean_text(subject.get("subject_id"))
     aliases = read_external_csv(PROCESSED_DIR / "dim_subject_alias.csv")
@@ -2775,10 +2847,15 @@ def english_alias_keys_for_subject(subject: dict[str, Any]) -> set[str]:
         key = normalize_ascii_key(value)
         if key:
             values.add(key)
-    for value in public_supplements.source_aliases(subject, "软科"):
-        key = normalize_ascii_key(value)
-        if key:
-            values.add(key)
+    for row in subject.get("public_supplements", []):
+        if clean_text(row.get("ranking_source")) != "软科":
+            continue
+        if bool(row.get("requires_disclosure")):
+            continue
+        for field in ["subject_or_area", "subject_or_area_en"]:
+            key = normalize_ascii_key(row.get(field))
+            if key:
+                values.add(key)
     return values
 
 
@@ -2954,6 +3031,7 @@ def build_usnews_indicator_history_trend(run_dir: Path, subject: dict[str, Any])
     df = filter_external_subject_history(df, subject, "US News")
     if df.empty:
         return {"artifact_id": artifact_id, "status": "skipped", "reason": f"missing US News external indicator history for subject: {clean_text(subject.get('target_subject'))}"}
+    df = normalize_external_history_subject_display(df, subject, "US News")
     df.to_csv(out / "chart_data.csv", index=False, encoding="utf-8-sig")
     df.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
     render_indicator_trend(df, f"U.S. News {clean_text(subject['target_subject'])}同济分项指标历史趋势", out / "chart.png")

@@ -158,7 +158,7 @@ def read_target_subject_area() -> str:
         the_override = overrides.get("THE", {})
         if isinstance(the_override, dict):
             value = clean_text(the_override.get("weight_subject_or_area")) or clean_text(the_override.get("ranking_subject_or_area"))
-    return canonical_the_area(value) or "自然科学"
+    return clean_text(value) or "自然科学"
 
 
 def artifact_png_path(artifact_id: str) -> Path | None:
@@ -506,6 +506,13 @@ def apply_table_fixed_widths(table: Any, widths_emu: list[int]) -> None:
 
 
 def build_native_table(document: Document, matrix: list[list[str]], total_width_emu: int | None = None) -> Any:
+    header = matrix[0] if matrix else []
+    filtered = [header]
+    for row in matrix[1:]:
+        if len(row) >= 2 and row[-1] == "0":
+            continue
+        filtered.append(row)
+    matrix = filtered
     row_count = len(matrix)
     column_count = max(len(row) for row in matrix)
     table = document.add_table(rows=row_count, cols=column_count)
@@ -785,8 +792,39 @@ def excluded_slot_note(row: dict[str, str]) -> str:
     artifact_id = clean_text(row.get("artifact_id", ""))
     section = clean_text(row.get("section", ""))
     artifact_key = artifact_id.lower()
+    if "mainland_rank_band_distribution" in artifact_key:
+        return (
+            f"\u5f53\u524d{subject_name}\u5b66\u79d1\u6682\u65e0\u53ef\u6838\u9a8c\u7684"
+            "\u591a\u699c\u5355\u524d200\u5185\u5730\u9ad8\u6821\u4f4d\u6b21\u5206\u5e03\u8868\uff1b"
+            "\u672c\u7ae0\u4ec5\u4fdd\u7559\u5df2\u5f62\u6210\u6837\u672c\u7684\u699c\u5355\u5bf9\u6807\u8868\uff0c"
+            "\u7f3a\u5931\u699c\u5355\u4e0d\u4ee5\u7a7a\u8868\u6216\u4ee3\u7406\u6837\u672c\u8865\u9f50\u3002"
+        )
+    if "the_indicator_weight" in artifact_key:
+        return f"当前{subject_name}学科暂无可核验的 THE 对应口径同济最新综合排名记录，本报告不生成 THE 权重图；待补充 THE 对应排名和分项数据后再纳入指标权重分析。"
+    if "the_tongji_indicator_history" in artifact_key:
+        the_area = read_target_subject_area()
+        if source_has_tongji_latest("THE"):
+            history_summary = summarize_source_history_for_residual_text("THE", subject_name)
+            if history_summary:
+                return f"{history_summary}但当前暂无可核验的 THE 分项指标历史表，本小节仅呈现综合位次历史，不借用其他榜单或近邻口径展开分项趋势归因。"
+            return f"THE 已有{the_area}口径下的同济综合排名历史记录，并已纳入综合排名历史趋势图；但当前暂无可核验的 THE 分项指标历史表，本报告不借用其他榜单或近邻口径替代，待补充 THE 分项数据后再展开分项趋势分析。"
+        return f"当前{subject_name}学科暂无可核验的 THE 分项指标历史表，本报告不借用其他榜单或近邻口径替代；待补充 THE 对应分项数据后再展开趋势分析。"
+    if "the_mainland_peer_ranking" in artifact_key:
+        return f"当前{subject_name}学科暂无可核验的 THE 前200内地高校对标样本，本报告不生成 THE 对标表；相关同行分析以已生成榜单样本为准。"
+    if "the_peer_indicator_relative_rank" in artifact_key:
+        return f"当前{subject_name}学科暂无可核验的 THE 分项指标相对排名图，本报告不借用其他榜单图表；待补充 THE 对应分项数据后再纳入对标分析。"
+    if "the" in artifact_key or "THE" in section:
+        return f"当前{subject_name}学科暂无可直接用于本报告该位置的 THE 学科排名或分项指标数据，待补充 THE 对应口径后再生成对应图表。"
     if "qs_indicator_weight" in artifact_key:
-        return ""
+        qs_area = (
+            source_runtime_override_value("QS", "ranking_subject_or_area")
+            or source_runtime_override_value("QS", "weight_subject_or_area")
+            or resolved_subject_value("qs_subject_name")
+            or subject_name
+        )
+        if source_has_tongji_latest("QS"):
+            return f"当前{subject_name}学科暂无可核验的 QS {qs_area}口径指标权重图，本报告不借用其他 QS 学科或近邻口径替代；已有 QS 综合排名和同行分项数据仍在对应章节呈现。"
+        return f"当前{subject_name}学科暂无可核验的 QS {qs_area}口径指标权重图，也暂无可核验的 QS 同济最新综合排名记录；本报告不借用其他 QS 学科或近邻口径替代，待补充对应口径数据后再纳入分析。"
     if "qs_mainland_peer_ranking" in artifact_key:
         return f"当前{subject_name}学科暂无可核验的 QS 前200内地高校对标样本，本报告不生成该榜单对标表；相关同行分析以已生成图表为准。"
     if "qs_peer_indicator_relative_rank" in artifact_key:
@@ -794,7 +832,9 @@ def excluded_slot_note(row: dict[str, str]) -> str:
     if "qs" in artifact_key or "QS" in section:
         return f"当前{subject_name}学科暂无可直接用于本报告该位置的 QS 学科排名或分项指标数据，待补充 QS 对应口径后再生成对应图表。"
     if "usnews_indicator_weight" in artifact_id:
-        return f"当前{subject_name}学科暂无 U.S. News 官方对应口径权重数据，本报告仅保留已有 U.S. News 排名与分项历史，不套用其他学科权重图。"
+        if source_has_tongji_latest("US News"):
+            return f"当前{subject_name}学科暂无 U.S. News 官方对应口径权重数据，本报告仅保留已有 U.S. News 排名与分项历史，不套用其他学科权重图。"
+        return f"当前{subject_name}学科暂无 U.S. News 官方对应口径权重数据，也暂无可核验的 U.S. News 同济最新综合排名记录；本报告不套用其他学科权重图，待补充对应口径数据后再纳入分析。"
     if "arwu_tongji_indicator_history" in artifact_key:
         subject_label = arwu_public_subject_label(subject_name)
         return f"当前{subject_name}学科暂无可核验的软科多年分项指标历史表，本报告仅保留软科{subject_label}公开口径的权重和内地高校样本，不生成同济软科分项历史明细表。"
@@ -816,21 +856,51 @@ def excluded_slot_note(row: dict[str, str]) -> str:
 
 
 def replace_excluded_narrative_paragraphs(document: Document, row: dict[str, str], note: str) -> int:
-    mapping = read_narrative_mapping().get(clean_text(row.get("logical_slot_id", "")))
-    if not mapping:
+    if not note:
         return 0
-    changed = 0
-    wrote_note = False
-    for paragraph_spec in mapping.get("paragraphs", []):
-        target_index = int(paragraph_spec["template_paragraph_index"]) - 1
-        if target_index < 0 or target_index >= len(document.paragraphs):
+    heading = find_heading_for_logical_section(document, row.get("section", ""))
+    if heading is None:
+        return 0
+    next_element = heading._p.getnext()
+    if next_element is not None and next_element.tag == qn("w:p"):
+        next_text = clean_text(paragraph_element_text(next_element))
+        if next_text == note:
+            return 0
+    insert_note_after_heading(heading, note)
+    return 1
+
+
+def find_heading_for_logical_section(document: Document, section: str) -> Paragraph | None:
+    text = re.sub(r"\s+", "", clean_text(section))
+    major_match = re.match(r"^([一二三四五六七八九十]+)、", text)
+    sub_match = re.search(r"、(\d+)、(.+)$", text)
+    if not major_match or not sub_match:
+        return None
+    major_prefix = f"{major_match.group(1)}、"
+    sub_prefix = f"{sub_match.group(1)}、"
+    sub_tail = sub_match.group(2)
+    source_markers = [marker for marker in ["THE", "QS", "U.S.News", "U.S.News", "USNews", "软科"] if marker in sub_tail]
+    major_index: int | None = None
+    for index, paragraph in enumerate(document.paragraphs):
+        paragraph_text_compact = re.sub(r"\s+", "", paragraph_text(paragraph))
+        if getattr(getattr(paragraph, "style", None), "name", "") == "Heading 1" and paragraph_text_compact.startswith(major_prefix):
+            major_index = index
+            break
+    if major_index is None:
+        return None
+    for paragraph in document.paragraphs[major_index + 1 :]:
+        style_name = getattr(getattr(paragraph, "style", None), "name", "") or ""
+        paragraph_text_compact = re.sub(r"\s+", "", paragraph_text(paragraph))
+        if style_name == "Heading 1":
+            break
+        if style_name != "Heading 2":
             continue
-        paragraph = document.paragraphs[target_index]
-        style = paragraph_run_style(paragraph)
-        set_paragraph_text_with_template_style(paragraph, note if not wrote_note else "", style)
-        wrote_note = True
-        changed += 1
-    return changed
+        if not paragraph_text_compact.startswith(sub_prefix):
+            continue
+        if source_markers and not any(marker in paragraph_text_compact.replace(" ", "") for marker in source_markers):
+            continue
+        return paragraph
+    return None
 
 
 def subsection_heading_from_section(section: str) -> str:
@@ -849,9 +919,10 @@ def insert_note_after_heading(paragraph: Paragraph, note: str) -> None:
     inserted.style = paragraph.part.document.styles["Normal"]
     inserted.paragraph_format.space_before = Pt(0)
     inserted.paragraph_format.space_after = Pt(6)
+    inserted.paragraph_format.first_line_indent = Pt(28)
     run = inserted.add_run(note)
-    run.font.name = "SimSun"
-    run._element.rPr.rFonts.set(qn("w:eastAsia"), "SimSun")
+    run.font.name = "仿宋_GB2312"
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "仿宋_GB2312")
     run.font.size = Pt(14)
 
 
@@ -870,6 +941,8 @@ STALE_TEMPLATE_PARAGRAPH_PATTERNS = (
     "N&S\u8bba\u6587",
     "\u77ed\u671f\u770b\u540c\u6d4e\u96be\u6709\u9876\u5c16\u6821\u53cb",
     "\u6240\u6709\u76f8\u5bf9\u6392\u540d\u4e3a200\u591a\u4f4d",
+    "\u56db\u5927\u6392\u540d\u4e2dU.S.News\u6392\u540d\u6700\u770b\u91cd\u79d1\u7814\u4ea7\u51fa",
+    "THE\u57282023\u5e74\u8c03\u6574\u4e86\u6392\u540d\u6307\u6807\u4f53\u7cfb",
 )
 
 
@@ -882,6 +955,40 @@ def remove_stale_template_paragraphs(document: Document) -> int:
         normalized = re.sub(r"\s+", "", text)
         if any(pattern in normalized for pattern in STALE_TEMPLATE_PARAGRAPH_PATTERNS):
             remove_paragraph(paragraph)
+            changed += 1
+    return changed
+
+
+def keep_table_captions_with_tables(document: Document) -> int:
+    body = document.element.body
+    changed = 0
+    for caption_element in list(body):
+        if caption_element.tag != qn("w:p"):
+            continue
+        caption_text = re.sub(r"\s+", "", paragraph_element_text(caption_element))
+        if not (caption_text.startswith("\u8868") or caption_text.startswith("\u9644\u8868")):
+            continue
+
+        current = caption_element.getnext()
+        intervening_paragraphs = 0
+        has_intervening_text = False
+        target_table = None
+        while current is not None and intervening_paragraphs <= 4:
+            if current.tag == qn("w:tbl"):
+                target_table = current
+                break
+            if current.tag != qn("w:p"):
+                break
+            text = re.sub(r"\s+", "", paragraph_element_text(current))
+            if text:
+                if text.startswith(("\u8868", "\u9644\u8868", "\u56fe")):
+                    break
+                has_intervening_text = True
+            intervening_paragraphs += 1
+            current = current.getnext()
+
+        if target_table is not None and has_intervening_text:
+            caption_element.addnext(target_table)
             changed += 1
     return changed
 
@@ -937,26 +1044,81 @@ def normalize_excluded_section_notes(document: Document, excluded_rows: list[dic
     return changed
 
 
+def find_heading1_containing(document: Document, needle: str) -> Paragraph | None:
+    for paragraph in document.paragraphs:
+        style_name = getattr(getattr(paragraph, "style", None), "name", "") or ""
+        if style_name == "Heading 1" and needle in paragraph_text(paragraph):
+            return paragraph
+    return None
+
+
+def remove_rank_distribution_intro_block(document: Document, note: str) -> dict[str, int]:
+    heading = find_heading1_containing(document, "\u5bf9\u6807\u9ad8\u6821\u6574\u4f53\u5206\u6790")
+    if heading is None:
+        return {}
+
+    removed_paragraphs = 0
+    removed_tables = 0
+    current = heading._p.getnext()
+    while current is not None:
+        next_current = current.getnext()
+        if current.tag == qn("w:p"):
+            paragraph = Paragraph(current, heading._parent)
+            style_name = getattr(getattr(paragraph, "style", None), "name", "") or ""
+            if style_name in {"Heading 1", "Heading 2"}:
+                break
+            parent = current.getparent()
+            if parent is not None:
+                parent.remove(current)
+                removed_paragraphs += 1
+        elif current.tag == qn("w:tbl"):
+            parent = current.getparent()
+            if parent is not None:
+                parent.remove(current)
+                removed_tables += 1
+        current = next_current
+
+    insert_note_after_heading(heading, note)
+    return {"removed_paragraphs": removed_paragraphs, "removed_tables": removed_tables}
+
+
 def remove_excluded_slot_content(document: Document, excluded_rows: list[dict[str, str]]) -> list[dict[str, Any]]:
     log_rows: list[dict[str, Any]] = []
     for row in excluded_rows:
         slot_id = clean_text(row.get("logical_slot_id", ""))
         artifact_id = clean_text(row.get("artifact_id", ""))
         note = excluded_slot_note(row)
+        if artifact_id == "table_04_mainland_rank_band_distribution":
+            changed = remove_rank_distribution_intro_block(document, note)
+            log_rows.append(
+                {
+                    "slot": slot_id,
+                    "artifact_id": artifact_id,
+                    "operation": "remove_excluded_slot_content",
+                    "status": "ok" if changed else "skipped",
+                    "caption_found": False,
+                    "removed_visual_paragraphs": 0,
+                    "removed_tables": changed.get("removed_tables", 0) if changed else 0,
+                    "caption_replaced": changed.get("removed_paragraphs", 0) if changed else 0,
+                    "narrative_replaced": 1 if changed else 0,
+                    "note": note,
+                }
+            )
+            continue
         caption = cleaned_reference_caption(row)
         caption_index = find_caption_paragraph_index(document, caption)
+        caption_paragraph = document.paragraphs[caption_index] if caption_index is not None else None
         removed_visual_paragraphs = 0
         removed_tables = 0
         caption_replaced = 0
-        narrative_replaced = replace_excluded_narrative_paragraphs(document, row, note)
-        if caption_index is not None:
-            paragraph = document.paragraphs[caption_index]
+        if caption_paragraph is not None:
             if row.get("slot_kind") == "table":
-                removed_tables = remove_nearby_table(paragraph)
+                removed_tables = remove_nearby_table(caption_paragraph)
             else:
-                removed_visual_paragraphs = remove_nearby_visual_paragraphs(paragraph)
-            set_paragraph_text_with_template_style(paragraph, note if narrative_replaced == 0 else "", paragraph_run_style(paragraph))
+                removed_visual_paragraphs = remove_nearby_visual_paragraphs(caption_paragraph)
+            remove_paragraph(caption_paragraph)
             caption_replaced = 1
+        narrative_replaced = replace_excluded_narrative_paragraphs(document, row, note)
         log_rows.append(
             {
                 "slot": slot_id,
@@ -1067,20 +1229,16 @@ def format_number(value: Any, digits: int = 1) -> str:
 
 
 def normalize_brand_text(text: str) -> str:
-    replacement = re.sub(r"U\s*\\?\.?\s*S\s*\\?\.?\s*News", "U.S.News", text)
-    replacement = re.sub(r"US\s+News", "U.S.News", replacement)
-    replacement = replacement.replace("U.S. News", "U.S.News")
-    replacement = replacement.replace("U.S.News学科", "U.S.News 学科")
-    replacement = replacement.replace("U.S.News排名", "U.S.News 排名")
-    replacement = replacement.replace("U.S.News分项", "U.S.News 分项")
-    replacement = replacement.replace("U.S.News指标", "U.S.News 指标")
-    replacement = re.sub(r"U\.S\.News(?=[\u4e00-\u9fff])", "U.S.News ", replacement)
+    replacement = re.sub(r"U\s*\\?\.?\s*S\s*\\?\.?\s*News", "U.S. News", text)
+    replacement = re.sub(r"US\s+News", "U.S. News", replacement)
+    replacement = re.sub(r"U\.S\.\s*News", "U.S. News", replacement)
+    replacement = re.sub(r"U\.S\. News\s+", "U.S. News ", replacement)
     return replacement
 
 
 def display_source_name(value: Any) -> str:
     source = clean_text(value)
-    if normalize_brand_text(source) == "U.S.News":
+    if normalize_brand_text(source) == "U.S. News":
         return "U.S. News"
     return source
 
@@ -1108,23 +1266,26 @@ def report_subject_label_for_source(source: str, default: str = "") -> str:
         return arwu_public_subject_label(default)
     if source == "QS":
         return (
-            source_runtime_override_value("QS", "ranking_subject_or_area")
+            report_selected_subject_label("QS", "")
+            or source_runtime_override_value("QS", "ranking_subject_or_area")
             or source_runtime_override_value("QS", "weight_subject_or_area")
             or resolved_subject_value("qs_subject_name")
             or default
         )
     if source in {"US News", "U.S. News"}:
         return (
-            source_runtime_override_value("US News", "ranking_subject_or_area")
+            report_selected_subject_label("US News", "")
+            or source_runtime_override_value("US News", "ranking_subject_or_area")
             or source_runtime_override_value("US News", "weight_subject_or_area")
             or resolved_subject_value("usnews_subject_name")
             or default
         )
     if source == "THE":
-        return canonical_the_area(
-            source_runtime_override_value("THE", "ranking_subject_or_area")
-            or source_runtime_override_value("THE", "weight_subject_or_area")
+        return (
+            report_selected_subject_label("THE", "")
+            or source_runtime_override_value("THE", "ranking_subject_or_area")
             or resolved_subject_value("the_subject_area")
+            or source_runtime_override_value("THE", "weight_subject_or_area")
             or default
         )
     return default
@@ -1158,8 +1319,6 @@ def summarize_overview(artifact_id: str) -> str:
     for row in rows:
         source = clean_text(row.get("ranking_source", ""))
         subject = clean_text(row.get("ranking_subject_raw", ""))
-        if source in {"THE", "US News", "U.S. News"}:
-            subject = canonical_the_area(subject) or subject
         year = first_present(row, ["ranking_year", "release_year"])
         rank = rank_text(row)
         if source and rank:
@@ -1208,6 +1367,8 @@ def summarize_weight(artifact_id: str) -> str:
     group_text = "、".join(f"{name}{value:.1f}%" for name, value in top_groups)
     source_name = display_source_name(source)
     subject_label = subject or read_target_subject_name()
+    if source_name == "THE":
+        subject_label = read_target_subject_area() or subject_label
     source_status_key = "US News" if source_name == "U.S. News" else source_name
     if not source_has_tongji_latest(source_status_key):
         return (
@@ -2041,6 +2202,155 @@ def insert_qs_history_table(document: Document) -> list[dict[str, Any]]:
     ]
 
 
+def source_history_matrix_for_word(source: str) -> list[list[str]]:
+    rows = sorted(
+        source_history_rows(source),
+        key=lambda row: to_number(row.get("ranking_year", "")) or to_number(row.get("release_year", "")) or 0,
+    )
+    matrix = [["排名年度", "排名口径", "世界排名", "区间中位位次"]]
+    for row in rows:
+        year = first_present(row, ["ranking_year", "release_year"])
+        subject = first_present(row, ["ranking_subject_raw", "ranking_subject_alias"]) or read_target_subject_name()
+        matrix.append([year, subject, rank_text(row), format_number(row.get("rank_midpoint", ""), 1)])
+    return matrix if len(matrix) > 1 else []
+
+
+def find_source_history_table_anchor(document: Document, source: str) -> tuple[Paragraph | None, str]:
+    history_section_index: int | None = None
+    for index, paragraph in enumerate(document.paragraphs):
+        text = paragraph_text(paragraph).replace(" ", "")
+        if "排名历史发展分析" in text:
+            history_section_index = index
+            break
+    if history_section_index is None:
+        return None, "history_section_not_found"
+
+    heading_index: int | None = None
+    for index in range(history_section_index + 1, len(document.paragraphs)):
+        text = re.sub(r"\s+", "", paragraph_text(document.paragraphs[index]))
+        if "对标高校整体分析" in text:
+            break
+        if source in text and "学科排名" in text and (is_heading_paragraph(text) or "、" in text[:5]):
+            heading_index = index
+            break
+    if heading_index is None:
+        return None, f"{source.lower()}_history_heading_not_found"
+
+    for index in range(heading_index + 1, len(document.paragraphs)):
+        paragraph = document.paragraphs[index]
+        raw_text = paragraph_text(paragraph)
+        text = re.sub(r"\s+", "", raw_text)
+        if not text:
+            continue
+        if is_heading_paragraph(text):
+            return paragraph, "before_next_history_source"
+        if source in raw_text and not is_caption_paragraph(text):
+            return paragraph, f"after_{source.lower()}_history_paragraph"
+    return document.paragraphs[heading_index], f"after_{source.lower()}_history_heading"
+
+
+def insert_the_history_table(document: Document) -> list[dict[str, Any]]:
+    source = "THE"
+    caption_text = f"表：{read_target_subject_name()}学科在THE学科排名中的综合位次历史"
+    if any(caption_text in paragraph_text(paragraph) for paragraph in document.paragraphs):
+        return [
+            {
+                "slot": "the_history_table_insert",
+                "artifact_id": "figure_07_all_rankings_history",
+                "operation": "insert_the_history_table",
+                "status": "skipped",
+                "reason": "already_inserted",
+            }
+        ]
+
+    matrix = source_history_matrix_for_word(source)
+    if not matrix:
+        return [
+            {
+                "slot": "the_history_table_insert",
+                "artifact_id": "figure_07_all_rankings_history",
+                "operation": "insert_the_history_table",
+                "status": "skipped",
+                "reason": "missing_the_history_rows",
+            }
+        ]
+
+    anchor, anchor_mode = find_source_history_table_anchor(document, source)
+    if anchor is None:
+        return [
+            {
+                "slot": "the_history_table_insert",
+                "artifact_id": "figure_07_all_rankings_history",
+                "operation": "insert_the_history_table",
+                "status": "skipped",
+                "reason": anchor_mode,
+            }
+        ]
+
+    if anchor_mode == "before_next_history_source":
+        insert_caption_before_paragraph(anchor, caption_text)
+        insert_native_table_before_paragraph(document, anchor, matrix, content_width_emu(document))
+    else:
+        caption = insert_caption_after_paragraph(anchor, caption_text)
+        insert_native_table_after_paragraph(document, caption, matrix, content_width_emu(document))
+
+    return [
+        {
+            "slot": "the_history_table_insert",
+            "artifact_id": "figure_07_all_rankings_history",
+            "operation": "insert_the_history_table",
+            "status": "ok",
+            "anchor_mode": anchor_mode,
+            "rows": len(matrix),
+            "cols": len(matrix[0]) if matrix else 0,
+        }
+    ]
+
+
+def remove_duplicate_the_history_summary_after_table(document: Document) -> int:
+    summary_prefix = "THE \u5df2\u5f62\u6210\u53ef\u6838\u9a8c\u7684\u7efc\u5408\u4f4d\u6b21\u5386\u53f2\u5e8f\u5217"
+    gap_phrase = "\u5206\u9879\u6307\u6807\u5386\u53f2\u8868"
+    caption_phrase = "THE\u5b66\u79d1\u6392\u540d\u4e2d\u7684\u7efc\u5408\u4f4d\u6b21\u5386\u53f2"
+    the_heading_phrase = "THE\u5b66\u79d1\u6392\u540d"
+
+    changed = 0
+    in_the_section = False
+    saw_gap_aware_summary = False
+    after_history_caption = False
+    for paragraph in list(document.paragraphs):
+        text = clean_text(paragraph_text(paragraph))
+        compact = re.sub(r"\s+", "", text)
+        style_name = getattr(getattr(paragraph, "style", None), "name", "") or ""
+        if style_name == "Heading 1":
+            in_the_section = False
+            saw_gap_aware_summary = False
+            after_history_caption = False
+            continue
+        if style_name == "Heading 2":
+            in_the_section = the_heading_phrase in compact
+            saw_gap_aware_summary = False
+            after_history_caption = False
+            continue
+        if not in_the_section:
+            continue
+        if text.startswith(summary_prefix) and gap_phrase in text:
+            saw_gap_aware_summary = True
+            continue
+        if caption_phrase in compact:
+            after_history_caption = True
+            continue
+        if (
+            after_history_caption
+            and saw_gap_aware_summary
+            and text.startswith(summary_prefix)
+            and gap_phrase not in text
+        ):
+            remove_paragraph(paragraph)
+            changed += 1
+            after_history_caption = False
+    return changed
+
+
 def insert_qs_peer_indicator_figure(document: Document) -> list[dict[str, Any]]:
     artifact_id = "figure_10_qs_peer_indicator_relative_rank"
     image_path = artifact_png_path(artifact_id)
@@ -2058,9 +2368,7 @@ def insert_qs_peer_indicator_figure(document: Document) -> list[dict[str, Any]]:
 
     subject_name = read_target_subject_name()
     qs_subject_label = (
-        source_runtime_override_value("QS", "ranking_subject_or_area")
-        or source_runtime_override_value("QS", "weight_subject_or_area")
-        or resolved_subject_value("qs_subject_name", "")
+        report_selected_subject_label("QS", "")
         or subject_name
     )
     indicator_count = len(rows)
@@ -2081,6 +2389,16 @@ def insert_qs_peer_indicator_figure(document: Document) -> list[dict[str, Any]]:
         if "对标高校分指标分析" in text:
             section_index = index
             break
+    if section_index is None:
+        return [
+            {
+                "slot": "qs_peer_indicator_insert",
+                "artifact_id": artifact_id,
+                "operation": "insert_qs_peer_indicator_figure",
+                "status": "skipped",
+                "reason": "peer_indicator_section_not_found",
+            }
+        ]
     qs_heading_index: int | None = None
     if section_index is not None:
         for index in range(section_index + 1, len(document.paragraphs)):
@@ -2231,7 +2549,44 @@ def sha256_bytes(data: bytes) -> str:
 
 
 def normalize_table_cell(value: Any) -> str:
-    return re.sub(r"\s+", "", clean_text(value))
+    text = re.sub(r"\s+", "", clean_text(value))
+    return text.replace("U.S.News", "USNews")
+
+
+def table04_expected_matrix_for_audit(matrix: list[list[str]]) -> list[list[str]]:
+    if not matrix:
+        return matrix
+    header = matrix[0]
+    try:
+        source_idx = header.index("\u699c\u5355")
+        band_idx = header.index("\u4f4d\u6b21\u533a\u95f4")
+        count_idx = header.index("\u9ad8\u6821\u6570\u91cf")
+    except ValueError:
+        return matrix
+    totals: dict[str, float] = {}
+    for row in matrix[1:]:
+        if len(row) <= max(source_idx, band_idx, count_idx):
+            continue
+        if clean_text(row[band_idx]) != "1-200\u5408\u8ba1":
+            continue
+        try:
+            totals[clean_text(row[source_idx])] = float(clean_text(row[count_idx]) or 0)
+        except ValueError:
+            totals[clean_text(row[source_idx])] = 0
+    if not totals:
+        return matrix
+    filtered_rows = [
+        row
+        for row in matrix[1:]
+        if totals.get(clean_text(row[source_idx]), 0) > 0
+        and clean_text(row[count_idx]) != "0"
+    ]
+    return [header] + filtered_rows
+
+
+def document_has_appendix_section(document: Document) -> bool:
+    appendix_text = "\u9644\u8868"
+    return any(appendix_text in paragraph_text(paragraph) for paragraph in document.paragraphs)
 
 
 def table_to_matrix(table: Any) -> list[list[str]]:
@@ -2319,9 +2674,13 @@ def audit_replacements(rows: list[dict[str, str]], output_docx: Path) -> list[di
                 }
             )
         elif row["slot_kind"] == "table":
+            if artifact_id == "table_09_peer_full_ranking_history_appendix" and not document_has_appendix_section(document):
+                continue
             table_index = parse_slot_index(row["reference_object"], "table_")
             matrix_path = artifact_matrix_path(artifact_id)
             expected_matrix = read_csv_matrix(matrix_path) if matrix_path else []
+            if artifact_id == "table_04_mainland_rank_band_distribution":
+                expected_matrix = table04_expected_matrix_for_audit(expected_matrix)
             actual_matrix, match_mode = find_table_matrix_for_audit(document, expected_matrix, table_index)
             expected_header = expected_matrix[0] if expected_matrix else []
             actual_header = actual_matrix[0][: len(expected_header)] if actual_matrix else []
@@ -2723,7 +3082,7 @@ def summarize_qs_comprehensive_history_for_residual_text(subject_name: str, qs_s
     latest_year = int(to_number(latest.get("ranking_year", "")) or to_number(latest.get("release_year", "")) or 0)
     first_mid = to_number(first.get("rank_midpoint", ""))
     latest_mid = to_number(latest.get("rank_midpoint", ""))
-    subject_label = clean_text(qs_subject_name) or clean_text(first.get("ranking_subject_raw", "")) or subject_name
+    subject_label = report_selected_subject_label("QS", "") or clean_text(first.get("ranking_subject_raw", "")) or clean_text(qs_subject_name) or subject_name
     if first_mid is not None and latest_mid is not None and len(rows) >= 2:
         direction = "明显提升" if latest_mid < first_mid else "有所回落" if latest_mid > first_mid else "基本稳定"
         return (
@@ -2753,7 +3112,7 @@ def subject_label_from_artifact_rows(rows: list[dict[str, str]], default: str = 
     for row in rows:
         value = first_present(row, keys)
         if value and not is_missing_subject_label(value):
-            return canonical_the_area(value) or value
+            return value
     return default
 
 
@@ -2763,6 +3122,42 @@ def source_history_rows(source: str) -> list[dict[str, str]]:
         for row in read_artifact_rows("figure_07_all_rankings_history", "chart_data.csv")
         if clean_text(row.get("ranking_source", "")) == source
     ]
+
+
+def artifact_subject_or_area(artifact_id: str) -> str:
+    spec_path = SUBJECT_RUN_DIR / "artifacts" / artifact_id / "chart_spec.json"
+    if not spec_path.exists():
+        return ""
+    try:
+        payload = json.loads(spec_path.read_text(encoding="utf-8-sig"))
+    except json.JSONDecodeError:
+        return ""
+    return clean_text(payload.get("ranking_subject_or_area", ""))
+
+
+def report_selected_subject_label(source: str, default: str = "") -> str:
+    source_key = "US News" if source in {"U.S. News", "US News"} else source
+    override = (
+        source_runtime_override_value(source_key, "ranking_subject_or_area")
+        or source_runtime_override_value(source_key, "weight_subject_or_area")
+    )
+    if override:
+        return override
+    history_label = subject_label_from_artifact_rows(source_history_rows(source_key), "")
+    if history_label:
+        return history_label
+    weight_artifact = {
+        "QS": "figure_04_qs_indicator_weight",
+        "US News": "figure_05_usnews_indicator_weight",
+        "U.S. News": "figure_05_usnews_indicator_weight",
+        "THE": "figure_06_the_indicator_weight",
+        "软科": "figure_03_arwu_indicator_weight",
+    }.get(source, "")
+    if weight_artifact:
+        artifact_label = artifact_subject_or_area(weight_artifact)
+        if artifact_label:
+            return artifact_label
+    return default
 
 
 def summarize_source_history_for_residual_text(source: str, subject_name: str) -> str:
@@ -2895,11 +3290,7 @@ def paragraph_source_context(document: Document, paragraph_index: int) -> str:
 def replace_residual_template_paragraphs(document: Document) -> int:
     subject_name = read_target_subject_name()
     qs_direct_subject_name = resolved_subject_value("qs_subject_name", "")
-    qs_runtime_subject_name = (
-        source_runtime_override_value("QS", "ranking_subject_or_area")
-        or source_runtime_override_value("QS", "weight_subject_or_area")
-    )
-    qs_subject_name = qs_runtime_subject_name or ("" if is_missing_subject_label(qs_direct_subject_name) else qs_direct_subject_name) or subject_name
+    qs_subject_name = report_selected_subject_label("QS", "") or ("" if is_missing_subject_label(qs_direct_subject_name) else qs_direct_subject_name) or subject_name
     qs_available = source_has_tongji_latest("QS")
     qs_history_summary = summarize_qs_comprehensive_history_for_residual_text(subject_name, qs_subject_name)
     qs_history_text = (
@@ -3042,17 +3433,17 @@ def apply_usnews_brand_run_font(document: Document) -> int:
     for paragraph in iter_all_paragraphs(document):
         text = paragraph_text(paragraph)
         normalized = normalize_brand_text(text)
-        if "U.S.News" not in normalized:
+        if "U.S. News" not in normalized:
             continue
         template_style = paragraph_run_style(paragraph)
         for run in list(paragraph.runs):
             paragraph._p.remove(run._element)
-        for part in re.split(r"(U\.S\.News)", normalized):
+        for part in re.split(r"(U\.S\. News)", normalized):
             if not part:
                 continue
             run = paragraph.add_run(part)
             apply_run_style(run, template_style)
-            if part == "U.S.News":
+            if part == "U.S. News":
                 run.font.name = "Times New Roman"
                 run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
         changed += 1
@@ -3159,6 +3550,8 @@ def repair_peer_indicator_figure_anchors(document: Document) -> int:
     section_end = next_heading1_index(document, section_start)
     changed = remove_image_paragraphs_between(document, section_start, section_end)
     repairs = [
+        ("figure_09_arwu_peer_indicator_relative_rank", ["软科", "分项指标相对排名"]),
+        ("figure_10_qs_peer_indicator_relative_rank", ["QS", "分项指标相对排名"]),
         ("figure_11_usnews_peer_indicator_relative_rank", ["U.S. News", "分项指标相对排名"]),
         ("figure_12_the_peer_indicator_relative_rank", ["THE", "分项指标相对排名"]),
     ]
@@ -3169,6 +3562,34 @@ def repair_peer_indicator_figure_anchors(document: Document) -> int:
             continue
         insert_image_before_paragraph(document, caption, image_path)
         changed += 1
+    return changed
+
+
+def restore_empty_major_section_headings(document: Document) -> int:
+    changed = 0
+    replacements = [
+        ("1、软科学科排名", "五、对标高校分指标分析"),
+        ("1、论文整体", "六、对标高校论文指标分析"),
+    ]
+    for index, paragraph in enumerate(document.paragraphs):
+        if not paragraph_is_heading1(paragraph) or clean_text(paragraph_text(paragraph)):
+            continue
+        next_heading_text = ""
+        for probe in range(index + 1, len(document.paragraphs)):
+            candidate = document.paragraphs[probe]
+            candidate_text = clean_text(paragraph_text(candidate))
+            if not candidate_text:
+                continue
+            if paragraph_is_heading1(candidate):
+                break
+            if paragraph_is_heading2(candidate):
+                next_heading_text = candidate_text
+                break
+        for marker, replacement in replacements:
+            if marker in next_heading_text:
+                set_paragraph_text_with_template_style(paragraph, replacement, paragraph_run_style(paragraph))
+                changed += 1
+                break
     return changed
 
 
@@ -3200,6 +3621,8 @@ def source_subsection_has_evidence(source: str, context: str) -> bool:
         artifact_id = source_peer_indicator_artifact_id(source)
         return bool(artifact_id and read_artifact_rows(artifact_id, "chart_data.csv"))
     if context == "indicator_history":
+        if source_history_rows(source):
+            return True
         if not source_has_tongji_latest(source):
             return False
         artifact_ids = source_indicator_history_artifact_ids(source)
@@ -3214,6 +3637,21 @@ def remove_block_elements_until(paragraph: Paragraph, stop_paragraph: Paragraph 
     if parent is None:
         return 0
     current = paragraph._p
+    stop_element = stop_paragraph._p if stop_paragraph is not None else None
+    removed = 0
+    while current is not None and current is not stop_element:
+        next_current = current.getnext()
+        parent.remove(current)
+        removed += 1
+        current = next_current
+    return removed
+
+
+def remove_block_elements_until_after(paragraph: Paragraph, stop_paragraph: Paragraph | None) -> int:
+    parent = paragraph._p.getparent()
+    if parent is None:
+        return 0
+    current = paragraph._p.getnext()
     stop_element = stop_paragraph._p if stop_paragraph is not None else None
     removed = 0
     while current is not None and current is not stop_element:
@@ -3244,28 +3682,30 @@ def remove_empty_source_subsections(document: Document, section_marker: str, con
     if section_start is None:
         return 0
     changed = 0
+    index = section_start + 1
     while True:
-        section_end = next_heading1_index(document, section_start)
-        removed = False
         paragraphs = document.paragraphs
-        for index in range(section_start + 1, section_end):
-            paragraph = paragraphs[index]
-            if not paragraph_is_heading2(paragraph):
-                continue
-            source = source_from_subsection_heading(paragraph_text(paragraph))
-            if not source or source_subsection_has_evidence(source, context):
-                continue
-            next_index = section_end
-            for probe in range(index + 1, section_end):
-                if paragraph_is_heading2(paragraphs[probe]) or paragraph_is_heading1(paragraphs[probe]):
-                    next_index = probe
-                    break
-            stop_paragraph = paragraphs[next_index] if next_index < len(paragraphs) else None
-            changed += remove_block_elements_until(paragraph, stop_paragraph)
-            removed = True
+        section_end = next_heading1_index(document, section_start)
+        if index >= section_end:
             break
-        if not removed:
-            break
+        paragraph = paragraphs[index]
+        if not paragraph_is_heading2(paragraph):
+            index += 1
+            continue
+        source = source_from_subsection_heading(paragraph_text(paragraph))
+        if not source or source_subsection_has_evidence(source, context):
+            index += 1
+            continue
+        next_index = section_end
+        for probe in range(index + 1, section_end):
+            if paragraph_is_heading2(paragraphs[probe]) or paragraph_is_heading1(paragraphs[probe]):
+                next_index = probe
+                break
+        stop_paragraph = paragraphs[next_index] if next_index < len(paragraphs) else None
+        changed += remove_block_elements_until_after(paragraph, stop_paragraph)
+        insert_note_after_heading(paragraph, source_unavailable_text(source, read_target_subject_name(), context))
+        changed += 1
+        index += 2
     section_start = find_heading1_index(document, section_marker)
     if section_start is None:
         return changed
@@ -3294,6 +3734,28 @@ def paper_artifacts_available() -> bool:
         "figure_16_paper_international_collab_relative_rank",
     ]
     return any((SUBJECT_RUN_DIR / "artifacts" / artifact_id / "chart_data.csv").exists() for artifact_id in artifact_ids)
+
+
+def remove_appendix_section(document: Document) -> int:
+    section_start = find_heading1_index(document, "附表")
+    if section_start is None:
+        return 0
+    section_end = next_heading1_index(document, section_start)
+
+    body = document._body._element
+    heading_element = document.paragraphs[section_start]._element
+    heading_pos = list(body).index(heading_element)
+
+    children_to_remove = []
+    for child in list(body)[heading_pos:]:
+        if child.tag == qn("w:sectPr"):
+            break
+        children_to_remove.append(child)
+
+    for child in children_to_remove:
+        body.remove(child)
+
+    return 1
 
 
 def normalize_missing_paper_section(document: Document) -> int:
@@ -3326,8 +3788,7 @@ def proxy_label_replacements(text: str, subject_name: str) -> str:
         for old, new in replacements.items():
             result = result.replace(old, new)
     qs_label = (
-        source_runtime_override_value("QS", "ranking_subject_or_area")
-        or source_runtime_override_value("QS", "weight_subject_or_area")
+        report_selected_subject_label("QS", "")
         or resolved_subject_value("qs_subject_name")
     )
     if qs_label and qs_label != subject_name:
@@ -3338,10 +3799,11 @@ def proxy_label_replacements(text: str, subject_name: str) -> str:
         }
         for old, new in replacements.items():
             result = result.replace(old, new)
-    usnews_label = source_runtime_override_value("US News", "weight_subject_or_area")
+    usnews_label = report_selected_subject_label("US News", "")
     if usnews_label and usnews_label != subject_name:
         replacements = {
             f"U.S. News 学科排名{subject_name}学科指标权重": f"U.S. News 学科排名{usnews_label}口径指标权重",
+            f"U.S. News学科排名{subject_name}学科指标权重": f"U.S. News学科排名{usnews_label}口径指标权重",
             f"U.S. News{subject_name}指标权重": f"U.S. News{usnews_label}口径指标权重",
         }
         for old, new in replacements.items():
@@ -3359,6 +3821,30 @@ def normalize_proxy_labels(document: Document) -> int:
             set_paragraph_text_with_template_style(paragraph, replacement, paragraph_run_style(paragraph))
             changed += 1
     return changed
+
+
+def remove_empty_paragraphs_before_media(document: Document) -> int:
+    removed = 0
+    indices = list(range(len(document.paragraphs) - 1))
+    for i in reversed(indices):
+        p = document.paragraphs[i]
+        if p.text.strip():
+            continue
+        if p._element.findall('.//{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}inline'):
+            continue
+        if p._element.findall('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}drawing'):
+            continue
+        next_p = document.paragraphs[i + 1]
+        next_text = next_p.text.strip()
+        next_has_image = bool(
+            next_p._element.findall('.//{http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing}inline')
+            or next_p._element.findall('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}drawing')
+        )
+        next_is_caption = next_text and (next_text.startswith('图') or next_text.startswith('表')) and ('、' in next_text or '：' in next_text)
+        if next_has_image or next_is_caption:
+            remove_paragraph(p)
+            removed += 1
+    return removed
 
 
 def normalize_cover_title(document: Document) -> int:
@@ -3786,6 +4272,9 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     residual_paragraph_changes = replace_residual_template_paragraphs(document)
     stale_template_paragraph_removals = remove_stale_template_paragraphs(document)
     qs_history_table_insertions = insert_qs_history_table(document)
+    the_history_table_insertions = insert_the_history_table(document)
+    duplicate_the_history_summary_removals = remove_duplicate_the_history_summary_after_table(document)
+    restored_major_headings_before_qs_insert = restore_empty_major_section_headings(document)
     qs_peer_indicator_insertions = insert_qs_peer_indicator_figure(document)
     brand_name_changes = normalize_report_brand_names(document)
     rank_prefix_changes = normalize_rank_prefix_markers(document)
@@ -3793,10 +4282,14 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     cover_title_changes = normalize_cover_title(document)
     virtual_table_insertions = insert_virtual_native_tables(document, rows)
     evidence_section_changes = normalize_evidence_backed_source_sections(document)
+    restored_major_headings = restore_empty_major_section_headings(document)
     peer_figure_anchor_repairs = repair_peer_indicator_figure_anchors(document)
+    table_caption_pair_repairs = keep_table_captions_with_tables(document)
+    appendix_removals = remove_appendix_section(document)
     missing_paper_section_changes = normalize_missing_paper_section(document)
     brand_name_changes += normalize_report_brand_names(document)
     rank_prefix_changes += normalize_rank_prefix_markers(document)
+    empty_before_media_removals = remove_empty_paragraphs_before_media(document)
     image_alignment_changes = normalize_inline_image_paragraph_alignment(document)
     figure_caption_renumbers = renumber_figure_captions(document)
     table_caption_renumbers = renumber_table_captions(document)
@@ -3843,6 +4336,13 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "operation": "normalize_section_page_geometry",
             "status": "ok",
             "changed_values": section_page_geometry_changes,
+        },
+        {
+            "slot": "the_history_summary",
+            "artifact_id": "figure_07_all_rankings_history",
+            "operation": "remove_duplicate_the_history_summary_after_table",
+            "status": "ok",
+            "removed_paragraphs": duplicate_the_history_summary_removals,
         },
         {
             "slot": "cover_section_break",
@@ -3918,6 +4418,13 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
         *qs_peer_indicator_insertions,
         *virtual_table_insertions,
         {
+            "slot": "major_section_headings_before_qs_insert",
+            "artifact_id": "",
+            "operation": "restore_empty_major_section_headings_before_qs_insert",
+            "status": "ok",
+            "changed_paragraphs": restored_major_headings_before_qs_insert,
+        },
+        {
             "slot": "brand_names",
             "artifact_id": "",
             "operation": "normalize_report_brand_names",
@@ -3939,6 +4446,13 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "changed_paragraphs": rank_prefix_changes,
         },
         {
+            "slot": "empty_paragraphs_before_media",
+            "artifact_id": "",
+            "operation": "remove_empty_paragraphs_before_media",
+            "status": "ok",
+            "removed_paragraphs": empty_before_media_removals,
+        },
+        {
             "slot": "embedded_image_alignment",
             "artifact_id": "",
             "operation": "normalize_inline_image_paragraph_alignment",
@@ -3953,11 +4467,26 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "changed_paragraphs": peer_figure_anchor_repairs,
         },
         {
+            "slot": "major_section_headings",
+            "artifact_id": "",
+            "operation": "restore_empty_major_section_headings",
+            "status": "ok",
+            "changed_paragraphs": restored_major_headings,
+        },
+        {
             "slot": "evidence_backed_source_sections",
             "artifact_id": "",
             "operation": "normalize_evidence_backed_source_sections",
             "status": "ok",
             "changed_paragraphs": evidence_section_changes,
+        },
+        *the_history_table_insertions,
+        {
+            "slot": "appendix_section",
+            "artifact_id": "",
+            "operation": "remove_appendix_section",
+            "status": "ok",
+            "removed_sections": appendix_removals,
         },
         {
             "slot": "missing_paper_section",
@@ -3986,6 +4515,13 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "operation": "renumber_table_captions",
             "status": "ok",
             "changed_paragraphs": table_caption_renumbers,
+        },
+        {
+            "slot": "table_caption_pairs",
+            "artifact_id": "",
+            "operation": "keep_table_captions_with_tables",
+            "status": "ok",
+            "changed_tables": table_caption_pair_repairs,
         },
         {
             "slot": "cover_title",

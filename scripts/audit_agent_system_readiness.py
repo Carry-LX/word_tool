@@ -94,6 +94,15 @@ def normalize_subject_key(value: Any) -> str:
     return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "", text)
 
 
+def normalize_subject_key_set(value: Any) -> set[str]:
+    text = clean_text(value)
+    if not text:
+        return set()
+    parts = re.split(r"[\n\r,，、;；|]+", text)
+    keys = {normalize_subject_key(part) for part in parts if clean_text(part)}
+    return {key for key in keys if key}
+
+
 def canonical_subject_scope_text(value: Any) -> str:
     text = clean_text(value)
     if not text:
@@ -105,6 +114,15 @@ def canonical_subject_scope_text(value: Any) -> str:
         "physical sciences": "自然科学",
         "natural sciences": "自然科学",
         "computer science": "计算机科学",
+        "cell biology": "细胞生物学",
+        "immunology": "免疫学",
+        "medicine": "医学",
+        "clinical medicine": "临床医学",
+        "oncology": "肿瘤学",
+        "chemistry": "化学",
+        "chemical engineering": "化学工程",
+        "biological sciences": "生物科学",
+        "biotechnology and applied microbiology": "生物技术应用微生物学",
     }
     aliases = {normalize_subject_key_raw(key): value for key, value in alias_pairs.items()}
     crosswalk_path = CONFIG_DIR / "runtime" / "the_weight_area_crosswalk.json"
@@ -333,7 +351,7 @@ def audit_latest_run_subject_scope_consistency(run_dir: Path, issues: list[dict[
         for row in availability.to_dict(orient="records")
         if clean_text(row.get("ranking_source")) and clean_text(row.get("selected_ranking_subject_or_area"))
     }
-    selected_keys = {source: normalize_subject_key(value) for source, value in selected_by_source.items()}
+    selected_keys = {source: normalize_subject_key_set(value) for source, value in selected_by_source.items()}
     subject_columns = [
         "ranking_subject_raw",
         "ranking_subject_or_area",
@@ -363,8 +381,8 @@ def audit_latest_run_subject_scope_consistency(run_dir: Path, issues: list[dict[
         available_subject_columns = [column for column in subject_columns if column in df.columns]
         if not available_subject_columns:
             continue
-        for source, selected_key in selected_keys.items():
-            if not selected_key:
+        for source, selected_key_set in selected_keys.items():
+            if not selected_key_set:
                 continue
             source_df = df[df["ranking_source"].map(clean_text) == source].copy()
             if source_df.empty:
@@ -374,7 +392,11 @@ def audit_latest_run_subject_scope_consistency(run_dir: Path, issues: list[dict[
                 if not values:
                     continue
                 checked_rows += len(source_df)
-                bad_values = [value for value in values if normalize_subject_key(value) != selected_key]
+                bad_values = []
+                for value in values:
+                    observed_key_set = normalize_subject_key_set(value)
+                    if not observed_key_set or not observed_key_set.issubset(selected_key_set):
+                        bad_values.append(value)
                 if bad_values:
                     mismatches.append(
                         {

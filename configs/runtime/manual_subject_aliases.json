@@ -418,18 +418,6 @@
       "note": "QS Data Science / AI 横跨控制、计算机和智能科学。"
     },
     {
-      "rule_id": "QS_ANATOMY_PHYSIOLOGY_TO_BASIC_MEDICINE",
-      "ranking_source": "QS",
-      "subject_id": "subject_1001",
-      "aliases": [
-        "解剖和生理学",
-        "解剖与生理学",
-        "Anatomy & Physiology"
-      ],
-      "mapping_class": "deterministic",
-      "note": "解剖与生理学归入基础医学。"
-    },
-    {
       "rule_id": "QS_HISTORY_BROAD_TO_HISTORY_SUBJECTS",
       "ranking_source": "QS",
       "subject_id": "subject_0602",
@@ -2049,312 +2037,230 @@
       "note": "机器人科学与工程连接机械、控制与智能科学。"
     },
     {
-      "rule_id": "SUPP_IC_QS_EE_AI",
-      "ranking_source": "QS",
       "subject_id": "subject_1401",
+      "ranking_source": "QS",
       "aliases": [
-        "??????",
+        "电子电气工程",
         "Electrical and Electronic Engineering",
         "Engineering - Electrical and Electronic",
-        "?????????",
+        "数据科学与人工智能",
         "Data Science and Artificial Intelligence"
       ],
-      "mapping_class": "approximate",
-      "note": "????????????????????????????/????????????????QS 2026??Electrical and Electronic?Data Science and Artificial Intelligence?"
+      "note": "QS无集成电路直接口径，使用电子电气工程（Engineering-Electrical and Electronic）和数据科学与人工智能（Data Science & Artificial Intelligence）作为近邻口径。QS 2026年报告中确认为候选口径。"
     },
     {
-      "rule_id": "SUPP_IC_ARWU_EE_NANO_AI",
-      "ranking_source": "??",
       "subject_id": "subject_1401",
+      "ranking_source": "软科",
       "aliases": [
-        "??????",
+        "电力电子工程",
         "Electrical & Electronic Engineering",
-        "???????",
+        "纳米科学与技术",
         "Nanoscience & Nanotechnology",
-        "????",
+        "人工智能",
         "Artificial Intelligence"
       ],
-      "mapping_class": "approximate",
-      "note": "?????????????????????????????????????????"
+      "note": "软科无集成电路直接口径，使用电力电子工程（Electrical & Electronic Engineering）、纳米科学与技术（Nanoscience & Nanotechnology）、人工智能（Artificial Intelligence）作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_IC_USNEWS_EE_NANO_AI",
-      "ranking_source": "US News",
       "subject_id": "subject_1401",
+      "ranking_source": "US News",
       "aliases": [
-        "???????",
+        "电子电气工程",
         "electrical and electronic engineering",
-        "?????????",
+        "纳米科学与技术",
         "nanoscience and nanotechnology",
-        "????",
+        "人工智能",
         "artificial intelligence"
       ],
-      "mapping_class": "approximate",
-      "note": "?????????????US News???????/?????????/???????????"
+      "note": "US News无集成电路直接口径，使用电子电气工程（electrical and electronic engineering）、纳米科学与技术（nanoscience and nanotechnology）、人工智能（artificial intelligence）作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_IC_THE_ENGINEERING",
-      "ranking_source": "THE",
       "subject_id": "subject_1401",
+      "ranking_source": "THE",
       "aliases": [
-        "??",
-        "??",
-        "???",
+        "工学",
+        "工程",
+        "工程学",
         "Engineering",
-        "?????",
+        "计算机科学",
         "Computer Science"
       ],
-      "mapping_class": "approximate",
-      "note": "???THE??????????????/??????????????"
+      "note": "THE交叉学科以工程（Engineering）和计算机科学（Computer Science）领域作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_BUSINESS_ADMIN_ARWU",
-      "ranking_source": "??",
       "subject_id": "subject_1251",
+      "ranking_source": "软科",
       "aliases": [
-        "????",
+        "工商管理",
         "Business Administration",
-        "???",
+        "管理学",
         "Management"
       ],
-      "mapping_class": "broad_multi_subject",
-      "note": "??????????????/?????????????????????"
+      "note": "软科工商管理（Business Administration）和管理学（Management）对应工商管理/工商管理口径。"
     },
     {
-      "rule_id": "SUPP_BUSINESS_ADMIN_USNEWS",
-      "ranking_source": "US News",
       "subject_id": "subject_1251",
+      "ranking_source": "US News",
       "aliases": [
-        "?????",
+        "经济学与商业",
         "Economics and Business",
         "economics and business"
       ],
-      "mapping_class": "broad_multi_subject",
-      "note": "???US News???????????Economics and Business???"
+      "note": "US News经济学与商业（Economics and Business）对应工商管理口径。"
     },
     {
-      "rule_id": "SUPP_BUSINESS_ADMIN_THE",
-      "ranking_source": "THE",
       "subject_id": "subject_1251",
+      "ranking_source": "THE",
       "aliases": [
-        "??????",
-        "??????",
+        "商业与经济学",
+        "商业和经济学",
         "Business and Economics"
       ],
-      "mapping_class": "broad_multi_subject",
-      "note": "???THE Business and Economics?business and management?accounting and finance?economics and econometrics??????????"
+      "note": "THE商业与经济（Business and Economics）领域对应工商管理口径，覆盖商业与管理、会计与金融、经济与计量经济学。"
     },
     {
-      "rule_id": "SUPP_PUBLIC_ADMIN_ARWU",
-      "ranking_source": "??",
       "subject_id": "subject_1252",
+      "ranking_source": "软科",
       "aliases": [
-        "????",
+        "公共管理",
         "Public Administration"
       ],
-      "mapping_class": "deterministic",
-      "note": "?????GRAS??Public Administration?????????"
+      "note": "软科GRAS公共管理（Public Administration）对应公共管理口径。"
     },
     {
-      "rule_id": "SUPP_PUBLIC_ADMIN_QS",
-      "ranking_source": "QS",
       "subject_id": "subject_1252",
+      "ranking_source": "QS",
       "aliases": [
-        "?????????",
+        "社会政策与行政管理",
         "Social Policy and Administration"
       ],
-      "mapping_class": "approximate",
-      "note": "???QS??????????Social Policy and Administration???????"
+      "note": "QS社会政策与行政管理（Social Policy and Administration）对应公共管理口径。"
     },
     {
-      "rule_id": "SUPP_PUBLIC_ADMIN_USNEWS",
-      "ranking_source": "US News",
       "subject_id": "subject_1252",
+      "ranking_source": "US News",
       "aliases": [
-        "?????????",
+        "社会科学与公共卫生",
         "social sciences and public health"
       ],
-      "mapping_class": "approximate",
-      "note": "???US News???????????Social Sciences and Public Health?????"
+      "note": "US News社会科学与公共卫生（Social Sciences and Public Health）对应公共管理口径。"
     },
     {
-      "rule_id": "SUPP_PUBLIC_ADMIN_THE",
-      "ranking_source": "THE",
       "subject_id": "subject_1252",
+      "ranking_source": "THE",
       "aliases": [
-        "????",
+        "社会科学",
         "Social Sciences"
       ],
-      "mapping_class": "broad_multi_subject",
-      "note": "???THE???????????Social Sciences?????"
+      "note": "THE社会科学（Social Sciences）领域对应公共管理口径。"
     },
     {
-      "rule_id": "SUPP_AREA_STUDIES_QS",
-      "ranking_source": "QS",
       "subject_id": "subject_1407",
+      "ranking_source": "QS",
       "aliases": [
-        "???",
+        "政治学",
         "Politics",
-        "?????",
+        "现代语言学",
         "Modern Languages",
-        "????",
+        "发展研究",
         "Development Studies"
       ],
-      "mapping_class": "approximate",
-      "note": "?????????????????????/????/???????????????????"
+      "note": "QS区域国别学无直接口径，使用政治学（Politics）、现代语言学（Modern Languages）、发展研究（Development Studies）作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_AREA_STUDIES_USNEWS",
-      "ranking_source": "US News",
       "subject_id": "subject_1407",
+      "ranking_source": "US News",
       "aliases": [
-        "?????????",
+        "社会科学与公共卫生",
         "social sciences and public health"
       ],
-      "mapping_class": "approximate",
-      "note": "?????????US News??????????????????"
+      "note": "US News区域国别学无直接口径，使用社会科学与公共卫生（Social Sciences and Public Health）作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_AREA_STUDIES_THE",
-      "ranking_source": "THE",
       "subject_id": "subject_1407",
+      "ranking_source": "THE",
       "aliases": [
-        "????",
+        "社会科学",
         "Social Sciences",
-        "??????",
+        "艺术与人文",
         "Arts and Humanities"
       ],
-      "mapping_class": "approximate",
-      "note": "?????????THE????/??????????????"
+      "note": "THE区域国别学使用社会科学（Social Sciences）和艺术与人文（Arts and Humanities）领域作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_MARXISM_QS",
-      "ranking_source": "QS",
       "subject_id": "subject_0305",
+      "ranking_source": "QS",
       "aliases": [
-        "???",
+        "政治学",
         "Politics",
-        "??",
+        "哲学",
         "Philosophy"
       ],
-      "mapping_class": "approximate",
-      "note": "???????????????????????/????????????????"
+      "note": "QS马克思主义理论无直接口径，使用政治学（Politics）和哲学（Philosophy）作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_MARXISM_ARWU",
-      "ranking_source": "??",
       "subject_id": "subject_0305",
+      "ranking_source": "软科",
       "aliases": [
-        "???",
+        "政治学",
         "Political Sciences"
       ],
-      "mapping_class": "approximate",
-      "note": "??????????????????????????????"
+      "note": "软科马克思主义理论无直接口径，使用政治学（Political Sciences）作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_MARXISM_USNEWS",
-      "ranking_source": "US News",
       "subject_id": "subject_0305",
+      "ranking_source": "US News",
       "aliases": [
-        "?????????",
+        "社会科学与公共卫生",
         "social sciences and public health"
       ],
-      "mapping_class": "approximate",
-      "note": "???????????US News???????????????????????"
+      "note": "US News马克思主义理论无直接口径，使用社会科学与公共卫生（Social Sciences and Public Health）作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_MARXISM_THE",
-      "ranking_source": "THE",
       "subject_id": "subject_0305",
+      "ranking_source": "THE",
       "aliases": [
-        "????",
+        "社会科学",
         "Social Sciences",
-        "??????",
+        "艺术与人文",
         "Arts and Humanities"
       ],
-      "mapping_class": "approximate",
-      "note": "???????????THE????/???????????????????"
+      "note": "THE马克思主义理论使用社会科学（Social Sciences）和艺术与人文（Arts and Humanities）领域作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_OPTICAL_QS",
-      "ranking_source": "QS",
       "subject_id": "subject_0803",
+      "ranking_source": "QS",
       "aliases": [
-        "??????",
-        "???&???",
+        "物理与天文学",
+        "物理学与天文学",
         "Physics & Astronomy"
       ],
-      "mapping_class": "broad_multi_subject",
-      "note": "???????/????????QS?????????"
+      "note": "QS光学工程无直接口径，使用物理与天文学（Physics & Astronomy）作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_OPTICAL_ARWU",
-      "ranking_source": "??",
       "subject_id": "subject_0803",
+      "ranking_source": "软科",
       "aliases": [
-        "????",
+        "仪器科学",
         "Instruments Science & Technology",
-        "???????",
+        "纳米科学与技术",
         "Nanoscience & Nanotechnology"
       ],
-      "mapping_class": "approximate",
-      "note": "???????/?????????????????????????????"
+      "note": "软科光学工程使用仪器科学（Instruments Science & Technology）和纳米科学与技术（Nanoscience & Nanotechnology）作为近邻口径。"
     },
     {
-      "rule_id": "SUPP_OPTICAL_THE",
-      "ranking_source": "THE",
       "subject_id": "subject_0803",
+      "ranking_source": "THE",
       "aliases": [
-        "??",
-        "??",
-        "???",
+        "工学",
+        "工程",
+        "工程学",
         "Engineering",
-        "??",
-        "????",
+        "理学",
+        "物理科学",
         "Physical Sciences"
       ],
-      "mapping_class": "broad_multi_subject",
-      "note": "???????/????????THE??/?????????"
-    },
-    {
-      "rule_id": "SUPP_IP_MINISTRY_ALIAS",
-      "ranking_source": "ministry",
-      "subject_id": "subject_0301",
-      "aliases": [
-        "?????"
-      ],
-      "mapping_class": "approximate",
-      "note": "???????????????????????49????????"
-    },
-    {
-      "rule_id": "SUPP_EV_MINISTRY_ALIAS",
-      "ranking_source": "ministry",
-      "subject_id": "subject_0802",
-      "aliases": [
-        "??????"
-      ],
-      "mapping_class": "approximate",
-      "note": "??????????????????????49????????"
-    },
-    {
-      "rule_id": "SUPP_LOW_ALTITUDE_MINISTRY_ALIAS",
-      "ranking_source": "ministry",
-      "subject_id": "subject_0825",
-      "aliases": [
-        "???????"
-      ],
-      "mapping_class": "approximate",
-      "note": "????????????????????????????49????????"
-    },
-    {
-      "rule_id": "SUPP_OPTO_MINISTRY_ALIAS",
-      "ranking_source": "ministry",
-      "subject_id": "subject_0803",
-      "aliases": [
-        "???????"
-      ],
-      "mapping_class": "approximate",
-      "note": "???????????????????????49????????"
+      "note": "THE光学工程以工程（Engineering）和理学/物理科学（Physical Sciences）领域作为近邻口径。"
     }
   ]
 }

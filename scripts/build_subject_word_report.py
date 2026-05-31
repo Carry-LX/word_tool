@@ -207,6 +207,48 @@ def artifact_caption(slot: dict[str, Any]) -> str:
     )
 
 
+def figure_caption_prefix(caption: str) -> str:
+    text = clean_text(caption)
+    if "、" in text and text.startswith("图"):
+        return text.split("、", 1)[0] + "、"
+    return "图、"
+
+
+def source_display_name(source: str) -> str:
+    normalized = clean_text(source)
+    if normalized in {"US News", "U.S.News", "U.S. News"}:
+        return "U.S. News"
+    return normalized
+
+
+def spec_subject_label(spec_payload: dict[str, Any]) -> str:
+    source = clean_text(spec_payload.get("ranking_source"))
+    candidates = [clean_text(item) for item in spec_payload.get("candidate_subject_or_areas", []) if clean_text(item)]
+    if source == "THE" and candidates:
+        return candidates[-1]
+    return clean_text(spec_payload.get("ranking_subject_or_area")) or (candidates[-1] if candidates else "")
+
+
+def display_artifact_caption(slot: dict[str, Any], source_files: dict[str, str]) -> str:
+    caption = artifact_caption(slot)
+    artifact_id = clean_text(slot.get("artifact_id"))
+    spec_path_text = clean_text(source_files.get("chart_spec.json") or source_files.get("table_spec.json"))
+    spec_payload = read_json(Path(spec_path_text)) if spec_path_text else {}
+    source = source_display_name(spec_payload.get("ranking_source"))
+    subject_label = spec_subject_label(spec_payload)
+    if "indicator_weight" in artifact_id and source and subject_label:
+        prefix = figure_caption_prefix(caption)
+        if source == "软科":
+            return f"{prefix}软科世界一流学科{subject_label}口径指标权重"
+        if source == "QS":
+            return f"{prefix}QS学科排名{subject_label}口径指标权重"
+        if source == "U.S. News":
+            return f"{prefix}U.S. News学科排名{subject_label}口径指标权重"
+        if source == "THE":
+            return f"{prefix}THE世界学科排名{subject_label}口径指标权重"
+    return caption
+
+
 def bundle_file_role(filename: str) -> str:
     roles = {
         "chart_data.csv": "final_chart_data",
@@ -418,6 +460,7 @@ def build_artifact_source_overview(
     copied_files: list[dict[str, Any]],
     source_files: dict[str, str],
     bundle_dir: Path,
+    caption: str,
 ) -> dict[str, Any]:
     spec_name = spec_filename(source_files)
     spec_payload = read_json(Path(source_files[spec_name])) if spec_name else {}
@@ -446,7 +489,7 @@ def build_artifact_source_overview(
     overview = {
         "artifact_id": artifact_id,
         "logical_slot_id": clean_text(slot.get("logical_slot_id")),
-        "artifact_caption": artifact_caption(slot),
+        "artifact_caption": caption,
         "artifact_status": clean_text(slot.get("artifact_status")),
         "primary_data_file": primary_data_filename(source_files),
         "spec_file": spec_name,
@@ -507,7 +550,8 @@ def export_artifact_source_bundle(run_dir: Path, manifest: dict[str, Any], outpu
         source_files = slot.get("source_files", {}) or {}
         if not artifact_id or not source_files:
             continue
-        bundle_name = f"{order:02d}_{artifact_id}_{slug_text(artifact_caption(slot))[:48]}"
+        caption = display_artifact_caption(slot, source_files)
+        bundle_name = f"{order:02d}_{artifact_id}_{slug_text(caption)[:48]}"
         artifact_bundle_dir = bundle_root / bundle_name
         artifact_bundle_dir.mkdir(parents=True, exist_ok=True)
 
@@ -527,7 +571,7 @@ def export_artifact_source_bundle(run_dir: Path, manifest: dict[str, Any], outpu
                 }
             )
 
-        overview = build_artifact_source_overview(artifact_id, slot, copied_files, source_files, artifact_bundle_dir)
+        overview = build_artifact_source_overview(artifact_id, slot, copied_files, source_files, artifact_bundle_dir, caption)
         write_json(artifact_bundle_dir / "source_overview.json", overview)
         write_text(artifact_bundle_dir / "replot_request.md", build_replot_request_text(overview))
 
@@ -569,7 +613,7 @@ def export_artifact_source_bundle(run_dir: Path, manifest: dict[str, Any], outpu
                 "artifact_id": artifact_id,
                 "logical_slot_id": clean_text(slot.get("logical_slot_id")),
                 "section": clean_text(slot.get("section")),
-                "caption": artifact_caption(slot),
+                "caption": caption,
                 "bundle_dir": str(artifact_bundle_dir),
                 "primary_data_file": overview.get("primary_data_file", ""),
                 "spec_file": overview.get("spec_file", ""),

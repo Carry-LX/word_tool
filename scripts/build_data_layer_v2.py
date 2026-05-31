@@ -223,15 +223,26 @@ def build_dim_university() -> pd.DataFrame:
 
 
 def add_registry_row(rows: list[dict[str, Any]], **kwargs: Any) -> None:
+    display_value = kwargs.get("display_value")
+    match_value = kwargs.get("match_value")
+    if display_value is None:
+        display_value = kwargs.get("source_value", "")
+    if match_value is None:
+        match_value = kwargs.get("source_value", "")
     rows.append(
         {
             "mapping_id": stable_id("map", kwargs.get("mapping_type"), kwargs.get("source_system"), kwargs.get("source_value"), kwargs.get("target_value"), kwargs.get("subject_id")),
             "mapping_type": kwargs.get("mapping_type", ""),
+            "mapping_role": kwargs.get("mapping_role", ""),
             "source_system": kwargs.get("source_system", ""),
             "source_value": kwargs.get("source_value", ""),
             "source_norm": norm_key(kwargs.get("source_value", "")),
             "target_type": kwargs.get("target_type", ""),
             "target_value": kwargs.get("target_value", ""),
+            "display_value": display_value,
+            "display_norm": norm_key(display_value),
+            "match_value": match_value,
+            "match_norm": norm_key(match_value),
             "subject_id": kwargs.get("subject_id", ""),
             "ranking_source": kwargs.get("ranking_source", ""),
             "confidence": kwargs.get("confidence", ""),
@@ -257,10 +268,13 @@ def build_mapping_registry() -> pd.DataFrame:
         add_registry_row(
             rows,
             mapping_type="subject_alias",
+            mapping_role="display_alias",
             source_system=clean_text(row.get("ranking_source")),
             source_value=clean_text(row.get("ranking_subject_alias")),
             target_type="subject_id",
             target_value=clean_text(row.get("subject_id")),
+            display_value=clean_text(row.get("ranking_subject_alias")),
+            match_value=clean_text(row.get("ranking_subject_alias")),
             subject_id=clean_text(row.get("subject_id")),
             ranking_source=clean_text(row.get("ranking_source")),
             confidence=confidence,
@@ -286,11 +300,14 @@ def build_mapping_registry() -> pd.DataFrame:
                         continue
                     add_registry_row(
                         rows,
-                        mapping_type="subject_alias_rule",
+                        mapping_type="subject_match_alias_rule",
+                        mapping_role="match_alias",
                         source_system=clean_text(rule.get("ranking_source")),
                         source_value=alias,
                         target_type="subject_id",
                         target_value=subject_id,
+                        display_value="",
+                        match_value=alias,
                         subject_id=subject_id,
                         ranking_source=clean_text(rule.get("ranking_source")),
                         confidence=confidence,
@@ -307,10 +324,13 @@ def build_mapping_registry() -> pd.DataFrame:
             add_registry_row(
                 rows,
                 mapping_type="subject_to_cwts_field",
+                mapping_role="proxy_crosswalk",
                 source_system="CWTS",
                 source_value=clean_text(row.get("ministry_subject_name")),
                 target_type="cwts_field",
                 target_value=clean_text(row.get("cwts_field")),
+                display_value=clean_text(row.get("ministry_subject_name")),
+                match_value=clean_text(row.get("cwts_field")),
                 subject_id=clean_text(row.get("subject_id")),
                 ranking_source="CWTS",
                 confidence=clean_text(row.get("mapping_confidence")),
@@ -326,11 +346,14 @@ def build_mapping_registry() -> pd.DataFrame:
         for subject_key, area in data.items():
             add_registry_row(
                 rows,
-                mapping_type="the_weight_area",
+                mapping_type="the_weight_area_crosswalk",
+                mapping_role="data_match_crosswalk",
                 source_system="THE",
                 source_value=subject_key,
                 target_type="the_weight_area",
                 target_value=area,
+                display_value=subject_key,
+                match_value=area,
                 ranking_source="THE",
                 confidence="medium",
                 scope_type="ranking_area",
@@ -346,10 +369,13 @@ def build_mapping_registry() -> pd.DataFrame:
             add_registry_row(
                 rows,
                 mapping_type="indicator_group",
+                mapping_role="indicator_normalization",
                 source_system="internal",
                 source_value=source_value,
                 target_type="indicator_group",
                 target_value=target_value,
+                display_value=source_value,
+                match_value=target_value,
                 confidence="high",
                 scope_type="indicator_normalization",
                 evidence_level="manual_override",

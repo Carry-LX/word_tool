@@ -169,10 +169,11 @@ def build_slot_decisions(
         section = clean_text(row.get("section"))
         generated = artifact_generation.get(artifact_id, {})
         readiness = artifact_readiness.get(artifact_id, {})
+        readiness_status = clean_text(readiness.get("readiness_status"))
         status = clean_text(generated.get("status")) or clean_text(readiness.get("readiness_status")) or "missing"
         source_files = artifact_output_files(run_dir, artifact_id)
         has_visual = "chart.png" in source_files or "table.png" in source_files or "table_matrix.csv" in source_files
-        include = status == "generated" and has_visual
+        include = status == "generated" and readiness_status == "ready" and has_visual
         if not allow_all:
             include = include and (artifact_id in partial_allowed_artifacts or section in partial_allowed_sections)
         decisions.append(
@@ -185,7 +186,7 @@ def build_slot_decisions(
                 "reference_object": clean_text(row.get("reference_object")),
                 "artifact_id": artifact_id,
                 "artifact_status": status,
-                "readiness_status": clean_text(readiness.get("readiness_status")),
+                "readiness_status": readiness_status,
                 "include_in_word": include,
                 "skip_reason": "" if include else "not_generated_or_excluded_by_template_policy",
                 "source_files": source_files,

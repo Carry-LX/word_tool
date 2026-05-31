@@ -29,6 +29,25 @@ AND dim_subject_alias.subject_id = :subject_id
 
 The same rule applies to indicator facts through the indicator bridge or alias-normalized joins.
 
+## Subject Mapping Display vs Match
+
+Use `processed/dim_subject_mapping_explain.csv` and `processed/dim_subject_alias.csv` as the first source for Word-visible ranking subject labels.
+
+Use `processed/mapping_registry.csv` for governance and lineage. Its `mapping_role` field separates:
+
+- `display_alias`: can be shown in Word as the ranking subject/area label.
+- `match_alias`: internal matching alias only; do not use as the Word-visible label.
+- `data_match_crosswalk`: internal source-data crosswalk, such as THE display area to THE weight/history area.
+- `proxy_crosswalk`: proxy data crosswalk; disclose before using in reports.
+
+Example: if the ministry mapping file says chemistry maps to THE `物理学`, but THE weight data is stored under `自然科学`, Word should display `物理学` and preserve `自然科学` only as source lineage, such as `source_ranking_subject_raw`.
+
+Detailed handoff note:
+
+```text
+docs/subject_mapping_display_match_contract_20260529.md
+```
+
 ## Missing Data Semantics
 
 Use these distinctions in reports and audits:
