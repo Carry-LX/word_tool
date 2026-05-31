@@ -5,6 +5,7 @@ import json
 import hashlib
 import re
 import shutil
+import sqlite3
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -31,6 +32,8 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 TEMPLATE_DOCX = PROJECT_DIR / "data" / "同济大学XX学科的国际排名发展分析-2026年5月.docx"
 SLOT_MAPPING_CSV = PROJECT_DIR / "configs" / "template_slot_inventory" / "logical_slot_artifact_mapping.csv"
 NARRATIVE_MAPPING_JSON = PROJECT_DIR / "configs" / "template_slot_inventory" / "narrative_paragraph_mapping.json"
+DIM_SUBJECT_ALIAS_CSV = PROJECT_DIR / "processed" / "dim_subject_alias.csv"
+SQLITE_PATH = PROJECT_DIR / "processed" / "ranking.sqlite"
 RANKING_SOURCES = ["软科", "QS", "US News", "THE"]
 
 # 这里显式指定本次试跑使用哪一次学科产物。正常报告请通过 build_subject_word_report.py 注入。
@@ -1167,6 +1170,90 @@ def source_runtime_status(source: str) -> str:
     return clean_text(read_source_decision_by_source().get(source, {}).get("overall_status", ""))
 
 
+def subject_mapping_key(value: Any) -> str:
+    text = clean_text(value).lower().replace("&", " and ")
+    return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "", text)
+
+
+def read_mapping_table_aliases(source: str) -> list[str]:
+    payload = read_target_subject_payload()
+    subject_id = clean_text(payload.get("resolved_subject", {}).get("subject_id", ""))
+    if not subject_id or not DIM_SUBJECT_ALIAS_CSV.exists():
+        return []
+    source_key = "US News" if source in {"U.S. News", "US News"} else source
+    aliases: list[str] = []
+    with DIM_SUBJECT_ALIAS_CSV.open("r", encoding="utf-8-sig", newline="") as handle:
+        for row in csv.DictReader(handle):
+            if clean_text(row.get("subject_id", "")) != subject_id:
+                continue
+            if clean_text(row.get("ranking_source", "")) != source_key:
+                continue
+            alias = clean_text(row.get("ranking_subject_alias", ""))
+            if alias and not is_missing_subject_label(alias):
+                aliases.append(alias)
+    return ordered_unique(aliases)
+
+
+def latest_tongji_rank_for_mapping_alias(source: str, alias: str) -> str:
+    if not SQLITE_PATH.exists():
+        return ""
+    source_key = "US News" if source in {"U.S. News", "US News"} else source
+    alias_key = subject_mapping_key(alias)
+    if not alias_key:
+        return ""
+    query = """
+    SELECT ranking_year, release_year, ranking_subject_raw, ranking_subject_norm, rank_raw, rank_midpoint
+    FROM fact_ranking
+    WHERE ranking_source = ?
+      AND (is_tongji = 1 OR lower(is_tongji) = 'true' OR university_name_cn LIKE '%同济%' OR university_name_en LIKE '%Tongji%')
+    """
+    try:
+        with sqlite3.connect(SQLITE_PATH) as conn:
+            rows = conn.execute(query, [source_key]).fetchall()
+    except Exception:
+        return ""
+    matched = []
+    for ranking_year, release_year, raw, norm, rank_raw, rank_midpoint in rows:
+        raw_key = subject_mapping_key(raw)
+        norm_key = subject_mapping_key(norm)
+        if alias_key not in {raw_key, norm_key}:
+            continue
+        year = to_number(ranking_year) or to_number(release_year) or 0
+        rank = clean_rank_display(rank_raw) or format_number(rank_midpoint)
+        if rank:
+            matched.append((year, int(year) if year else 0, rank))
+    if not matched:
+        return ""
+    matched.sort(key=lambda item: item[0])
+    _, year, rank = matched[-1]
+    return f"{year}年第{rank}" if year else f"最新记录第{rank}"
+
+
+def mapping_table_scope_note_for_source(source: str, selected_label: str) -> str:
+    aliases = read_mapping_table_aliases(source)
+    if len(aliases) <= 1:
+        return ""
+    selected_key = subject_mapping_key(selected_label)
+    alternatives = [alias for alias in aliases if subject_mapping_key(alias) != selected_key]
+    if not alternatives:
+        return ""
+    selected_text = selected_label if selected_label and not is_missing_subject_label(selected_label) else aliases[0]
+    details = []
+    for alias in alternatives:
+        latest = latest_tongji_rank_for_mapping_alias(source, alias)
+        if latest:
+            details.append(f"“{alias}”口径有同济{latest}")
+        else:
+            details.append(f"“{alias}”口径暂未匹配到同济最新综合位次")
+    source_label = display_source_name(source)
+    return (
+        f"映射表中，{source_label}还对应{'、'.join(f'“{alias}”' for alias in alternatives)}。"
+        f"本报告图表以“{selected_text}”作为主呈现口径；"
+        + "；".join(details)
+        + "，因此不另行制图，只在文字中作为同榜单映射背景提示。"
+    )
+
+
 def arwu_public_subject_label(default: str = "") -> str:
     rows = read_artifact_rows("figure_03_arwu_indicator_weight", "chart_data.csv")
     if rows:
@@ -1316,6 +1403,7 @@ def summarize_overview(artifact_id: str) -> str:
         return ""
     parts = []
     scope_parts = []
+    mapping_notes = []
     for row in rows:
         source = clean_text(row.get("ranking_source", ""))
         subject = clean_text(row.get("ranking_subject_raw", ""))
@@ -1326,15 +1414,19 @@ def summarize_overview(artifact_id: str) -> str:
             parts.append(f"{display_source_name(source)} {year}年{subject_part}第{rank}")
         if source and subject:
             scope_parts.append(f"{display_source_name(source)}：{subject}")
+            note = mapping_table_scope_note_for_source(source, subject)
+            if note:
+                mapping_notes.append(note)
     if not parts:
         return ""
     source_count = len(parts)
     scope = "四类国际学科排名" if source_count >= 4 else f"{source_count}类可用国际学科排名"
     scope_text = f"当前实际采用口径分别为：{'；'.join(ordered_unique(scope_parts))}。" if scope_parts else ""
+    mapping_text = "".join(ordered_unique(mapping_notes))
     return (
         f"同济大学{read_target_subject_name()}学科在{scope}中形成最新记录："
         + "，".join(parts)
-        + f"。{scope_text}未覆盖榜单不作强行补齐，解读时应同时说明榜单口径差异和数据缺口。"
+        + f"。{scope_text}{mapping_text}未覆盖榜单不作强行补齐，解读时应同时说明榜单口径差异和数据缺口。"
     )
 
 
@@ -1370,21 +1462,23 @@ def summarize_weight(artifact_id: str) -> str:
     if source_name == "THE":
         subject_label = read_target_subject_area() or subject_label
     source_status_key = "US News" if source_name == "U.S. News" else source_name
+    mapping_note = mapping_table_scope_note_for_source(source_status_key, subject_label)
     if not source_has_tongji_latest(source_status_key):
         return (
             f"{source_name} 在{subject_label}口径下的权重前三为{group_text}。"
             f"当前事实层尚未匹配到同济大学在该{source_name}口径下的最新综合位次，"
             "因此本图仅用于理解该榜单公开评价方法，不用于判断同济综合排名变化。"
+            + mapping_note
         )
     if source_name == "QS":
-        return f"QS 在{subject_label}口径下，学术声誉和雇主声誉合计占比较高，权重前三为{group_text}。因此 QS 位次提升不能只解释为论文指标改善，还需要同步观察国际同行声誉和雇主评价的积累。"
+        return f"QS 在{subject_label}口径下，学术声誉和雇主声誉合计占比较高，权重前三为{group_text}。因此 QS 位次提升不能只解释为论文指标改善，还需要同步观察国际同行声誉和雇主评价的积累。" + mapping_note
     if source_name == "U.S. News":
-        return f"U.S. News 在{subject_label}口径下，权重前三为{group_text}，科研产出和引用影响构成主要评价基础。后续分析应重点看高被引占比、标准化引文影响和国际合作是否支撑综合位次。"
+        return f"U.S. News 在{subject_label}口径下，权重前三为{group_text}，科研产出和引用影响构成主要评价基础。后续分析应重点看高被引占比、标准化引文影响和国际合作是否支撑综合位次。" + mapping_note
     if source_name == "THE":
-        return f"THE 在{subject_label}口径下权重前三为{group_text}，评价重心较均衡地分布在研究环境、教学和研究质量。该口径下，单纯提升论文规模不足以解释排名变化，还需要看研究质量和国际化维度。"
+        return f"THE 在{subject_label}口径下权重前三为{group_text}，评价重心较均衡地分布在研究环境、教学和研究质量。该口径下，单纯提升论文规模不足以解释排名变化，还需要看研究质量和国际化维度。" + mapping_note
     if source_name == "软科":
-        return f"软科在{subject_label}口径下的权重前三为{group_text}，更偏向科研产出、国际合作和高水平成果。对同济而言，后续应把综合位次变化与高水平论文、论文影响力和一流师资等分项共同判断。"
-    return f"{source_name}在{subject_label}口径下的权重主要集中在{group_text}，应与同济大学对应分项表现联动解读。"
+        return f"软科在{subject_label}口径下的权重前三为{group_text}，更偏向科研产出、国际合作和高水平成果。对同济而言，后续应把综合位次变化与高水平论文、论文影响力和一流师资等分项共同判断。" + mapping_note
+    return f"{source_name}在{subject_label}口径下的权重主要集中在{group_text}，应与同济大学对应分项表现联动解读。" + mapping_note
 
 
 def summarize_commonality(artifact_id: str) -> str:
@@ -3083,6 +3177,7 @@ def summarize_qs_comprehensive_history_for_residual_text(subject_name: str, qs_s
     first_mid = to_number(first.get("rank_midpoint", ""))
     latest_mid = to_number(latest.get("rank_midpoint", ""))
     subject_label = report_selected_subject_label("QS", "") or clean_text(first.get("ranking_subject_raw", "")) or clean_text(qs_subject_name) or subject_name
+    mapping_note = mapping_table_scope_note_for_source("QS", subject_label)
     if first_mid is not None and latest_mid is not None and len(rows) >= 2:
         direction = "明显提升" if latest_mid < first_mid else "有所回落" if latest_mid > first_mid else "基本稳定"
         return (
@@ -3091,12 +3186,14 @@ def summarize_qs_comprehensive_history_for_residual_text(subject_name: str, qs_s
             f"区间中位位次约由{first_mid:g}变为{latest_mid:g}，整体{direction}。"
             "该变化可作为观察国际声誉和同行竞争位势的重要证据；"
             "但分项归因仍需以声誉、雇主评价、篇均被引和 H 指数等指标为边界，避免把综合位次提升直接等同于所有维度改善。"
+            + mapping_note
         )
     latest_year_text = f"{latest_year}年" if latest_year else "最新年份"
     return (
         f"QS 学科排名已有{subject_name}学科综合位次记录，当前采用“{subject_label}”口径，"
         f"{latest_year_text}位次为{rank_text(latest)}。该结果可用于观察综合竞争位置；"
         "分项指标多年历史尚未完全结构化，后续应补齐声誉、雇主评价、篇均被引和 H 指数等口径后再展开归因。"
+        + mapping_note
     )
 
 
@@ -3173,6 +3270,7 @@ def summarize_source_history_for_residual_text(source: str, subject_name: str) -
     latest_mid = to_number(latest.get("rank_midpoint", ""))
     source_label = display_source_name(source)
     subject_label = subject_label_from_artifact_rows(rows, subject_name)
+    mapping_note = mapping_table_scope_note_for_source(source, subject_label)
     if first_mid is not None and latest_mid is not None and len(rows) >= 2:
         direction = "明显提升" if latest_mid < first_mid else "有所回落" if latest_mid > first_mid else "基本稳定"
         return (
@@ -3180,11 +3278,13 @@ def summarize_source_history_for_residual_text(source: str, subject_name: str) -
             f"{first_year}年为{rank_text(first)}，{latest_year}年为{rank_text(latest)}，"
             f"区间中位位次约由{first_mid:g}变为{latest_mid:g}，整体{direction}。"
             "该变化可用于观察综合竞争位置；分项归因仍需回到该榜单自己的指标口径，避免跨榜单直接套用。"
+            + mapping_note
         )
     latest_year_text = f"{latest_year}年" if latest_year else "最新年份"
     return (
         f"{source_label} 学科排名已有{subject_name}学科综合位次记录，当前采用“{subject_label}”口径，"
         f"{latest_year_text}位次为{rank_text(latest)}。该结果可用于观察综合竞争位置，分项原因需以对应榜单指标为边界。"
+        + mapping_note
     )
 
 

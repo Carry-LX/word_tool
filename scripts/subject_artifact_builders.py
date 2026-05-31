@@ -1812,16 +1812,21 @@ def render_weight_tree(tree_df: pd.DataFrame, title: str, out_path: Path) -> Non
 def build_weight_artifact(run_dir: Path, subject: dict[str, Any], source: str, artifact_id: str, title_source: str) -> dict[str, Any]:
     out = artifact_dir(run_dir, artifact_id)
     weights = read_weights()
-    candidates = candidate_weight_areas(subject, source)
-    if source in {"QS", "US News"}:
-        candidates = ordered_unique(latest_overview_subject_areas(run_dir, source) + candidates)
+    overview_candidates = latest_overview_subject_areas(run_dir, source)
+    candidates = overview_candidates or candidate_weight_areas(subject, source)
     df, area = find_weight_subset(weights, source, candidates)
+    if df.empty and overview_candidates:
+        return {
+            "artifact_id": artifact_id,
+            "status": "skipped",
+            "reason": f"missing selected-source weight: {source}/{';'.join(overview_candidates)}",
+        }
     if df.empty and source == "THE":
         df, area = find_weight_subset(weights, source, ["自然科学"])
     if df.empty:
         return {"artifact_id": artifact_id, "status": "skipped", "reason": f"missing weight: {source}/{area}"}
-    display_area = expected_ranking_area(subject, source) or area
-    if source in {"QS", "US News"} and display_area and area and normalize_text_key(display_area) != normalize_text_key(area):
+    display_area = area if overview_candidates else (expected_ranking_area(subject, source) or area)
+    if source in {"QS", "US News", "软科"} and display_area and area and normalize_text_key(display_area) != normalize_text_key(area):
         df = df.copy()
         df["source_ranking_subject_or_area"] = df["ranking_subject_or_area"]
         df["ranking_subject_or_area"] = display_area
