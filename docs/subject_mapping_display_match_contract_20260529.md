@@ -83,6 +83,15 @@ THE：物理学
 
 只能作为 `data_match_crosswalk` 的 `match_value`，不能覆盖 Word 中的 `物理学`。
 
+## 生物学补丁
+
+原始 Excel 中 `0710 生物学` 在两个 sheet 内部存在冲突：
+
+- `学科映射关系` 的 THE 字段写为 `物理学`。
+- `Sheet1` 中 `THE世界学科排名 / 生命科学` 明确对应 `生物学、生态学、兽医学、林学、作物学、园艺学、植物保护、草学、畜牧学、水产`。
+
+运行口径以 `生命科学` 作为 `0710 生物学` 的 THE 展示和匹配口径。该补丁写入 `scripts/build_processed_core.py` 的 `SUBJECT_MAPPING_DISPLAY_CORRECTIONS`，避免 Word 报告继续把生物学误写为 THE 物理学口径。
+
 ## 快速核查方式
 
 核查某个一级学科对四大榜单的展示口径，优先看：

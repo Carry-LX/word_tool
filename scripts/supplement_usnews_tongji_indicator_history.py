@@ -21,6 +21,19 @@ OUTPUT_SUMMARY_MD = EXTERNAL_REPORT_DIR / "usnews_tongji_indicator_history_suppl
 
 SOURCE_CONFIGS = [
     {
+        "file_keyword": "2021US News",
+        "sheet": "Sheet1",
+        "release_year_col": "pubyear",
+        "ranking_year": 2021,
+        "subject_en_col": "subject",
+        "subject_cn_col": "",
+        "university_en_col": "university",
+        "university_cn_col": "university_zh",
+        "rank_col": "subjectrank",
+        "score_col": "subjectscore",
+        "indicator_columns": {},
+    },
+    {
         "file_keyword": "2022US News",
         "sheet": "Sheet2",
         "release_year": 2021,
@@ -297,7 +310,7 @@ def write_outputs(long_df: pd.DataFrame) -> dict[str, Any]:
         "## 说明",
         "",
         "- 数据来自本地已有 US News 学科排名明细 Excel，不是单独为某一学科手工录入。",
-        "- 2021 文件只有总分/总排名，缺少分项指标列，因此未纳入分项历史。",
+        "- 2021 文件只有总分/总排名，缺少分项指标列，因此仅纳入总得分，不生成分项指标排名。",
         "- 该补充文件按 US News 原始学科口径保存，后续 subject agent 通过学科 alias 自动筛选目标学科。",
     ]
     OUTPUT_SUMMARY_MD.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")

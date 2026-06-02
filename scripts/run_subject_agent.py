@@ -7,6 +7,7 @@ import re
 import sqlite3
 import sys
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,7 @@ FACT_INDICATOR_SUBJECT_BRIDGE_CSV = PROCESSED_DIR / "fact_ranking_indicator_subj
 LOGICAL_SLOT_MAPPING_CSV = CONFIG_DIR / "template_slot_inventory" / "logical_slot_artifact_mapping.csv"
 CURRENT_REQUEST_JSON = CONFIG_DIR / "runtime" / "current_subject_request.json"
 THE_WEIGHT_AREA_CROSSWALK_JSON = CONFIG_DIR / "runtime" / "the_weight_area_crosswalk.json"
+THE_RANKING_AREA_CROSSWALK_JSON = CONFIG_DIR / "runtime" / "the_ranking_area_crosswalk.json"
 README_PATH = PROJECT_DIR / "README.md"
 RECOMMENDED_PYTHON = agent_runtime.resolve_project_path(
     RUNTIME_PROFILE.get("recommended_python"),
@@ -180,12 +182,35 @@ def valid_mapping_value(value: Any) -> str:
     return public_supplements.valid_mapping_value(value)
 
 
+def single_mapping_value(value: Any) -> str:
+    text = valid_mapping_value(value)
+    if not text or re.search(r"[\n\r,;，、；/]+", text):
+        return ""
+    return text
+
+
 def canonical_the_area(value: Any) -> str:
     area = valid_mapping_value(value)
     if area and THE_WEIGHT_AREA_CROSSWALK_JSON.exists():
         crosswalk = json.loads(THE_WEIGHT_AREA_CROSSWALK_JSON.read_text(encoding="utf-8"))
         return valid_mapping_value(crosswalk.get(area, area))
     return area
+
+
+def the_ranking_area_candidates(value: Any) -> list[str]:
+    area = valid_mapping_value(value)
+    if not area:
+        return []
+    values: list[Any] = [area, canonical_the_area(area)]
+    if THE_RANKING_AREA_CROSSWALK_JSON.exists():
+        crosswalk = json.loads(THE_RANKING_AREA_CROSSWALK_JSON.read_text(encoding="utf-8"))
+        for item in list(values):
+            mapped = crosswalk.get(clean_text(item))
+            if isinstance(mapped, list):
+                values.extend(mapped)
+            elif mapped:
+                values.append(mapped)
+    return ordered_unique([valid_mapping_value(item) for item in values])
 
 
 def add_alias_values(subject: dict[str, Any], source: str, values: list[Any]) -> int:
@@ -278,6 +303,7 @@ def resolve_subject() -> dict[str, Any]:
         .apply(lambda s: sorted({clean_text(x) for x in s if clean_text(x)}))
         .to_dict()
     )
+    alias_details = alias_rows.to_dict(orient="records")
     subject = {
         "target_university": TARGET_UNIVERSITY,
         "target_subject": TARGET_SUBJECT,
@@ -296,6 +322,7 @@ def resolve_subject() -> dict[str, Any]:
         "usnews_subject_name": row.get("usnews_subject_name", ""),
         "the_subject_area": row.get("the_subject_area", ""),
         "alias_summary": alias_summary,
+        "alias_details": alias_details,
         "alias_row_count": len(alias_rows),
     }
     public_records = public_supplements.public_supplement_records(subject)
@@ -323,6 +350,126 @@ def source_alias_display(subject: dict[str, Any], source: str) -> str:
     aliases = [valid_mapping_value(value) for value in subject.get("alias_summary", {}).get(source, [])]
     aliases = [value for value in ordered_unique(aliases) if value]
     return "、".join(aliases)
+
+
+@lru_cache(maxsize=1)
+def load_usnews_bilingual_subject_aliases() -> dict[str, tuple[str, ...]]:
+    pairs: dict[str, set[str]] = {}
+
+    def add_pair(left: Any, right: Any) -> None:
+        left_text = clean_text(left)
+        right_text = clean_text(right)
+        if not left_text or not right_text or normalize_key(left_text) == normalize_key(right_text):
+            return
+        pairs.setdefault(normalize_key(left_text), set()).add(right_text)
+        pairs.setdefault(normalize_key(right_text), set()).add(left_text)
+
+    configs = [
+        ("2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx", "全球排名", "学科中文", "学科"),
+        ("2025-2026年度US News世界学科排名20251124.xlsx", "Sheet1", "学科中文", "学科英文"),
+    ]
+    for filename, sheet, cn_col, en_col in configs:
+        path = DATA_DIR / filename
+        if not path.exists():
+            continue
+        try:
+            df = pd.read_excel(path, sheet_name=sheet, dtype=str).fillna("")
+        except Exception:
+            continue
+        if cn_col not in df.columns or en_col not in df.columns:
+            continue
+        for _, row in df[[cn_col, en_col]].drop_duplicates().iterrows():
+            add_pair(row.get(cn_col), row.get(en_col))
+    return {key: tuple(sorted(values)) for key, values in pairs.items() if values}
+
+
+def expand_usnews_bilingual_values(values: list[Any]) -> list[str]:
+    aliases = load_usnews_bilingual_subject_aliases()
+    expanded: list[str] = []
+    for value in values:
+        for item in candidate_subject_areas(value):
+            if not clean_text(item):
+                continue
+            expanded.append(item)
+            expanded.extend(aliases.get(normalize_key(item), ()))
+    return ordered_unique(expanded)
+
+
+def source_primary_alias_values(subject: dict[str, Any], source: str) -> list[str]:
+    values: list[str] = []
+    for row in subject.get("alias_details", []):
+        if clean_text(row.get("ranking_source")) != source:
+            continue
+        source_note = clean_text(row.get("source_note"))
+        if source == "US News" and "USNEWS_ENGINEERING_BROAD" in source_note:
+            continue
+        alias = clean_text(row.get("ranking_subject_alias"))
+        if alias:
+            values.append(alias)
+    if values:
+        return ordered_unique(values)
+    return ordered_unique(subject.get("alias_summary", {}).get(source, []))
+
+
+def primary_source_area_values(subject: dict[str, Any], source: str) -> list[str]:
+    values: list[Any] = [
+        subject.get("target_subject"),
+        subject.get("subject_short_name"),
+        subject.get("ministry_subject_name"),
+    ]
+    override = subject.get("source_runtime_overrides", {}).get(source, {})
+    if source == "US News":
+        values.extend(candidate_subject_areas(subject.get("usnews_subject_name")))
+        values.extend([override.get("ranking_subject_or_area"), override.get("weight_subject_or_area")])
+        values.extend(source_primary_alias_values(subject, source))
+        return expand_usnews_bilingual_values(values)
+    values.extend([override.get("ranking_subject_or_area"), override.get("weight_subject_or_area")])
+    values.extend(subject.get("alias_summary", {}).get(source, []))
+    candidates: list[str] = []
+    for value in values:
+        candidates.extend(candidate_subject_areas(value))
+    return ordered_unique(candidates)
+
+
+def primary_source_area_keys_for_frame(df: pd.DataFrame, subject: dict[str, Any], source: str) -> set[str]:
+    if source != "US News" or df.empty:
+        return set()
+    available_keys: set[str] = set()
+    for column in ["ranking_subject_raw", "ranking_subject_norm", "ranking_subject_alias"]:
+        if column in df.columns:
+            available_keys.update(normalize_key(value) for value in df[column].tolist() if normalize_key(value))
+    if not available_keys:
+        return set()
+    scored_matches: list[tuple[int, int, int, set[str]]] = []
+    for preferred in primary_source_area_values(subject, source):
+        equivalent_values = expand_usnews_bilingual_values([preferred])
+        equivalent_keys = {normalize_key(value) for value in equivalent_values if normalize_key(value)}
+        equivalent_keys.update(key.replace("/", "") for key in list(equivalent_keys) if "/" in key)
+        matched_keys = equivalent_keys & available_keys
+        if matched_keys:
+            masks = []
+            for column in ["ranking_subject_raw", "ranking_subject_norm", "ranking_subject_alias"]:
+                if column in df.columns:
+                    masks.append(df[column].map(normalize_key).isin(matched_keys))
+            if masks:
+                mask = masks[0]
+                for item in masks[1:]:
+                    mask = mask | item
+                matched = df[mask].copy()
+                years = matched.get("ranking_year", pd.Series(dtype=str)).map(clean_text).nunique()
+                if "is_tongji" in matched.columns:
+                    tongji_matched = matched[matched["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
+                    tongji_years = tongji_matched.get("ranking_year", pd.Series(dtype=str)).map(clean_text).nunique()
+                else:
+                    tongji_years = 0
+            else:
+                years = 0
+                tongji_years = 0
+            scored_matches.append((int(tongji_years), int(years), -len(scored_matches), matched_keys))
+    if scored_matches:
+        scored_matches.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
+        return scored_matches[0][3]
+    return set()
 
 
 def query_ranking_records(subject_id: str) -> pd.DataFrame:
@@ -365,6 +512,17 @@ def query_supplemental_ranking_records(subject: dict[str, Any]) -> pd.DataFrame:
         source: {normalize_key(value) for value in alias_summary.get(source, []) if normalize_key(value)}
         for source in RANKING_SOURCES
     }
+    if "THE" in source_aliases:
+        expanded = set(source_aliases["THE"])
+        override = subject.get("source_runtime_overrides", {}).get("THE", {})
+        values = list(alias_summary.get("THE", [])) + [
+            subject.get("the_subject_area"),
+            override.get("ranking_subject_or_area"),
+            override.get("weight_subject_or_area"),
+        ]
+        for value in values:
+            expanded.update(normalize_key(item) for item in the_ranking_area_candidates(value) if normalize_key(item))
+        source_aliases["THE"] = expanded
     source_aliases = {source: aliases for source, aliases in source_aliases.items() if aliases}
     if not source_aliases:
         return pd.DataFrame()
@@ -536,20 +694,25 @@ def supplement_the_tongji_history_records(records: pd.DataFrame, subject: dict[s
 
 def expected_ranking_area(subject: dict[str, Any], source: str) -> str:
     override = subject.get("source_runtime_overrides", {}).get(source, {})
+    if source == "QS":
+        mapped = single_mapping_value(subject.get("qs_subject_name"))
+        if mapped:
+            return mapped
+    if source == "THE":
+        mapped = valid_mapping_value(subject.get("the_subject_area"))
+        if mapped:
+            return mapped
     override_area = valid_mapping_value(override.get("ranking_subject_or_area"))
     if override_area:
         return override_area
     if source == "软科":
         return valid_mapping_value(subject.get("arwu_subject_name")) or clean_text(subject.get("target_subject"))
     if source == "QS":
-        return (
-            valid_mapping_value(subject.get("qs_subject_name"))
-            or source_alias_display(subject, source)
-        )
+        return source_alias_display(subject, source)
     if source == "US News":
         return valid_mapping_value(subject.get("usnews_subject_name")) or source_alias_display(subject, source)
     if source == "THE":
-        return valid_mapping_value(subject.get("the_subject_area")) or source_alias_display(subject, source)
+        return source_alias_display(subject, source)
     return clean_text(subject.get("target_subject"))
 
 
@@ -560,12 +723,31 @@ def source_area_candidates(subject: dict[str, Any], source: str) -> list[str]:
     candidates: list[str] = []
     for value in ordered_unique([valid_mapping_value(item) for item in values]):
         candidates.extend(candidate_subject_areas(value))
-    return ordered_unique(candidates)
+    candidates = ordered_unique(candidates)
+    if source == "THE":
+        expanded: list[str] = []
+        for candidate in candidates:
+            expanded.extend(the_ranking_area_candidates(candidate))
+        return ordered_unique(expanded)
+    return candidates
 
 
 def filter_to_selected_source_area(df: pd.DataFrame, subject: dict[str, Any], source: str) -> pd.DataFrame:
     if df.empty:
         return df
+    primary_keys = primary_source_area_keys_for_frame(df, subject, source)
+    if primary_keys:
+        masks = []
+        for column in ["ranking_subject_raw", "ranking_subject_norm", "ranking_subject_alias"]:
+            if column in df.columns:
+                masks.append(df[column].map(normalize_key).isin(primary_keys))
+        if masks:
+            mask = masks[0]
+            for item in masks[1:]:
+                mask = mask | item
+            matched = df[mask].copy()
+            if not matched.empty:
+                return matched
     candidate_keys = {normalize_key(value) for value in source_area_candidates(subject, source) if normalize_key(value)}
     if not candidate_keys:
         return df.iloc[0:0].copy()
@@ -594,9 +776,22 @@ def build_ranking_availability(subject: dict[str, Any], records: pd.DataFrame) -
         tongji = latest[latest["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
         mainland = latest_for_peer[latest_for_peer.apply(is_mainland, axis=1)].copy() if not latest_for_peer.empty else latest_for_peer
         top200 = mainland[pd.to_numeric(mainland["rank_midpoint"], errors="coerce") <= TOP_RANK_MIDPOINT].copy()
+        selected_area = expected_ranking_area(subject, source)
+        observed_latest_area = ""
+        if not latest.empty:
+            observed_areas = ordered_unique(
+                [
+                    clean_text(value)
+                    for value in latest.get("ranking_subject_raw", pd.Series(dtype=str)).tolist()
+                    if clean_text(value)
+                ]
+            )
+            if observed_areas:
+                observed_latest_area = "；".join(observed_areas[:4])
         row = {
             "ranking_source": source,
-            "selected_ranking_subject_or_area": expected_ranking_area(subject, source),
+            "selected_ranking_subject_or_area": selected_area,
+            "observed_latest_subject_or_area": observed_latest_area,
             "latest_release_year": int(latest["release_year"].max()) if not latest.empty else "",
             "latest_ranking_year": int(latest["ranking_year"].max()) if not latest.empty else "",
             "latest_rows": len(latest),
@@ -654,7 +849,7 @@ def weight_candidate_values(subject: dict[str, Any], source: str, records: pd.Da
     return ordered_unique(candidates)
 
 
-def latest_tongji_ranking_subject_area(records: pd.DataFrame, source: str) -> str:
+def latest_tongji_ranking_subject_area(records: pd.DataFrame, source: str, subject: dict[str, Any] | None = None) -> str:
     if records is None or records.empty:
         return ""
     latest = latest_source_rows(records, source)
@@ -663,6 +858,19 @@ def latest_tongji_ranking_subject_area(records: pd.DataFrame, source: str) -> st
     tongji = latest[latest["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
     if tongji.empty:
         return ""
+    primary_keys = primary_source_area_keys_for_frame(tongji, subject, source) if subject else set()
+    if primary_keys:
+        masks = []
+        for column in ["ranking_subject_raw", "ranking_subject_norm", "ranking_subject_alias"]:
+            if column in tongji.columns:
+                masks.append(tongji[column].map(normalize_key).isin(primary_keys))
+        if masks:
+            mask = masks[0]
+            for item in masks[1:]:
+                mask = mask | item
+            primary = tongji[mask].copy()
+            if not primary.empty:
+                tongji = primary
     tongji["_rank_sort"] = pd.to_numeric(tongji.get("rank_midpoint", pd.Series(dtype=str)), errors="coerce")
     broad_keys = {"engineering", "工程", "工程学", "natural sciences", "physical sciences", "social sciences"}
     tongji["_broad_subject"] = tongji.get("ranking_subject_raw", pd.Series([""] * len(tongji))).map(
@@ -706,7 +914,7 @@ def attach_runtime_public_supplements(subject: dict[str, Any], records: pd.DataF
     strategy = public_supplements.usnews_weight_strategy()
     if strategy.get("prefer_actual_ranking_subject"):
         weights = read_weight_data()
-        actual_ranking_area = latest_tongji_ranking_subject_area(records, "US News")
+        actual_ranking_area = latest_tongji_ranking_subject_area(records, "US News", subject)
         candidates = ordered_unique(candidate_subject_areas(actual_ranking_area) + weight_candidate_values(subject, "US News", records))
         subset, matched_area = find_weight_subset(weights, "US News", candidates)
         requires_disclosure = bool(strategy.get("requires_disclosure_when_inferred"))
@@ -731,22 +939,33 @@ def attach_runtime_public_supplements(subject: dict[str, Any], records: pd.DataF
         for source in sorted(supplement_rows.get("ranking_source", pd.Series(dtype=str)).dropna().astype(str).unique().tolist()):
             if source in subject["source_runtime_overrides"]:
                 continue
-            if supplement_rows[supplement_rows["ranking_source"] == source].empty:
+            source_rows = supplement_rows[supplement_rows["ranking_source"] == source].copy()
+            if source_rows.empty:
                 continue
+            all_source_rows = records[records.get("ranking_source", pd.Series(dtype=str)).astype(str).eq(source)].copy()
+            primary_keys = primary_source_area_keys_for_frame(all_source_rows, subject, source)
+            if primary_keys:
+                primary_rows = filter_to_selected_source_area(all_source_rows, subject, source)
+            else:
+                primary_rows = source_rows
+            if not primary_rows.empty:
+                primary_rows = primary_rows.copy()
+                primary_rows["_sort_ranking_year"] = pd.to_numeric(primary_rows.get("ranking_year", pd.Series(dtype=str)), errors="coerce")
+                primary_rows["_sort_release_year"] = pd.to_numeric(primary_rows.get("release_year", pd.Series(dtype=str)), errors="coerce")
+                primary_rows = primary_rows.sort_values(["_sort_ranking_year", "_sort_release_year"], ascending=[False, False])
+            primary_area = clean_text(
+                (primary_rows.get("ranking_subject_raw", pd.Series(dtype=str)).dropna().astype(str).tolist() or [""])[0]
+            )
+            supplemental_areas = ordered_unique(
+                [
+                    clean_text(value)
+                    for value in source_rows.get("ranking_subject_raw", pd.Series(dtype=str)).dropna().astype(str).tolist()
+                    if clean_text(value)
+                ]
+            )
             subject["source_runtime_overrides"][source] = {
-                "ranking_subject_or_area": ";".join(
-                    sorted(
-                        {
-                            clean_text(value)
-                            for value in supplement_rows[supplement_rows["ranking_source"] == source]
-                            .get("ranking_subject_raw", pd.Series(dtype=str))
-                            .dropna()
-                            .astype(str)
-                            .tolist()
-                            if clean_text(value)
-                        }
-                    )[:8]
-                ),
+                "ranking_subject_or_area": primary_area,
+                "supplemental_subject_or_areas": "；".join([area for area in supplemental_areas if normalize_key(area) not in primary_keys][:12]),
                 "proxy_level": "runtime_direct_alias_supplement",
                 "requires_disclosure": False,
                 "reason": "本地事实表存在同济记录，但原始学科口径未能通过 subject_id 直接 join；已按映射表或公开直接别名补入，不作为代理口径。",

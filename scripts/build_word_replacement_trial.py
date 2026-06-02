@@ -16,7 +16,7 @@ from xml.etree import ElementTree as ET
 from docx import Document
 from docx.enum.section import WD_ORIENT
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
@@ -187,6 +187,16 @@ def read_csv_matrix(path: Path) -> list[list[str]]:
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         rows = [[cell.strip() for cell in row] for row in csv.reader(handle)]
     return [row for row in rows if any(cell for cell in row)]
+
+
+def read_csv_rows(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return [
+            {str(key): clean_text(value) for key, value in row.items()}
+            for row in csv.DictReader(handle)
+        ]
 
 
 def clean_text(value: Any) -> str:
@@ -390,10 +400,18 @@ def cell_shading(cell: Any, fill: str) -> None:
     shd.set(qn("w:fill"), fill)
 
 
-def set_cell_text(cell: Any, text: str, *, bold: bool, font_size: float, header: bool) -> None:
+def set_cell_text(
+    cell: Any,
+    text: str,
+    *,
+    bold: bool,
+    font_size: float,
+    header: bool,
+    alignment: WD_ALIGN_PARAGRAPH = WD_ALIGN_PARAGRAPH.CENTER,
+) -> None:
     cell.text = ""
     paragraph = cell.paragraphs[0]
-    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER if header or len(text) <= 12 else WD_ALIGN_PARAGRAPH.LEFT
+    paragraph.alignment = alignment
     paragraph.paragraph_format.space_before = 0
     paragraph.paragraph_format.space_after = 0
     paragraph.paragraph_format.line_spacing = 0.86 if font_size <= 5.4 else 1
@@ -403,6 +421,10 @@ def set_cell_text(cell: Any, text: str, *, bold: bool, font_size: float, header:
     run.font.name = "Microsoft YaHei" if header else "SimSun"
     run.font.color.rgb = RGBColor(31, 41, 51)
     run._element.rPr.rFonts.set(qn("w:eastAsia"), "微软雅黑" if header else "宋体")
+
+
+def native_table_cell_alignment(header: str, column_count: int, row_index: int) -> WD_ALIGN_PARAGRAPH:
+    return WD_ALIGN_PARAGRAPH.CENTER
 
 
 def set_cell_margins(cell: Any, margin_dxa: int = 35) -> None:
@@ -529,14 +551,23 @@ def build_native_table(document: Document, matrix: list[list[str]], total_width_
         apply_table_widths(table, column_count, target_width)
 
     decorate_body_rows = column_count <= 10
+    headers = [clean_text(value) for value in matrix[0]] if matrix else []
     for row_index, row in enumerate(matrix):
         cells = table.rows[row_index].cells
         for column_index, cell in enumerate(cells):
             value = row[column_index] if column_index < len(row) else ""
-            if decorate_body_rows or row_index == 0:
-                cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
             set_cell_margins(cell, 10 if column_count >= 18 else 25 if column_count >= 12 else 55)
-            set_cell_text(cell, value, bold=row_index == 0, font_size=font_size, header=row_index == 0)
+            header = headers[column_index] if column_index < len(headers) else ""
+            alignment = native_table_cell_alignment(header, column_count, row_index)
+            set_cell_text(
+                cell,
+                value,
+                bold=row_index == 0,
+                font_size=font_size,
+                header=row_index == 0,
+                alignment=alignment,
+            )
             if row_index == 0:
                 cell_shading(cell, "E9EEF5")
             elif decorate_body_rows and row_index % 2 == 0:
@@ -559,6 +590,27 @@ def normalize_existing_table_geometry(document: Document) -> int:
         widths = [int(total_width / column_count)] * column_count
         apply_table_fixed_widths(table, widths)
         changed += 1
+    return changed
+
+
+def normalize_table_cell_alignment(document: Document) -> int:
+    changed = 0
+    for table in document.tables:
+        if not table.rows or not table.columns:
+            continue
+        column_count = len(table.columns)
+        headers = [clean_text(cell.text) for cell in table.rows[0].cells] if table.rows else []
+        for row_index, row in enumerate(table.rows):
+            for column_index, cell in enumerate(row.cells):
+                header = headers[column_index] if column_index < len(headers) else ""
+                cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+                alignment = native_table_cell_alignment(header, column_count, row_index)
+                for paragraph in cell.paragraphs:
+                    paragraph.alignment = alignment
+                    paragraph.paragraph_format.space_before = Pt(0)
+                    paragraph.paragraph_format.space_after = Pt(0)
+                    paragraph.paragraph_format.line_spacing = 1
+                changed += 1
     return changed
 
 
@@ -1188,6 +1240,26 @@ def read_mapping_table_aliases(source: str) -> list[str]:
                 continue
             if clean_text(row.get("ranking_source", "")) != source_key:
                 continue
+            source_note = clean_text(row.get("source_note", ""))
+            alias_type = clean_text(row.get("alias_type", ""))
+            is_mapping_table_source = (
+                "mapping_sheet1" in alias_type
+                or "dim_subject_column" in alias_type
+                or "教育部学科映射Sheet1" in source_note
+                or source_note in {"arwu_subject_name", "qs_subject_name", "usnews_subject_name", "the_subject_area"}
+            )
+            is_runtime_crosswalk = any(
+                token in source_note or token in alias_type
+                for token in [
+                    "crosswalk",
+                    "manual",
+                    "public",
+                    "supplement",
+                    "runtime",
+                ]
+            )
+            if not is_mapping_table_source or is_runtime_crosswalk:
+                continue
             alias = clean_text(row.get("ranking_subject_alias", ""))
             if alias and not is_missing_subject_label(alias):
                 aliases.append(alias)
@@ -1301,9 +1373,8 @@ def clean_rank_display(value: Any) -> str:
     text = clean_text(value)
     if not text:
         return ""
-    text = re.sub(r"#+\s*(?=\d)", "", text)
-    text = re.sub(r"=+\s*(?=\d)", "", text)
-    return text.strip()
+    text = re.sub(r"^[#=＝]+\s*(?=\d)", "", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def format_number(value: Any, digits: int = 1) -> str:
@@ -1336,6 +1407,13 @@ def resolved_subject_value(key: str, default: str = "") -> str:
     return clean_text(resolved.get(key, "")) or default
 
 
+def single_mapping_label(value: Any) -> str:
+    text = clean_text(value)
+    if not text or is_missing_subject_label(text) or re.search(r"[\n\r,;，、；/]+", text):
+        return ""
+    return text
+
+
 def source_runtime_override_value(source: str, key: str, default: str = "") -> str:
     payload = read_target_subject_payload()
     resolved = payload.get("resolved_subject", {})
@@ -1353,10 +1431,10 @@ def report_subject_label_for_source(source: str, default: str = "") -> str:
         return arwu_public_subject_label(default)
     if source == "QS":
         return (
-            report_selected_subject_label("QS", "")
+            single_mapping_label(resolved_subject_value("qs_subject_name"))
+            or report_selected_subject_label("QS", "")
             or source_runtime_override_value("QS", "ranking_subject_or_area")
             or source_runtime_override_value("QS", "weight_subject_or_area")
-            or resolved_subject_value("qs_subject_name")
             or default
         )
     if source in {"US News", "U.S. News"}:
@@ -1406,7 +1484,8 @@ def summarize_overview(artifact_id: str) -> str:
     mapping_notes = []
     for row in rows:
         source = clean_text(row.get("ranking_source", ""))
-        subject = clean_text(row.get("ranking_subject_raw", ""))
+        raw_subject = clean_text(row.get("ranking_subject_raw", ""))
+        subject = report_subject_label_for_source(source, raw_subject) if source == "THE" else raw_subject
         year = first_present(row, ["ranking_year", "release_year"])
         rank = rank_text(row)
         if source and rank:
@@ -1523,7 +1602,28 @@ def summarize_history(artifact_id: str) -> str:
             parts.append(f"{display_source_name(source)}最新位次为{rank_text(last)}")
     if not parts:
         return ""
-    return f"从历史序列看，{read_target_subject_name()}学科在不同榜单中的变化并不同步：" + "；".join(parts) + "。因此本节更适合观察长期区间和榜单口径，而不是只比较单一年份。"
+    supplemental_rows = read_artifact_rows(artifact_id, "usnews_supplemental_subject_ranks.csv")
+    supplemental_note = ""
+    if supplemental_rows:
+        supplemental_items = []
+        for row in sorted(supplemental_rows, key=lambda item: clean_text(item.get("ranking_subject_raw", "")))[:5]:
+            area = clean_text(row.get("ranking_subject_alias", "")) or clean_text(row.get("ranking_subject_raw", ""))
+            year = clean_text(row.get("ranking_year", "")) or clean_text(row.get("release_year", ""))
+            if area:
+                supplemental_items.append(f"“{area}”{year}年{rank_text(row)}" if year else f"“{area}”{rank_text(row)}")
+        if supplemental_items:
+            main_label = report_selected_subject_label("US News", "") or "主口径"
+            supplemental_note = (
+                f" U.S. News 主趋势线按“{main_label}”主口径绘制；"
+                f"同一一级学科下其他相关子口径最新可见数据包括{'、'.join(supplemental_items)}，"
+                "这些子口径不并入主趋势线，只作为文字参照。"
+            )
+    return (
+        f"从历史序列看，{read_target_subject_name()}学科在不同榜单中的变化并不同步："
+        + "；".join(parts)
+        + "。因此本节更适合观察长期区间和榜单口径，而不是只比较单一年份。"
+        + supplemental_note
+    )
 
 
 def summarize_usnews_indicator_trend(artifact_id: str) -> str:
@@ -1560,10 +1660,36 @@ def summarize_peer_indicator(artifact_id: str) -> str:
     ranked.sort(key=lambda item: item[0])
     strong = "、".join(name for _, name, _ in ranked[:2] if name)
     weak = "、".join(name for _, name, _ in ranked[-2:] if name)
-    peer_size = first_present(ranked[0][2], ["peer_scope_size", "comparison_scope_size"])
+    scope_sizes = []
+    for _, _, row in ranked:
+        value = to_number(first_present(row, ["comparison_scope_size", "peer_scope_size"]))
+        if value is not None:
+            scope_sizes.append(int(value))
+    scope_sizes = sorted(set(scope_sizes))
+    if len(scope_sizes) == 1:
+        peer_size = str(scope_sizes[0])
+    elif len(scope_sizes) > 1:
+        peer_size = f"{scope_sizes[0]}至{scope_sizes[-1]}"
+    else:
+        peer_size = "若干"
     source = "软科" if "figure_09" in artifact_id else "QS" if "figure_10_qs" in artifact_id else "U.S. News" if "figure_11" in artifact_id else "THE"
-    subject_label = subject_label_from_artifact_rows(rows, report_subject_label_for_source(source.replace("U.S. News", "US News"), read_target_subject_name()))
-    return f"{source}{subject_label}口径分项对标共覆盖{peer_size or '若干'}所内地高校。同济大学相对靠前的指标主要是{strong or '部分优势项'}，相对靠后的指标主要是{weak or '部分短板项'}，建设工作应优先把这些短板与榜单权重结合判断。"
+    source_key = source.replace("U.S. News", "US News")
+    default_subject = read_target_subject_name()
+    subject_label = report_subject_label_for_source(source_key, default_subject) if source == "THE" else subject_label_from_artifact_rows(rows, report_subject_label_for_source(source_key, default_subject))
+    trace_rows = read_artifact_rows(artifact_id, "source_trace.csv")
+    trace_subjects = []
+    for row in trace_rows:
+        value = first_present(row, ["ranking_subject_raw", "ranking_subject_or_area", "ranking_subject_alias", "ranking_subject"])
+        if value and not is_missing_subject_label(value):
+            trace_subjects.append(value)
+    trace_subjects = sorted(set(trace_subjects))
+    if default_subject and len(trace_subjects) > 1:
+        subject_phrase = f"{default_subject}相关口径"
+    elif subject_label.endswith("口径"):
+        subject_phrase = subject_label
+    else:
+        subject_phrase = f"{subject_label}口径"
+    return f"{source}{subject_phrase}分项对标共覆盖{peer_size}所内地高校。同济大学相对靠前的指标主要是{strong or '部分优势项'}，相对靠后的指标主要是{weak or '部分短板项'}，建设工作应优先把这些短板与榜单权重结合判断。"
 
 
 def summarize_peer_table(artifact_id: str) -> str:
@@ -1572,7 +1698,8 @@ def summarize_peer_table(artifact_id: str) -> str:
         return ""
     source = "软科" if "table_05" in artifact_id else "U.S. News" if "table_06" in artifact_id else "QS" if "table_07" in artifact_id else "THE" if "table_08" in artifact_id else ""
     full_rows = read_artifact_rows(artifact_id, "latest_peer_records_full_top200.csv")
-    subject_label = subject_label_from_artifact_rows(full_rows, read_target_subject_name())
+    source_key = "US News" if source == "U.S. News" else source
+    subject_label = report_subject_label_for_source("THE", read_target_subject_name()) if source == "THE" else subject_label_from_artifact_rows(full_rows, report_subject_label_for_source(source_key, read_target_subject_name()))
     source_scope = f"{source}{subject_label}口径" if source and subject_label else f"{source}最新口径"
     displayed_count = len(rows)
     full_count = len(full_rows) or displayed_count
@@ -3234,12 +3361,20 @@ def artifact_subject_or_area(artifact_id: str) -> str:
 
 def report_selected_subject_label(source: str, default: str = "") -> str:
     source_key = "US News" if source in {"U.S. News", "US News"} else source
-    override = (
-        source_runtime_override_value(source_key, "ranking_subject_or_area")
-        or source_runtime_override_value(source_key, "weight_subject_or_area")
+    if source_key == "THE":
+        mapped = resolved_subject_value("the_subject_area")
+        if mapped:
+            return mapped
+    overview_label = subject_label_from_artifact_rows(
+        [
+            row
+            for row in read_artifact_rows("figure_01_tongji_subject_ranking_overview", "chart_data.csv")
+            if clean_text(row.get("ranking_source", "")) == source_key
+        ],
+        "",
     )
-    if override:
-        return override
+    if overview_label:
+        return overview_label
     history_label = subject_label_from_artifact_rows(source_history_rows(source_key), "")
     if history_label:
         return history_label
@@ -3254,6 +3389,12 @@ def report_selected_subject_label(source: str, default: str = "") -> str:
         artifact_label = artifact_subject_or_area(weight_artifact)
         if artifact_label:
             return artifact_label
+    override = (
+        source_runtime_override_value(source_key, "ranking_subject_or_area")
+        or source_runtime_override_value(source_key, "weight_subject_or_area")
+    )
+    if override:
+        return override
     return default
 
 
@@ -3269,7 +3410,7 @@ def summarize_source_history_for_residual_text(source: str, subject_name: str) -
     first_mid = to_number(first.get("rank_midpoint", ""))
     latest_mid = to_number(latest.get("rank_midpoint", ""))
     source_label = display_source_name(source)
-    subject_label = subject_label_from_artifact_rows(rows, subject_name)
+    subject_label = report_subject_label_for_source(source, subject_label_from_artifact_rows([latest], subject_name))
     mapping_note = mapping_table_scope_note_for_source(source, subject_label)
     if first_mid is not None and latest_mid is not None and len(rows) >= 2:
         direction = "明显提升" if latest_mid < first_mid else "有所回落" if latest_mid > first_mid else "基本稳定"
@@ -3570,6 +3711,24 @@ def normalize_inline_image_paragraph_alignment(document: Document) -> int:
             continue
         if paragraph.alignment != WD_ALIGN_PARAGRAPH.CENTER:
             paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            changed += 1
+    return changed
+
+
+def normalize_artifact_vertical_spacing(document: Document) -> int:
+    changed = 0
+    for paragraph in iter_all_paragraphs(document):
+        text = clean_text(paragraph_text(paragraph))
+        paragraph_format = paragraph.paragraph_format
+        if paragraph_has_image(paragraph):
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph_format.space_before = Pt(6)
+            paragraph_format.space_after = Pt(8)
+            changed += 1
+            continue
+        if is_caption_paragraph(text):
+            paragraph_format.space_before = Pt(8)
+            paragraph_format.space_after = Pt(6)
             changed += 1
     return changed
 
@@ -4182,20 +4341,22 @@ def set_embedded_image_extent(docx_path: Path, target_member: str, width_emu: in
 def normalize_embedded_image_extents(rows: list[dict[str, str]], docx_path: Path, content_width: int) -> list[dict[str, Any]]:
     image_targets = extract_template_image_targets(docx_path)
     log_rows: list[dict[str, Any]] = []
+    visible_index_by_slot = visible_figure_index_map(rows)
     for row in rows:
         if row.get("slot_kind") != "figure" or not row.get("reference_media"):
             continue
-        image_index = parse_slot_index(row.get("reference_object", ""), "image_")
-        target_member = image_targets.get(image_index or -1, "")
+        visible_image_index = visible_index_by_slot.get(row.get("logical_slot_id", ""), -1)
+        target_member = image_targets.get(visible_image_index, "")
         image_path = artifact_png_path(row.get("artifact_id", ""))
-        if image_index is None or not target_member or image_path is None:
+        if visible_image_index < 1 or not target_member or image_path is None:
             log_rows.append(
                 {
                     "slot": row.get("logical_slot_id", ""),
                     "artifact_id": row.get("artifact_id", ""),
                     "operation": "normalize_embedded_image_extent",
                     "status": "skipped",
-                    "reason": "missing_image_index_or_png_or_target",
+                    "reason": "missing_visible_image_index_or_png_or_target",
+                    "visible_image_index": visible_image_index,
                 }
             )
             continue
@@ -4210,6 +4371,7 @@ def normalize_embedded_image_extents(rows: list[dict[str, str]], docx_path: Path
                 "artifact_id": row.get("artifact_id", ""),
                 "operation": "normalize_embedded_image_extent",
                 "status": "ok" if changes else "skipped",
+                "visible_image_index": visible_image_index,
                 "target_member": target_member,
                 "source_png": str(image_path),
                 "width_emu": width_emu,
@@ -4223,6 +4385,136 @@ def normalize_embedded_image_extents(rows: list[dict[str, str]], docx_path: Path
 def is_word_heading1(paragraph: Paragraph) -> bool:
     style_name = getattr(getattr(paragraph, "style", None), "name", "") or ""
     return style_name == "Heading 1"
+
+
+def insert_styled_paragraph_after(paragraph: Paragraph, text: str, template_style: dict[str, Any]) -> Paragraph:
+    new_element = OxmlElement("w:p")
+    paragraph._element.addnext(new_element)
+    inserted = Paragraph(new_element, paragraph._parent)
+    try:
+        inserted.style = paragraph.style
+    except Exception:
+        pass
+    inserted.paragraph_format.alignment = paragraph.paragraph_format.alignment
+    inserted.paragraph_format.left_indent = paragraph.paragraph_format.left_indent
+    inserted.paragraph_format.right_indent = paragraph.paragraph_format.right_indent
+    inserted.paragraph_format.first_line_indent = paragraph.paragraph_format.first_line_indent or Pt(28)
+    inserted.paragraph_format.space_before = paragraph.paragraph_format.space_before
+    inserted.paragraph_format.space_after = paragraph.paragraph_format.space_after
+    inserted.paragraph_format.line_spacing = paragraph.paragraph_format.line_spacing
+    set_paragraph_text_with_template_style(inserted, text, template_style)
+    return inserted
+
+
+def split_scope_values(value: str) -> list[str]:
+    return [item.strip() for item in re.split(r"[\n\r,，、;；|]+", clean_text(value)) if item.strip()]
+
+
+def final_scope_boundary_text(subject_name: str) -> str:
+    availability_rows = read_csv_rows(SUBJECT_RUN_DIR / "ranking_availability.csv")
+    overview_rows = read_artifact_rows("figure_01_tongji_subject_ranking_overview", "chart_data.csv")
+    main_by_source: dict[str, str] = {}
+    for row in overview_rows:
+        source = clean_text(row.get("ranking_source", ""))
+        subject = report_subject_label_for_source(source, clean_text(row.get("ranking_subject_raw", "")))
+        if source and subject:
+            main_by_source[source] = subject
+    main_scope_parts: list[str] = []
+    alternative_items: list[str] = []
+    seen_alternatives: set[str] = set()
+    for source in RANKING_SOURCES:
+        selected = main_by_source.get(source, "")
+        if source and selected:
+            main_scope_parts.append(f"{display_source_name(source)}“{selected}”")
+    for row in availability_rows:
+        source = clean_text(row.get("ranking_source", ""))
+        selected = main_by_source.get(source, "") or clean_text(row.get("selected_ranking_subject_or_area", ""))
+        observed = clean_text(row.get("observed_latest_subject_or_area", ""))
+        selected_keys = {subject_mapping_key(item) for item in split_scope_values(selected)}
+        for alias in split_scope_values(observed):
+            alias_key = subject_mapping_key(alias)
+            if not alias_key or alias_key in selected_keys:
+                continue
+            latest = latest_tongji_rank_for_mapping_alias(source, alias)
+            item_key = f"{source}:{alias}:{latest}"
+            if item_key in seen_alternatives:
+                continue
+            seen_alternatives.add(item_key)
+            alternative_items.append(
+                f"{display_source_name(source)}“{alias}”{latest}"
+                if latest
+                else f"{display_source_name(source)}“{alias}”有相关记录但未进入主趋势线"
+            )
+
+    supplemental_rows = read_artifact_rows("figure_07_all_rankings_history", "usnews_supplemental_subject_ranks.csv")
+    for row in supplemental_rows:
+        source = clean_text(row.get("ranking_source", "")) or "US News"
+        alias = clean_text(row.get("ranking_subject_raw", ""))
+        year = clean_text(row.get("ranking_year", "")) or clean_text(row.get("release_year", ""))
+        rank = rank_text(row)
+        if not alias or not rank:
+            continue
+        item_key = f"{source}:{alias}:{year}:{rank}"
+        if item_key in seen_alternatives:
+            continue
+        seen_alternatives.add(item_key)
+        alternative_items.append(f"{display_source_name(source)}“{alias}”{year}年第{rank}")
+
+    main_text = "、".join(ordered_unique(main_scope_parts)) or "各榜单当前可核验主口径"
+    if alternative_items:
+        return (
+            f"口径边界上，本报告图表主线只保留一个可连续解释的主口径，当前为{main_text}。"
+            f"未并入主图但已有同济数据或最新观测的相关口径包括：{'；'.join(ordered_unique(alternative_items)[:8])}。"
+            "这些数据不与主口径连线，不参与同一条趋势的升降判断，但在阅读结论时应作为同榜单映射背景保留。"
+        )
+    return (
+        f"口径边界上，本报告图表主线只保留一个可连续解释的主口径，当前为{main_text}。"
+        f"若后续为{subject_name}补充新的同榜单子口径，应继续采用“主口径绘图、其他口径文字披露”的规则，避免把不同学科口径强行连成一条趋势线。"
+    )
+
+
+def final_paper_evidence_text(subject_name: str) -> str:
+    paper_parts = [
+        summarize_paper("figure_13_paper_output_citation_relative_rank", "paper_quantity_values"),
+        summarize_paper("figure_14_paper_cnci_cpp_relative_rank", "paper_quality_values"),
+        summarize_paper("figure_15_paper_highly_cited_relative_rank", "paper_highly_cited_summary"),
+        summarize_paper("figure_16_paper_international_collab_relative_rank", "paper_collab_summary"),
+    ]
+    paper_parts = [text for text in paper_parts if text]
+    if not paper_parts:
+        return (
+            f"论文证据方面，当前{subject_name}学科缺少可直接入图的 WoS 37校同学科论文数据，"
+            "因此投入建议不宜把论文规模、CNCI、高被引和国际合作作定量排序结论；建议学校先支持学科补齐该口径数据，再将其纳入排名提升专项评估。"
+        )
+    return (
+        "论文证据方面，"
+        + "".join(paper_parts[:4])
+        + "这些指标说明，单纯增加论文数量不足以支撑排名持续上升，更需要学校在高影响力成果培育、国际合作网络和重点团队稳定支持上形成投入。"
+    )
+
+
+def final_recommendation_paragraphs() -> list[str]:
+    subject_name = read_target_subject_name()
+    overview = summarize_overview("figure_01_tongji_subject_ranking_overview")
+    history = summarize_history("figure_07_all_rankings_history")
+    scope_text = final_scope_boundary_text(subject_name)
+    paper_text = final_paper_evidence_text(subject_name)
+    source_phrase = available_source_phrase()
+    if not overview:
+        overview = (
+            f"综合{source_phrase}可核验图表看，同济大学{subject_name}学科的国际竞争状态不能只由单一榜单判断，"
+            "需要同时观察综合位次、内地同行梯队和分项指标。"
+        )
+    if history:
+        overview = overview + history
+    action_text = (
+        f"基于上述结果，建议学校将{subject_name}学科作为排名提升重点支持对象，投入方向可聚焦四类："
+        "第一，围绕 CNCI、篇均被引和 Top 1%/Top 10%论文设立高影响力成果培育支持，对具有进入国际顶级会议、顶级期刊和高被引潜力的团队给予连续资助；"
+        "第二，支持学科建设稳定的国际合作平台和海外联合团队，提高国际合作论文质量和国际同行可见度，而不只是增加合作论文数量；"
+        "第三，面向 QS、THE 等含声誉评价的榜单，支持学科参与国际学术组织、重要会议、国际评审和高水平学术活动，增强学科在全球同行中的识别度；"
+        "第四，对已接近前200或处于国内同梯队竞争的关键榜单，建议学校配置专项资源开展对标提升，把投入优先落在最能影响排名指标的论文质量、国际合作和学术声誉环节。"
+    )
+    return [overview, scope_text, paper_text, action_text]
 
 
 def compact_final_recommendation_section(document: Document) -> int:
@@ -4247,15 +4539,25 @@ def compact_final_recommendation_section(document: Document) -> int:
         for paragraph in document.paragraphs[start_index + 1 : section_end]
         if clean_text(paragraph_text(paragraph)) and not paragraph_is_heading1(paragraph)
     ]
+    final_texts = final_recommendation_paragraphs()
     if body_paragraphs:
-        compact_text = (
-            f"综合当前可核验图表，同济大学{read_target_subject_name()}学科应把已有证据与缺失榜单口径分开判断；"
-            "后续重点提升标准化引文影响、高被引论文占比和国际合作论文质量，待补齐直接口径后再开展跨榜单归因。"
-        )
-        set_paragraph_text_with_template_style(body_paragraphs[0], compact_text, paragraph_run_style(body_paragraphs[0]))
+        anchor = body_paragraphs[0]
+        template_style = paragraph_run_style(anchor)
+        set_paragraph_text_with_template_style(anchor, final_texts[0], template_style)
         changed += 1
         for paragraph in body_paragraphs[1:]:
             remove_paragraph(paragraph)
+            changed += 1
+        previous = anchor
+        for text in final_texts[1:]:
+            previous = insert_styled_paragraph_after(previous, text, template_style)
+            changed += 1
+    else:
+        heading = document.paragraphs[start_index]
+        template_style = paragraph_run_style(heading)
+        previous = heading
+        for text in final_texts:
+            previous = insert_styled_paragraph_after(previous, text, template_style)
             changed += 1
     section_end = next_heading1_index(document, start_index)
     for paragraph in list(document.paragraphs[start_index + 1 : section_end]):
@@ -4272,8 +4574,9 @@ def compact_final_recommendation_section(document: Document) -> int:
             paragraph_format.space_after = Pt(3)
         else:
             paragraph_format.space_before = Pt(0)
-            paragraph_format.space_after = Pt(0)
-            paragraph_format.line_spacing = 1
+            paragraph_format.space_after = Pt(6)
+            paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
+            paragraph_format.first_line_indent = paragraph_format.first_line_indent or Pt(28)
             try:
                 paragraph_format.widow_control = False
             except AttributeError:
@@ -4391,6 +4694,7 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     rank_prefix_changes += normalize_rank_prefix_markers(document)
     empty_before_media_removals = remove_empty_paragraphs_before_media(document)
     image_alignment_changes = normalize_inline_image_paragraph_alignment(document)
+    artifact_spacing_changes = normalize_artifact_vertical_spacing(document)
     figure_caption_renumbers = renumber_figure_captions(document)
     table_caption_renumbers = renumber_table_captions(document)
     usnews_brand_run_changes = apply_usnews_brand_run_font(document)
@@ -4402,6 +4706,7 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     pre_section_empty_changes = remove_empty_paragraphs_before_section_breaks(document)
     trailing_final_section_changes = remove_trailing_empty_final_section(document)
     table_geometry_changes = normalize_existing_table_geometry(document)
+    table_cell_alignment_changes = normalize_table_cell_alignment(document)
     final_recommendation_compactions = compact_final_recommendation_section(document)
     section_page_geometry_changes = normalize_section_page_geometry(document)
     doc_content_width = content_width_emu(document)
@@ -4610,6 +4915,13 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "changed_paragraphs": figure_caption_renumbers,
         },
         {
+            "slot": "artifact_spacing",
+            "artifact_id": "",
+            "operation": "normalize_artifact_vertical_spacing",
+            "status": "ok",
+            "changed_paragraphs": artifact_spacing_changes,
+        },
+        {
             "slot": "table_captions",
             "artifact_id": "",
             "operation": "renumber_table_captions",
@@ -4652,6 +4964,13 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
             "removed_sections": trailing_final_section_changes,
         },
         {
+            "slot": "table_cell_alignment",
+            "artifact_id": "",
+            "operation": "normalize_table_cell_alignment",
+            "status": "ok",
+            "changed_cells": table_cell_alignment_changes,
+        },
+        {
             "slot": "trailing_table_empty_paragraph_xml",
             "artifact_id": "",
             "operation": "remove_trailing_table_empty_paragraph_in_docx_xml",
@@ -4661,7 +4980,7 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
         {
             "slot": "final_recommendation_section",
             "artifact_id": "",
-            "operation": "compact_final_recommendation_section",
+            "operation": "expand_final_recommendation_section",
             "status": "ok",
             "changed_paragraphs": final_recommendation_compactions,
         },

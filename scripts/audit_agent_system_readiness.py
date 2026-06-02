@@ -118,9 +118,19 @@ def canonical_subject_scope_text(value: Any) -> str:
         "immunology": "免疫学",
         "medicine": "医学",
         "clinical medicine": "临床医学",
+        "artificial intelligence": "人工智能",
+        "computer science": "计算机科学",
         "oncology": "肿瘤学",
         "chemistry": "化学",
         "chemical engineering": "化学工程",
+        "environment/ecology": "环境科学与工程",
+        "environmentecology": "环境科学与工程",
+        "environmental science and engineering": "环境科学与工程",
+        "环境与生态学": "环境科学与工程",
+        "physics": "物理学",
+        "condensed matter physics": "凝聚态物理学",
+        "materials science": "材料科学",
+        "polymer science": "高分子科学",
         "biological sciences": "生物科学",
         "biotechnology and applied microbiology": "生物技术应用微生物学",
     }
@@ -340,6 +350,47 @@ def latest_regeneration_batch_summary() -> dict[str, Any]:
     return payload
 
 
+def run_subject_id(run_dir: Path) -> str:
+    summary_path = run_dir / "agent_run_summary.json"
+    if not summary_path.exists():
+        return ""
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    request = summary.get("request", {})
+    subject_code = clean_text(request.get("target_subject_code"))
+    if not subject_code:
+        return ""
+    subject_path = PROCESSED_DIR / "dim_subject.csv"
+    if not subject_path.exists():
+        return ""
+    subjects = pd.read_csv(subject_path, dtype=str).fillna("")
+    matched = subjects[subjects["ministry_subject_code"].map(clean_text) == subject_code].copy()
+    if matched.empty:
+        return ""
+    return clean_text(matched.iloc[0].get("subject_id"))
+
+
+def expand_selected_keys_with_aliases(run_dir: Path, selected_keys: dict[str, set[str]]) -> dict[str, int]:
+    subject_id = run_subject_id(run_dir)
+    alias_path = PROCESSED_DIR / "dim_subject_alias.csv"
+    if not subject_id or not alias_path.exists():
+        return {"subject_alias_keys_added": 0}
+    aliases = pd.read_csv(alias_path, dtype=str).fillna("")
+    aliases = aliases[aliases["subject_id"].map(clean_text) == subject_id].copy()
+    added = 0
+    for row in aliases.to_dict(orient="records"):
+        source = clean_text(row.get("ranking_source"))
+        alias = clean_text(row.get("ranking_subject_alias"))
+        if source not in selected_keys or not alias:
+            continue
+        before = len(selected_keys[source])
+        selected_keys[source].update(normalize_subject_key_set(alias))
+        added += len(selected_keys[source]) - before
+    return {"subject_id": subject_id, "subject_alias_keys_added": added}
+
+
 def audit_latest_run_subject_scope_consistency(run_dir: Path, issues: list[dict[str, Any]]) -> dict[str, Any]:
     ranking_path = run_dir / "ranking_availability.csv"
     artifacts_dir = run_dir / "artifacts"
@@ -352,6 +403,7 @@ def audit_latest_run_subject_scope_consistency(run_dir: Path, issues: list[dict[
         if clean_text(row.get("ranking_source")) and clean_text(row.get("selected_ranking_subject_or_area"))
     }
     selected_keys = {source: normalize_subject_key_set(value) for source, value in selected_by_source.items()}
+    alias_scope = expand_selected_keys_with_aliases(run_dir, selected_keys)
     subject_columns = [
         "ranking_subject_raw",
         "ranking_subject_or_area",
@@ -361,6 +413,8 @@ def audit_latest_run_subject_scope_consistency(run_dir: Path, issues: list[dict[
     mismatches: list[dict[str, Any]] = []
     checked_rows = 0
     for path in sorted(artifacts_dir.glob("**/*.csv")):
+        if path.name in {"source_trace.csv", "lineage_manifest.csv", "usnews_supplemental_subject_ranks.csv"}:
+            continue
         try:
             df = pd.read_csv(path, dtype=str).fillna("")
         except Exception as exc:  # noqa: BLE001
@@ -423,6 +477,7 @@ def audit_latest_run_subject_scope_consistency(run_dir: Path, issues: list[dict[
         "checked_rows": checked_rows,
         "mismatch_count": len(mismatches),
         "mismatches": mismatches[:50],
+        **alias_scope,
     }
 
 

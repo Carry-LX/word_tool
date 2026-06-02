@@ -214,7 +214,7 @@ def parse_the() -> list[dict[str, Any]]:
                     ranking_source="THE",
                     ranking_subject_or_area=subject_area,
                     indicator_name=indicator,
-                    weight_value=to_percent(value),
+                    weight_value=value,
                     source_sheet="the",
                     source_row=row_idx + 1,
                     raw_group=group,

@@ -89,8 +89,8 @@ def parse_rank_midpoint(value: Any) -> float | None:
     return float(numbers[0])
 
 
-def read_sheet(file_name: str, sheet_name: str) -> pd.DataFrame:
-    df = pd.read_excel(DATA_DIR / file_name, sheet_name=sheet_name, dtype=object)
+def read_sheet(file_name: str, sheet_name: str, header: int = 0) -> pd.DataFrame:
+    df = pd.read_excel(DATA_DIR / file_name, sheet_name=sheet_name, dtype=object, header=header)
     df.columns = [clean_text(column) for column in df.columns]
     df = df.dropna(how="all").copy()
     return df
@@ -160,9 +160,12 @@ def record(
 
 
 def append_records_from_config(records: list[dict[str, Any]], config: dict[str, Any]) -> None:
-    df = read_sheet(config["file"], config["sheet"])
+    header = int(config.get("header", 0))
+    df = read_sheet(config["file"], config["sheet"], header=header)
+    subject_map = config.get("subject_map", {})
     for idx, row in df.iterrows():
-        subject_raw = clean_text(row.get(config["subject_col"]))
+        source_subject_raw = clean_text(row.get(config["subject_col"]))
+        subject_raw = clean_text(subject_map.get(normalize_key(source_subject_raw), source_subject_raw))
         university_cn = clean_text(row.get(config["university_cn_col"]))
         university_en = clean_text(row.get(config.get("university_en_col", ""))) if config.get("university_en_col") else ""
         region = clean_text(row.get(config.get("region_col", ""))) if config.get("region_col") else ""
@@ -191,14 +194,66 @@ def append_records_from_config(records: list[dict[str, Any]], config: dict[str, 
                     metric_value=value,
                     source_file=config["file"],
                     source_sheet=config["sheet"],
-                    source_row=int(idx) + 2,
+                    source_row=int(idx) + 2 + header,
                 )
             )
 
 
 def build_records() -> pd.DataFrame:
     records: list[dict[str, Any]] = []
+    the_2022_subject_map = {
+        "arts & humanities": "艺术与人文学",
+        "business & economics": "商业与经济学",
+        "clinical & health": "临床与健康",
+        "computer science": "计算机科学",
+        "education": "教育学",
+        "engineering": "工学",
+        "law": "法学",
+        "life sciences": "生命科学",
+        "physical sciences": "理学",
+        "psychology": "心理学",
+        "social sciences": "社会科学",
+    }
+    the_2022_subject_map = {normalize_key(key): value for key, value in the_2022_subject_map.items()}
     configs = [
+        {
+            "ranking_source": "软科",
+            "file": "2021年软科世界一流学科排名-20211119.xlsx",
+            "sheet": "arwu_gras_detail",
+            "release_year_col": "Time",
+            "ranking_year_col": "Time",
+            "subject_col": "Subject",
+            "university_cn_col": "Institution",
+            "region_col": "Country_Region",
+            "world_rank_col": "World_Rank",
+            "indicators": [
+                {"column": "Total_Score", "name": "总得分", "metric_type": "score"},
+                {"column": "Q1", "name": "高水平研究成果/重要期刊论文数", "metric_type": "score"},
+                {"column": "CNCI", "name": "科研影响力/论文标准化影响力", "metric_type": "score"},
+                {"column": "IC", "name": "国际合作/国际合作论文比例", "metric_type": "score"},
+                {"column": "TOP", "name": "世界一流成果", "metric_type": "score"},
+                {"column": "AWARD", "name": "世界一流教师", "metric_type": "score"},
+            ],
+        },
+        {
+            "ranking_source": "软科",
+            "file": "2022年软科世界一流学科排名-20220720.xlsx",
+            "sheet": "Sheet1",
+            "release_year_col": "Time",
+            "ranking_year_col": "Time",
+            "subject_col": "Subject",
+            "university_cn_col": "Institution",
+            "region_col": "Country_Region",
+            "world_rank_col": "World_Rank",
+            "indicators": [
+                {"column": "Total_Score", "name": "总得分", "metric_type": "score"},
+                {"column": "Q1", "name": "高水平研究成果/重要期刊论文数", "metric_type": "score"},
+                {"column": "CNCI", "name": "科研影响力/论文标准化影响力", "metric_type": "score"},
+                {"column": "IC", "name": "国际合作/国际合作论文比例", "metric_type": "score"},
+                {"column": "TOP", "name": "世界一流成果", "metric_type": "score"},
+                {"column": "AWARD", "name": "世界一流教师", "metric_type": "score"},
+            ],
+        },
         {
             "ranking_source": "软科",
             "file": "2025年软科世界一流学科排名20251118.xlsx",
@@ -217,6 +272,26 @@ def build_records() -> pd.DataFrame:
                 {"column": "世界一流成果", "name": "世界一流成果", "metric_type": "score"},
                 {"column": "世界一流教师", "name": "世界一流教师", "metric_type": "score"},
                 {"column": "辅助总得分", "name": "辅助总得分", "metric_type": "score"},
+            ],
+        },
+        {
+            "ranking_source": "QS",
+            "file": "2022年QS学科排名202203.xlsx",
+            "sheet": "Sheet1",
+            "header": 1,
+            "release_year_col": "pubyear",
+            "ranking_year_col": "pubyear",
+            "subject_col": "subject_name",
+            "university_cn_col": "uni",
+            "region_col": "location",
+            "world_rank_col": "overall_rank_dis",
+            "indicators": [
+                {"column": "overall", "name": "总得分", "metric_type": "score"},
+                {"column": "h指数排名", "name": "H指数", "metric_type": "score"},
+                {"column": "论文篇均引用率", "name": "篇均被引次数", "metric_type": "score"},
+                {"column": "学术声誉", "name": "学术声誉", "metric_type": "score"},
+                {"column": "雇主声誉", "name": "雇主声誉", "metric_type": "score"},
+                {"column": "国际研究网络", "name": "国际网络研究", "metric_type": "score"},
             ],
         },
         {
@@ -304,6 +379,27 @@ def build_records() -> pd.DataFrame:
                 {"column": "排名前1%的高被引论文数量排名", "name": "排名前1%的高被引论文数量排名", "metric_type": "rank"},
                 {"column": "前1%的高被引论文占论文总数的百分比排名", "name": "前1%的高被引论文占论文总数的百分比排名", "metric_type": "rank"},
                 {"column": "会议排名", "name": "会议排名", "metric_type": "rank"},
+            ],
+        },
+        {
+            "ranking_source": "THE",
+            "file": "2022THE学科领域排名.xlsx",
+            "sheet": "Sheet1",
+            "release_year_col": "pubyear",
+            "ranking_year_col": "pubyear",
+            "subject_col": "subject",
+            "subject_map": the_2022_subject_map,
+            "university_cn_col": "university_zh",
+            "university_en_col": "university",
+            "region_col": "location",
+            "world_rank_col": "worldrank",
+            "indicators": [
+                {"column": "overall", "name": "总得分", "metric_type": "score"},
+                {"column": "teaching", "name": "教学", "metric_type": "score"},
+                {"column": "research", "name": "科研环境", "metric_type": "score"},
+                {"column": "citations", "name": "篇均被引", "metric_type": "score"},
+                {"column": "industry_income", "name": "商业收入", "metric_type": "score"},
+                {"column": "international_outlook", "name": "国际化视野", "metric_type": "score"},
             ],
         },
         {

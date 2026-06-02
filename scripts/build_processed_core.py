@@ -18,6 +18,7 @@ PROCESSED_DIR = PROJECT_DIR / "processed"
 QA_DIR = PROCESSED_DIR / "qa"
 LOG_DIR = PROJECT_DIR / "logs"
 MANUAL_ALIASES_PATH = PROJECT_DIR / "configs" / "runtime" / "manual_subject_aliases.json"
+THE_RANKING_AREA_CROSSWALK_JSON = PROJECT_DIR / "configs" / "runtime" / "the_ranking_area_crosswalk.json"
 TONGJI_SUBJECT_PROXY_SUPPLEMENT_CSV = PROJECT_DIR / "configs" / "runtime" / "tongji_subject_proxy_supplement.csv"
 
 DIM_SUBJECT_CSV = PROCESSED_DIR / "dim_subject.csv"
@@ -32,6 +33,9 @@ RUN_LOG = LOG_DIR / "processed_core_run_log.md"
 
 TARGET_UNIVERSITY = "同济大学"
 REFERENCE_SUBJECT = "数学"
+SUBJECT_MAPPING_DISPLAY_CORRECTIONS = {
+    ("0710", "the_subject_area"): "生命科学",
+}
 
 
 def now_text() -> str:
@@ -126,6 +130,22 @@ def load_manual_alias_config() -> dict[str, Any]:
     if not MANUAL_ALIASES_PATH.exists():
         return {"invalid_alias_values": ["", "无", "暂无", "无对应", "-", "None", "nan"], "area_alias_rules": []}
     return json.loads(MANUAL_ALIASES_PATH.read_text(encoding="utf-8"))
+
+
+def load_the_ranking_area_crosswalk() -> dict[str, list[str]]:
+    if not THE_RANKING_AREA_CROSSWALK_JSON.exists():
+        return {}
+    payload = json.loads(THE_RANKING_AREA_CROSSWALK_JSON.read_text(encoding="utf-8"))
+    output: dict[str, list[str]] = {}
+    for key, value in payload.items():
+        canonical = clean_text(key)
+        if isinstance(value, list):
+            variants = [clean_text(item) for item in value if clean_text(item)]
+        else:
+            variants = [clean_text(value)]
+        if canonical:
+            output[canonical] = variants
+    return output
 
 
 def coalesce(row: pd.Series, columns: list[str]) -> Any:
@@ -283,6 +303,9 @@ def build_dim_subject() -> pd.DataFrame:
     ).copy()
 
     dim["ministry_subject_code"] = dim["ministry_subject_code"].map(clean_text)
+    for (subject_code, column), value in SUBJECT_MAPPING_DISPLAY_CORRECTIONS.items():
+        if column in dim.columns:
+            dim.loc[dim["ministry_subject_code"].eq(subject_code), column] = value
     dim = dim.merge(official_small, on="ministry_subject_code", how="left")
     dim = dim.merge(tongji_grouped, on="ministry_subject_code", how="left")
 
@@ -329,8 +352,39 @@ def infer_ranking_source(value: Any) -> str:
     return ""
 
 
+def load_usnews_bilingual_subject_aliases() -> dict[str, list[str]]:
+    pairs: dict[str, set[str]] = {}
+
+    def add_pair(left: Any, right: Any) -> None:
+        left_text = clean_text(left)
+        right_text = clean_text(right)
+        if not left_text or not right_text or normalize_key(left_text) == normalize_key(right_text):
+            return
+        pairs.setdefault(normalize_key(left_text), set()).add(right_text)
+        pairs.setdefault(normalize_key(right_text), set()).add(left_text)
+
+    configs = [
+        ("2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx", "全球排名", "学科中文", "学科"),
+        ("2025-2026年度US News世界学科排名20251124.xlsx", "Sheet1", "学科中文", "学科英文"),
+    ]
+    for filename, sheet, cn_col, en_col in configs:
+        path = DATA_DIR / filename
+        if not path.exists():
+            continue
+        df = read_sheet(filename, sheet)
+        if cn_col not in df.columns or en_col not in df.columns:
+            continue
+        for _, row in df[[cn_col, en_col]].drop_duplicates().iterrows():
+            add_pair(row.get(cn_col), row.get(en_col))
+    return {key: sorted(values) for key, values in pairs.items() if values}
+
+
 def build_dim_subject_alias(dim_subject: pd.DataFrame) -> pd.DataFrame:
+    manual_alias_config = load_manual_alias_config()
     invalid_alias_values = {normalize_key(value) for value in ["无", "暂无", "无对应", "不适用", "nan"]}
+    invalid_alias_values.update(normalize_key(value) for value in manual_alias_config.get("invalid_alias_values", []))
+    the_ranking_area_crosswalk = load_the_ranking_area_crosswalk()
+    usnews_bilingual_aliases = load_usnews_bilingual_subject_aliases()
     mapping_sheet_reverse = read_sheet("教育部学科与四大国际学科排名映射关系.xlsx", "Sheet1")
     ministry_name_to_id = {
         normalize_key(row["ministry_subject_name"]): clean_text(row["subject_id"])
@@ -388,6 +442,92 @@ def build_dim_subject_alias(dim_subject: pd.DataFrame) -> pd.DataFrame:
             ("ministry", "ministry_subject_name"),
         ]:
             add_alias(subject_id, source, row[column], "dim_subject_column", column)
+        for canonical_area in split_alias_text(row.get("the_subject_area")):
+            for variant in the_ranking_area_crosswalk.get(canonical_area, []):
+                add_alias(
+                    subject_id,
+                    "THE",
+                    variant,
+                    "the_ranking_area_crosswalk",
+                    "configs/runtime/the_ranking_area_crosswalk.json",
+                    split_alias=False,
+                )
+        for usnews_alias in split_alias_text(row.get("usnews_subject_name")):
+            for bilingual_alias in usnews_bilingual_aliases.get(normalize_key(usnews_alias), []):
+                add_alias(
+                    subject_id,
+                    "US News",
+                    bilingual_alias,
+                    "usnews_bilingual_raw_subject_alias",
+                    "US News raw bilingual subject columns",
+                    split_alias=False,
+                )
+        for local_subject_alias in split_alias_text(row.get("subject_short_name")):
+            bilingual_values = usnews_bilingual_aliases.get(normalize_key(local_subject_alias), [])
+            if not bilingual_values:
+                continue
+            add_alias(
+                subject_id,
+                "US News",
+                local_subject_alias,
+                "subject_short_name_usnews_bilingual",
+                "subject_short_name matched US News raw bilingual subject columns",
+                split_alias=False,
+            )
+            for bilingual_alias in bilingual_values:
+                add_alias(
+                    subject_id,
+                    "US News",
+                    bilingual_alias,
+                    "subject_short_name_usnews_bilingual",
+                    "subject_short_name matched US News raw bilingual subject columns",
+                    split_alias=False,
+                )
+
+    for rule in manual_alias_config.get("area_alias_rules", []):
+        ranking_source = clean_text(rule.get("ranking_source"))
+        dim_column = clean_text(rule.get("dim_subject_column"))
+        dim_value = clean_text(rule.get("dim_subject_value"))
+        if not ranking_source or not dim_column or dim_column not in dim_subject.columns:
+            continue
+        matched_subjects = dim_subject[dim_subject[dim_column].map(clean_text).eq(dim_value)].copy()
+        source_note = "manual_subject_aliases.json"
+        rule_id = clean_text(rule.get("rule_id"))
+        if rule_id:
+            source_note = f"{source_note}:{rule_id}"
+        mapping_class = clean_text(rule.get("mapping_class"))
+        alias_type = "manual_area_alias_rule" + (f":{mapping_class}" if mapping_class else "")
+        for _, subject_row in matched_subjects.iterrows():
+            for alias in rule.get("aliases", []):
+                add_alias(
+                    clean_text(subject_row.get("subject_id")),
+                    ranking_source,
+                    alias,
+                    alias_type,
+                    source_note,
+                    split_alias=False,
+                )
+
+    for rule in manual_alias_config.get("subject_alias_rules", []):
+        subject_id = clean_text(rule.get("subject_id"))
+        ranking_source = clean_text(rule.get("ranking_source"))
+        if not subject_id or not ranking_source:
+            continue
+        source_note = "manual_subject_aliases.json"
+        rule_id = clean_text(rule.get("rule_id"))
+        if rule_id:
+            source_note = f"{source_note}:{rule_id}"
+        mapping_class = clean_text(rule.get("mapping_class"))
+        alias_type = "manual_subject_alias_rule" + (f":{mapping_class}" if mapping_class else "")
+        for alias in rule.get("aliases", []):
+            add_alias(
+                subject_id,
+                ranking_source,
+                alias,
+                alias_type,
+                source_note,
+                split_alias=False,
+            )
 
     for _, row in mapping_sheet_reverse.iterrows():
         source = infer_ranking_source(row.get("榜单名称"))
@@ -579,6 +719,28 @@ def ranking_record(
 def append_arwu(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list[str]]) -> None:
     configs = [
         {
+            "file": "2021年软科世界一流学科排名-20211119.xlsx",
+            "sheet": "arwu_gras_detail",
+            "release_year": "Time",
+            "subject": "Subject",
+            "university_cn": "Institution",
+            "university_en": "",
+            "region": "Country_Region",
+            "rank": "World_Rank",
+            "score": "Total_Score",
+        },
+        {
+            "file": "2022年软科世界一流学科排名-20220720.xlsx",
+            "sheet": "Sheet1",
+            "release_year": "Time",
+            "subject": "Subject",
+            "university_cn": "Institution",
+            "university_en": "",
+            "region": "Country_Region",
+            "rank": "World_Rank",
+            "score": "Total_Score",
+        },
+        {
             "file": "2023年软科世界一流学科排名-20231030.xlsx",
             "sheet": "名单",
             "release_year": "发布年度",
@@ -640,6 +802,19 @@ def append_arwu(records: list[dict[str, Any]], lookups: dict[tuple[str, str], li
 def append_qs(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list[str]]) -> None:
     configs = [
         {
+            "file": "2022年QS学科排名202203.xlsx",
+            "sheet": "Sheet1",
+            "header": 1,
+            "release_year": "pubyear",
+            "ranking_year": "pubyear",
+            "subject": "subject_name",
+            "university_cn": "uni",
+            "university_en": "",
+            "region": "location",
+            "rank": "overall_rank_dis",
+            "score": "overall",
+        },
+        {
             "file": "2023年QS世界学科排名.xlsx",
             "sheet": "2023",
             "release_year": 2023,
@@ -689,7 +864,8 @@ def append_qs(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list
         },
     ]
     for config in configs:
-        df = read_sheet(config["file"], config["sheet"])
+        header = int(config.get("header", 0))
+        df = read_sheet(config["file"], config["sheet"], header=header)
         for index, row in df.iterrows():
             subject_raw = first_existing(row, [config["subject"]])
             subject_id, match_count = direct_subject_id_for("QS", subject_raw, lookups)
@@ -710,7 +886,7 @@ def append_qs(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list
                     total_score=row.get(config["score"]),
                     source_file=config["file"],
                     source_sheet=config["sheet"],
-                    source_row=int(index) + 2,
+                    source_row=int(index) + 2 + header,
                 )
             )
 
@@ -729,7 +905,7 @@ def append_usnews(records: list[dict[str, Any]], lookups: dict[tuple[str, str], 
             "university_en": "university",
             "region": "location",
             "rank": "subjectrank",
-            "score": "globalscore",
+            "score": "subjectscore",
         },
         {
             "file": "2022US News世界学科排名20211026.xlsx",
@@ -753,8 +929,8 @@ def append_usnews(records: list[dict[str, Any]], lookups: dict[tuple[str, str], 
             "release_year": "发布时间",
             "ranking_year": "Time",
             "subject": "Subject",
-            "university_cn": "Name",
-            "university_en": "",
+            "university_cn": "",
+            "university_en": "Name",
             "region": "Country",
             "rank": "Rank",
             "score": "OVERALL_SCORE",
@@ -771,7 +947,7 @@ def append_usnews(records: list[dict[str, Any]], lookups: dict[tuple[str, str], 
             "university_en": "名称",
             "region": "国家",
             "rank": "世界排名",
-            "score": "总得分",
+            "score": "总得分.1",
         },
         {
             "file": "2025-2026年度US News世界学科排名20251124.xlsx",
@@ -817,40 +993,72 @@ def append_usnews(records: list[dict[str, Any]], lookups: dict[tuple[str, str], 
 
 
 def append_the(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list[str]]) -> None:
-    config = {
-        "file": "世界大学学科排名THE（2022-2026年）20260123.xlsx",
-        "sheet": "数据",
-        "release_year": "发布年度",
-        "ranking_year": "排名年度",
-        "subject": "学科中文",
-        "university_cn": "中文名称",
-        "university_en": "外文名称",
-        "region": "所在地区",
-        "rank": "国际排名",
-        "score": "总得分",
+    the_2022_subject_map = {
+        "arts & humanities": "艺术与人文学",
+        "business & economics": "商业与经济学",
+        "clinical & health": "临床与健康",
+        "computer science": "计算机科学",
+        "education": "教育学",
+        "engineering": "工学",
+        "law": "法学",
+        "life sciences": "生命科学",
+        "physical sciences": "理学",
+        "psychology": "心理学",
+        "social sciences": "社会科学",
     }
-    df = read_sheet(config["file"], config["sheet"])
-    for index, row in df.iterrows():
-        subject_raw = first_existing(row, [config["subject"]])
-        subject_id, match_count = direct_subject_id_for("THE", subject_raw, lookups)
-        records.append(
-            ranking_record(
-                ranking_source="THE",
-                release_year=parse_year(row.get(config["release_year"])),
-                ranking_year=parse_year(row.get(config["ranking_year"])),
-                subject_raw=subject_raw,
-                subject_id=subject_id,
-                subject_alias_match_count=match_count,
-                university_name_cn=first_existing(row, [config["university_cn"]]),
-                university_name_en=first_existing(row, [config["university_en"]]),
-                country_or_region=first_existing(row, [config["region"]]),
-                rank_value=row.get(config["rank"]),
-                total_score=row.get(config["score"]),
-                source_file=config["file"],
-                source_sheet=config["sheet"],
-                source_row=int(index) + 2,
+    the_2022_subject_map = {normalize_key(key): value for key, value in the_2022_subject_map.items()}
+    configs = [
+        {
+            "file": "2022THE学科领域排名.xlsx",
+            "sheet": "Sheet1",
+            "release_year": "pubyear",
+            "ranking_year": "pubyear",
+            "subject": "subject",
+            "subject_map": the_2022_subject_map,
+            "university_cn": "university_zh",
+            "university_en": "university",
+            "region": "location",
+            "rank": "worldrank",
+            "score": "overall",
+        },
+        {
+            "file": "世界大学学科排名THE（2022-2026年）20260123.xlsx",
+            "sheet": "数据",
+            "release_year": "发布年度",
+            "ranking_year": "排名年度",
+            "subject": "学科中文",
+            "university_cn": "中文名称",
+            "university_en": "外文名称",
+            "region": "所在地区",
+            "rank": "国际排名",
+            "score": "总得分",
+        },
+    ]
+    for config in configs:
+        df = read_sheet(config["file"], config["sheet"])
+        subject_map = config.get("subject_map", {})
+        for index, row in df.iterrows():
+            subject_raw_original = first_existing(row, [config["subject"]])
+            subject_raw = subject_map.get(normalize_key(subject_raw_original), subject_raw_original)
+            subject_id, match_count = direct_subject_id_for("THE", subject_raw, lookups)
+            records.append(
+                ranking_record(
+                    ranking_source="THE",
+                    release_year=parse_year(row.get(config["release_year"])),
+                    ranking_year=parse_year(row.get(config["ranking_year"])),
+                    subject_raw=subject_raw,
+                    subject_id=subject_id,
+                    subject_alias_match_count=match_count,
+                    university_name_cn=first_existing(row, [config["university_cn"]]),
+                    university_name_en=first_existing(row, [config["university_en"]]),
+                    country_or_region=first_existing(row, [config["region"]]),
+                    rank_value=row.get(config["rank"]),
+                    total_score=row.get(config["score"]),
+                    source_file=config["file"],
+                    source_sheet=config["sheet"],
+                    source_row=int(index) + 2,
+                )
             )
-        )
 
 
 def build_fact_ranking(dim_subject_alias: pd.DataFrame) -> pd.DataFrame:

@@ -12,6 +12,7 @@ from typing import Any
 
 import audit_word_report
 import agent_runtime
+import build_artifact_lineage_manifest
 import build_narrative_generation_bundle as narrative_bundle
 import generate_narrative_with_llm as narrative_llm
 import build_word_assembly_manifest as assembly_manifest
@@ -772,6 +773,14 @@ def build_subject_word_report() -> dict[str, Any]:
     append_stage_log(output_docx.parent, "artifact_source_bundle", "start")
     artifact_source_bundle = export_artifact_source_bundle(run_dir, manifest, output_docx.parent)
     append_stage_log(output_docx.parent, "artifact_source_bundle", "done")
+    append_stage_log(output_docx.parent, "artifact_lineage_manifest", "start")
+    try:
+        artifact_lineage = build_artifact_lineage_manifest.build_lineage_manifests(run_dir, output_docx.parent)
+        artifact_lineage["status"] = "generated"
+        append_stage_log(output_docx.parent, "artifact_lineage_manifest", "generated")
+    except Exception as exc:
+        artifact_lineage = {"status": "error", "error": str(exc)}
+        append_stage_log(output_docx.parent, "artifact_lineage_manifest", "error", {"error": str(exc)})
 
     payload = {
         "generated_at": now_text(),
@@ -786,6 +795,7 @@ def build_subject_word_report() -> dict[str, Any]:
         "artifact_summary": subject_summary.get("parameterized_artifacts", {}),
         "artifact_audit": subject_summary.get("subject_artifact_audit", {}),
         "artifact_source_bundle": artifact_source_bundle,
+        "artifact_lineage": artifact_lineage,
         "word_replacement_audit": str(word_trial.REPLACEMENT_AUDIT_JSON),
         "word_open_normalization": word_open_normalization,
         "word_field_update": field_update_result,

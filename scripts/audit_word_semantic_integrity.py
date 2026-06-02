@@ -14,6 +14,7 @@ from docx import Document
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 FULL_WORD_REPORTS_DIR = PROJECT_DIR / "outputs" / "full_word_reports"
 COVERAGE_CSV = PROJECT_DIR / "outputs" / "subject_coverage_audit" / "tongji_49_academic_degree_generation_coverage_after_supplement.csv"
+DIM_SUBJECT_ALIAS_CSV = PROJECT_DIR / "processed" / "dim_subject_alias.csv"
 OUTPUT_DIR = PROJECT_DIR / "outputs" / "word_semantic_audit" / "latest"
 
 RANKING_SOURCES = ["软科", "QS", "US News", "THE"]
@@ -79,6 +80,26 @@ def load_coverage() -> dict[tuple[str, str], dict[str, str]]:
             continue
         rows[(code, name)] = {key: clean_text(value) for key, value in row.items()}
     return rows
+
+
+def load_alias_mapping() -> dict[tuple[str, str], str]:
+    if not DIM_SUBJECT_ALIAS_CSV.exists():
+        return {}
+    df = pd.read_csv(DIM_SUBJECT_ALIAS_CSV, dtype=str, encoding="utf-8-sig").fillna("")
+    rows: dict[tuple[str, str], list[str]] = {}
+    for _, row in df.iterrows():
+        subject_id = clean_text(row.get("subject_id"))
+        match = re.search(r"(\d{4})$", subject_id)
+        code = match.group(1) if match else ""
+        source = clean_text(row.get("ranking_source"))
+        alias = clean_text(row.get("ranking_subject_alias"))
+        if not code or not source or not alias:
+            continue
+        key = (code, source)
+        items = rows.setdefault(key, [])
+        if alias not in items:
+            items.append(alias)
+    return {key: ";".join(items) for key, items in rows.items()}
 
 
 def code_from_dir(path: Path) -> str:
@@ -270,7 +291,11 @@ def add_issue(issues: list[dict[str, Any]], report: dict[str, Any], severity: st
     )
 
 
-def audit_report(report_dir: Path, coverage: dict[tuple[str, str], dict[str, str]]) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def audit_report(
+    report_dir: Path,
+    coverage: dict[tuple[str, str], dict[str, str]],
+    alias_mapping: dict[tuple[str, str], str],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     code = code_from_dir(report_dir)
     subject = subject_name_from_dir(report_dir)
     report = {
@@ -344,7 +369,8 @@ def audit_report(report_dir: Path, coverage: dict[tuple[str, str], dict[str, str
     if coverage_row:
         ready_sources = sources_from_semicolon(coverage_row.get("tongji_sources") or coverage_row.get("ranking_sources"))
         for source in RANKING_SOURCES:
-            mapping = override_mapping_for_source(run_dir, source) if run_dir.exists() else ""
+            mapping = alias_mapping.get((code, source), "")
+            mapping = mapping or (override_mapping_for_source(run_dir, source) if run_dir.exists() else "")
             mapping = mapping or mapping_for_source(coverage_row, source)
             if not mapping or source not in ready_sources:
                 continue
@@ -358,7 +384,7 @@ def audit_report(report_dir: Path, coverage: dict[tuple[str, str], dict[str, str
                     f"{source} 有可用口径映射“{mapping}”，但 Word 正文/图题未明确出现该口径。",
                     f"mapping={mapping}",
                 )
-        the_mapping = mapping_for_source(coverage_row, "THE")
+        the_mapping = alias_mapping.get((code, "THE"), "") or mapping_for_source(coverage_row, "THE")
         if the_mapping and normalize_key(the_mapping) != normalize_key("自然科学") and "THE世界学科排名自然科学领域" in all_text:
             add_issue(
                 issues,
@@ -456,10 +482,11 @@ def audit_report(report_dir: Path, coverage: dict[tuple[str, str], dict[str, str
 
 def main() -> dict[str, Any]:
     coverage = load_coverage()
+    alias_mapping = load_alias_mapping()
     report_rows: list[dict[str, Any]] = []
     issue_rows: list[dict[str, Any]] = []
     for report_dir in latest_report_dirs():
-        report, issues = audit_report(report_dir, coverage)
+        report, issues = audit_report(report_dir, coverage, alias_mapping)
         report_rows.append(report)
         issue_rows.extend(issues)
 
