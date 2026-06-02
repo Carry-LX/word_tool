@@ -4574,8 +4574,9 @@ def compact_final_recommendation_section(document: Document) -> int:
             paragraph_format.space_after = Pt(3)
         else:
             paragraph_format.space_before = Pt(0)
-            paragraph_format.space_after = Pt(6)
-            paragraph_format.line_spacing_rule = WD_LINE_SPACING.ONE_POINT_FIVE
+            paragraph_format.space_after = Pt(2)
+            paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+            paragraph_format.line_spacing = 1.15
             paragraph_format.first_line_indent = paragraph_format.first_line_indent or Pt(28)
             try:
                 paragraph_format.widow_control = False
