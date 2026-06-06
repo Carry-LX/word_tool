@@ -195,7 +195,7 @@ def rank_year_columns(columns: list[Any]) -> list[tuple[str, int]]:
 
 
 def scan_the_tongji_history(subjects: list[dict[str, Any]]) -> pd.DataFrame:
-    paths = sorted(DATA_DIR.glob("世界大学学科排名THE*2022-2026*.xlsx"))
+    paths = sorted(DATA_DIR.glob("*THE*2023-2026*.xlsx"))
     if not paths:
         return pd.DataFrame()
     try:
@@ -220,6 +220,8 @@ def scan_the_tongji_history(subjects: list[dict[str, Any]]) -> pd.DataFrame:
             raw_values = []
             missing_years = []
             for column, year in year_cols:
+                if year < 2023 or year > 2026:
+                    continue
                 value = clean_text(row.get(column))
                 if not value or value in {"未进入", "滑落"}:
                     continue

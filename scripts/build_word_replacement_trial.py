@@ -483,7 +483,7 @@ def table_widths_by_header(matrix: list[list[str]], total_width_emu: int) -> lis
 
     fixed: list[int | None] = []
     for header in headers:
-        if header == "序号":
+        if "序号" in header:
             fixed.append(int(0.42 * 914400))
         elif "学校" in header:
             fixed.append(int(1.15 * 914400))
@@ -1661,10 +1661,12 @@ def summarize_peer_indicator(artifact_id: str) -> str:
     strong = "、".join(name for _, name, _ in ranked[:2] if name)
     weak = "、".join(name for _, name, _ in ranked[-2:] if name)
     scope_sizes = []
+    tongji_in_scope_values = []
     for _, _, row in ranked:
-        value = to_number(first_present(row, ["comparison_scope_size", "peer_scope_size"]))
+        value = to_number(first_present(row, ["peer_scope_size", "comparison_scope_size"]))
         if value is not None:
             scope_sizes.append(int(value))
+        tongji_in_scope_values.append(clean_text(row.get("tongji_in_peer_scope", "")).lower() in {"true", "1", "yes"})
     scope_sizes = sorted(set(scope_sizes))
     if len(scope_sizes) == 1:
         peer_size = str(scope_sizes[0])
@@ -1689,7 +1691,10 @@ def summarize_peer_indicator(artifact_id: str) -> str:
         subject_phrase = subject_label
     else:
         subject_phrase = f"{subject_label}口径"
-    return f"{source}{subject_phrase}分项对标共覆盖{peer_size}所内地高校。同济大学相对靠前的指标主要是{strong or '部分优势项'}，相对靠后的指标主要是{weak or '部分短板项'}，建设工作应优先把这些短板与榜单权重结合判断。"
+    reference_note = ""
+    if tongji_in_scope_values and not all(tongji_in_scope_values):
+        reference_note = "，并单列同济大学作为参照，不将参照点计入前列样本规模"
+    return f"{source}{subject_phrase}分项对标以{peer_size}所前列内地高校为参照样本{reference_note}。同济大学相对靠前的指标主要是{strong or '部分优势项'}，相对靠后的指标主要是{weak or '部分短板项'}，建设工作应优先把这些短板与榜单权重结合判断。"
 
 
 def summarize_peer_table(artifact_id: str) -> str:
@@ -1701,14 +1706,25 @@ def summarize_peer_table(artifact_id: str) -> str:
     source_key = "US News" if source == "U.S. News" else source
     subject_label = report_subject_label_for_source("THE", read_target_subject_name()) if source == "THE" else subject_label_from_artifact_rows(full_rows, report_subject_label_for_source(source_key, read_target_subject_name()))
     source_scope = f"{source}{subject_label}口径" if source and subject_label else f"{source}最新口径"
-    displayed_count = len(rows)
+    row_label_keys = ["序号/说明", "序号"]
+    top_sample_count = sum(
+        1
+        for row in rows
+        if clean_text(next((row.get(key, "") for key in row_label_keys if key in row), "")).isdigit()
+    )
+    displayed_count = top_sample_count or len(rows)
     full_count = len(full_rows) or displayed_count
     tongji = next((row for row in rows if "同济" in "".join(row.values())), {})
-    display_note = f"受篇幅限制，正文列示排名靠前的{displayed_count}所内地高校"
+    tongji_label = clean_text(next((tongji.get(key, "") for key in row_label_keys if key in tongji), "")) if tongji else ""
+    tongji_is_reference = "参照" in tongji_label
+    display_note = f"受篇幅限制，正文列示最新年份排名靠前的{displayed_count}所内地高校"
+    if tongji_is_reference:
+        display_note += "，并在表末另列同济大学作为参照；该参照行不计入前列样本，也不表示同济为下一顺位"
     if tongji:
-        values = [value for key, value in tongji.items() if key not in {"序号", "学校名称", "省份"} and value]
+        values = [value for key, value in tongji.items() if key not in {"序号", "序号/说明", "学校名称", "省份"} and value]
         latest_value = values[-1] if values else ""
-        return f"{source_scope}下，{display_note}。同济大学历年记录为{'、'.join(values[:4])}，最新位次为{latest_value}；与头部高校相比仍有梯队差距，但可通过连续位次变化判断追赶速度。"
+        reference_note = "表末“同济参照”用于和前列高校横向比较，不作为排名序号解读。" if tongji_is_reference else ""
+        return f"{source_scope}下，{display_note}。同济大学历年记录为{'、'.join(values[:4])}，最新位次为{latest_value}；{reference_note}与头部高校相比仍有梯队差距，但可通过连续位次变化判断追赶速度。"
     if source == "软科" and not source_has_tongji_latest("软科"):
         subject_label = arwu_public_subject_label(read_target_subject_name())
         return f"软科{subject_label}口径下，{display_note}。当前事实层尚未匹配到同济大学在该软科口径下的最新综合位次，因此该表仅用于观察头部高校格局，不用于判断同济软科位次或竞争梯队。"
@@ -1733,10 +1749,10 @@ def summarize_distribution(artifact_id: str) -> str:
         if len(positive_totals) >= 2:
             largest = clean_text(positive_totals[0].get("榜单", ""))
             smallest = clean_text(positive_totals[-1].get("榜单", ""))
-            return f"按学校去重后，{source_scope}前200位内地高校样本规模存在差异。{largest}样本更适合观察完整梯队，{smallest}样本规模较小，主要用于观察可核验头部样本；{missing_text}正文表格受篇幅限制仅展示排名靠前高校，后续对标分析需避免把不同榜单的样本规模直接等同。"
+            return f"按学校去重后，{source_scope}前200位内地高校样本规模存在差异。{largest}样本更适合观察完整梯队，{smallest}样本规模较小，主要用于观察可核验头部样本；{missing_text}正文表格受篇幅限制仅展示排名靠前样本，若同济未进入该范围则另列参照行，后续对标分析需避免把不同榜单的样本规模直接等同。"
         if positive_totals:
             source = clean_text(positive_totals[0].get("榜单", ""))
-            return f"按学校去重后，当前主要由{source}提供可核验前200内地高校样本；{missing_text}正文表格受篇幅限制仅展示排名靠前高校，后续对标分析应把已有样本和缺失榜单分开说明。"
+            return f"按学校去重后，当前主要由{source}提供可核验前200内地高校样本；{missing_text}正文表格受篇幅限制仅展示排名靠前样本，若同济未进入该范围则另列参照行，后续对标分析应把已有样本和缺失榜单分开说明。"
         return f"按学校去重后，{source_scope}暂未形成可用的前200位内地高校样本。后续需先补齐对应榜单口径，再开展同行梯队比较。"
     return ""
 
@@ -1750,7 +1766,12 @@ def summarize_indicator_history_table(artifact_id: str) -> str:
     indicator_col = next((col for col in columns if "指标" in col or "名称" in col), columns[0])
     indicators = [clean_text(row.get(indicator_col, "")) for row in rows[:4] if clean_text(row.get(indicator_col, ""))]
     source = "软科" if "table_01" in artifact_id else "U.S. News" if "table_02" in artifact_id else "THE"
-    if len(year_cols) >= 3 and all(str(year) == str(int(year_cols[0]) + idx) for idx, year in enumerate(year_cols)):
+    pure_year_cols = [col for col in year_cols if re.fullmatch(r"\d{4}", clean_text(col))]
+    if (
+        len(year_cols) >= 3
+        and len(pure_year_cols) == len(year_cols)
+        and all(str(year) == str(int(year_cols[0]) + idx) for idx, year in enumerate(year_cols))
+    ):
         year_text = f"{year_cols[0]}至{year_cols[-1]}"
     elif len(year_cols) >= 2:
         year_text = "、".join(year_cols)
@@ -2167,8 +2188,9 @@ def insert_caption_after_paragraph(paragraph: Paragraph, caption_text: str) -> P
     inserted.paragraph_format.space_before = Pt(2)
     inserted.paragraph_format.space_after = Pt(6)
     run = inserted.add_run(caption_text)
-    run.font.name = "SimSun"
-    run.font.size = Pt(10.5)
+    run.font.name = "仿宋_GB2312"
+    run.font.size = Pt(12)
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "仿宋_GB2312")
     return inserted
 
 
@@ -2180,9 +2202,9 @@ def insert_caption_before_paragraph(paragraph: Paragraph, caption_text: str) -> 
     inserted.paragraph_format.space_before = Pt(6)
     inserted.paragraph_format.space_after = Pt(2)
     run = inserted.add_run(caption_text)
-    run.font.name = "SimSun"
-    run.font.size = Pt(10.5)
-    run._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
+    run.font.name = "仿宋_GB2312"
+    run.font.size = Pt(12)
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "仿宋_GB2312")
     return inserted
 
 

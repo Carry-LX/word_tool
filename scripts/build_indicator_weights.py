@@ -15,11 +15,16 @@ DATA_DIR = PROJECT_DIR / "data"
 PROCESSED_DIR = PROJECT_DIR / "processed"
 QA_DIR = PROCESSED_DIR / "qa" / "indicator_weights"
 LOG_DIR = PROJECT_DIR / "logs"
+PREFERRED_WEIGHT_FILE = "四大世界学科2025指标权重（20260603更新）.xlsx"
 
-WEIGHT_FILE = next(
-    path.name
-    for path in DATA_DIR.glob("*.xlsx")
-    if path.name.startswith("\u56db\u5927") and "\u6743\u91cd" in path.name
+WEIGHT_FILE = (
+    PREFERRED_WEIGHT_FILE
+    if (DATA_DIR / PREFERRED_WEIGHT_FILE).exists()
+    else next(
+        path.name
+        for path in DATA_DIR.glob("*.xlsx")
+        if path.name.startswith("\u56db\u5927") and "\u6743\u91cd" in path.name
+    )
 )
 SQLITE_PATH = PROCESSED_DIR / "ranking.sqlite"
 

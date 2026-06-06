@@ -17,6 +17,9 @@ DATA_DIR = PROJECT_DIR / "data"
 PROCESSED_DIR = PROJECT_DIR / "processed"
 QA_DIR = PROCESSED_DIR / "qa" / "ranking_indicators"
 LOG_DIR = PROJECT_DIR / "logs"
+ARWU_RANKING_FILE = "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx"
+QS_USNEWS_RANKING_FILE = "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx"
+THE_RANKING_FILE = "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
 
 SQLITE_PATH = PROCESSED_DIR / "ranking.sqlite"
 FACT_RANKING_INDICATOR_CSV = PROCESSED_DIR / "fact_ranking_indicator.csv"
@@ -94,6 +97,13 @@ def read_sheet(file_name: str, sheet_name: str, header: int = 0) -> pd.DataFrame
     df.columns = [clean_text(column) for column in df.columns]
     df = df.dropna(how="all").copy()
     return df
+
+
+def data_file_name(preferred: str, *fallbacks: str) -> str:
+    for file_name in (preferred, *fallbacks):
+        if (DATA_DIR / file_name).exists():
+            return file_name
+    return preferred
 
 
 def indicator_group_for(indicator_name: str) -> str:
@@ -201,63 +211,11 @@ def append_records_from_config(records: list[dict[str, Any]], config: dict[str, 
 
 def build_records() -> pd.DataFrame:
     records: list[dict[str, Any]] = []
-    the_2022_subject_map = {
-        "arts & humanities": "艺术与人文学",
-        "business & economics": "商业与经济学",
-        "clinical & health": "临床与健康",
-        "computer science": "计算机科学",
-        "education": "教育学",
-        "engineering": "工学",
-        "law": "法学",
-        "life sciences": "生命科学",
-        "physical sciences": "理学",
-        "psychology": "心理学",
-        "social sciences": "社会科学",
-    }
-    the_2022_subject_map = {normalize_key(key): value for key, value in the_2022_subject_map.items()}
     configs = [
         {
             "ranking_source": "软科",
-            "file": "2021年软科世界一流学科排名-20211119.xlsx",
-            "sheet": "arwu_gras_detail",
-            "release_year_col": "Time",
-            "ranking_year_col": "Time",
-            "subject_col": "Subject",
-            "university_cn_col": "Institution",
-            "region_col": "Country_Region",
-            "world_rank_col": "World_Rank",
-            "indicators": [
-                {"column": "Total_Score", "name": "总得分", "metric_type": "score"},
-                {"column": "Q1", "name": "高水平研究成果/重要期刊论文数", "metric_type": "score"},
-                {"column": "CNCI", "name": "科研影响力/论文标准化影响力", "metric_type": "score"},
-                {"column": "IC", "name": "国际合作/国际合作论文比例", "metric_type": "score"},
-                {"column": "TOP", "name": "世界一流成果", "metric_type": "score"},
-                {"column": "AWARD", "name": "世界一流教师", "metric_type": "score"},
-            ],
-        },
-        {
-            "ranking_source": "软科",
-            "file": "2022年软科世界一流学科排名-20220720.xlsx",
-            "sheet": "Sheet1",
-            "release_year_col": "Time",
-            "ranking_year_col": "Time",
-            "subject_col": "Subject",
-            "university_cn_col": "Institution",
-            "region_col": "Country_Region",
-            "world_rank_col": "World_Rank",
-            "indicators": [
-                {"column": "Total_Score", "name": "总得分", "metric_type": "score"},
-                {"column": "Q1", "name": "高水平研究成果/重要期刊论文数", "metric_type": "score"},
-                {"column": "CNCI", "name": "科研影响力/论文标准化影响力", "metric_type": "score"},
-                {"column": "IC", "name": "国际合作/国际合作论文比例", "metric_type": "score"},
-                {"column": "TOP", "name": "世界一流成果", "metric_type": "score"},
-                {"column": "AWARD", "name": "世界一流教师", "metric_type": "score"},
-            ],
-        },
-        {
-            "ranking_source": "软科",
-            "file": "2025年软科世界一流学科排名20251118.xlsx",
-            "sheet": "数据",
+            "file": data_file_name(ARWU_RANKING_FILE),
+            "sheet": "2021-2025",
             "release_year_col": "发布年度",
             "ranking_year_col": "发布年度",
             "subject_col": "学科名称",
@@ -276,67 +234,8 @@ def build_records() -> pd.DataFrame:
         },
         {
             "ranking_source": "QS",
-            "file": "2022年QS学科排名202203.xlsx",
-            "sheet": "Sheet1",
-            "header": 1,
-            "release_year_col": "pubyear",
-            "ranking_year_col": "pubyear",
-            "subject_col": "subject_name",
-            "university_cn_col": "uni",
-            "region_col": "location",
-            "world_rank_col": "overall_rank_dis",
-            "indicators": [
-                {"column": "overall", "name": "总得分", "metric_type": "score"},
-                {"column": "h指数排名", "name": "H指数", "metric_type": "score"},
-                {"column": "论文篇均引用率", "name": "篇均被引次数", "metric_type": "score"},
-                {"column": "学术声誉", "name": "学术声誉", "metric_type": "score"},
-                {"column": "雇主声誉", "name": "雇主声誉", "metric_type": "score"},
-                {"column": "国际研究网络", "name": "国际网络研究", "metric_type": "score"},
-            ],
-        },
-        {
-            "ranking_source": "QS",
-            "file": "2024年QS世界学科排名-20240412.xlsx",
-            "sheet": "数据",
-            "release_year_col": "发布年度",
-            "ranking_year_col": "发布年度",
-            "subject_col": "学科中文",
-            "university_cn_col": "中文名称",
-            "university_en_col": "英文名称",
-            "region_col": "所在地区",
-            "world_rank_col": "国际排名",
-            "indicators": [
-                {"column": "总得分", "name": "总得分", "metric_type": "score"},
-                {"column": "H指数", "name": "H指数", "metric_type": "score"},
-                {"column": "篇均被引次数", "name": "篇均被引次数", "metric_type": "score"},
-                {"column": "学术声誉", "name": "学术声誉", "metric_type": "score"},
-                {"column": "雇主声誉", "name": "雇主声誉", "metric_type": "score"},
-                {"column": "国际网络研究", "name": "国际网络研究", "metric_type": "score"},
-            ],
-        },
-        {
-            "ranking_source": "QS",
-            "file": "2025年QS世界大学学科排名20250313.xlsx",
-            "sheet": "明细数",
-            "release_year_col": "年份",
-            "ranking_year_col": "年份",
-            "subject_col": "学科中文",
-            "university_cn_col": "大学",
-            "region_col": "地区",
-            "world_rank_col": "排名",
-            "indicators": [
-                {"column": "综合得分", "name": "总得分", "metric_type": "score"},
-                {"column": "H指数排名", "name": "H指数", "metric_type": "score"},
-                {"column": "论文篇均引用率", "name": "篇均被引次数", "metric_type": "score"},
-                {"column": "学术声誉", "name": "学术声誉", "metric_type": "score"},
-                {"column": "雇主声誉", "name": "雇主声誉", "metric_type": "score"},
-                {"column": "国际研究网络", "name": "国际网络研究", "metric_type": "score"},
-            ],
-        },
-        {
-            "ranking_source": "QS",
-            "file": "2026年QS世界学科排名20260326.xlsx",
-            "sheet": "数据",
+            "file": data_file_name(QS_USNEWS_RANKING_FILE),
+            "sheet": "QS（2021-2026）",
             "release_year_col": "发布年度",
             "ranking_year_col": "发布年度",
             "subject_col": "学科中文",
@@ -355,8 +254,8 @@ def build_records() -> pd.DataFrame:
         },
         {
             "ranking_source": "US News",
-            "file": "2025-2026年度US News世界学科排名20251124.xlsx",
-            "sheet": "Sheet1",
+            "file": data_file_name(QS_USNEWS_RANKING_FILE),
+            "sheet": "USnews（2021-2025）",
             "release_year_col": "发布年度",
             "ranking_year_col": "排名年度",
             "subject_col": "学科中文",
@@ -374,7 +273,7 @@ def build_records() -> pd.DataFrame:
                 {"column": "总被引频次排名", "name": "总被引频次排名", "metric_type": "rank"},
                 {"column": "被引用最多的10%的出版物数量排名", "name": "被引用最多的10%的出版物数量排名", "metric_type": "rank"},
                 {"column": "总被引率占总被引文献的10%排名", "name": "总被引率占总被引文献的10%排名", "metric_type": "rank"},
-                {"column": "具有国际合作出版物的比例排名", "name": "具有国际合作出版物的比例排名", "metric_type": "rank"},
+                {"column": "国际合作（国家层面）排名", "name": "国际合作（国家层面）排名", "metric_type": "rank"},
                 {"column": "国际合作排名", "name": "国际合作排名", "metric_type": "rank"},
                 {"column": "排名前1%的高被引论文数量排名", "name": "排名前1%的高被引论文数量排名", "metric_type": "rank"},
                 {"column": "前1%的高被引论文占论文总数的百分比排名", "name": "前1%的高被引论文占论文总数的百分比排名", "metric_type": "rank"},
@@ -383,29 +282,8 @@ def build_records() -> pd.DataFrame:
         },
         {
             "ranking_source": "THE",
-            "file": "2022THE学科领域排名.xlsx",
-            "sheet": "Sheet1",
-            "release_year_col": "pubyear",
-            "ranking_year_col": "pubyear",
-            "subject_col": "subject",
-            "subject_map": the_2022_subject_map,
-            "university_cn_col": "university_zh",
-            "university_en_col": "university",
-            "region_col": "location",
-            "world_rank_col": "worldrank",
-            "indicators": [
-                {"column": "overall", "name": "总得分", "metric_type": "score"},
-                {"column": "teaching", "name": "教学", "metric_type": "score"},
-                {"column": "research", "name": "科研环境", "metric_type": "score"},
-                {"column": "citations", "name": "篇均被引", "metric_type": "score"},
-                {"column": "industry_income", "name": "商业收入", "metric_type": "score"},
-                {"column": "international_outlook", "name": "国际化视野", "metric_type": "score"},
-            ],
-        },
-        {
-            "ranking_source": "THE",
-            "file": "世界大学学科排名THE（2022-2026年）20260123.xlsx",
-            "sheet": "数据",
+            "file": data_file_name(THE_RANKING_FILE),
+            "sheet": "数据（2023-2026）",
             "release_year_col": "发布年度",
             "ranking_year_col": "排名年度",
             "subject_col": "学科中文",
@@ -427,6 +305,8 @@ def build_records() -> pd.DataFrame:
                 {"column": "国际化视野排名", "name": "国际化视野排名", "metric_type": "rank"},
                 {"column": "篇均被引", "name": "篇均被引", "metric_type": "score"},
                 {"column": "篇均被引排名", "name": "篇均被引排名", "metric_type": "rank"},
+                {"column": "研究", "name": "研究", "metric_type": "score"},
+                {"column": "研究排名", "name": "研究排名", "metric_type": "rank"},
             ],
         },
     ]

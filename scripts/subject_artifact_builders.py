@@ -42,6 +42,7 @@ ARWU_HISTORY_CSV = EXTERNAL_PROCESSED_DIR / "local_arwu_tongji_math_indicator_hi
 ARWU_PUBLIC_TONGJI_LONG_CSV = EXTERNAL_PROCESSED_DIR / "arwu_gras_public_tongji_history_2023_2025_long.csv"
 USNEWS_WEIGHT_CANDIDATE_CSV = EXTERNAL_PROCESSED_DIR / "usnews_math_weight_candidate_indirect.csv"
 UNIVERSITY_PROVINCE_CSV = PROCESSED_DIR / "dim_university_province.csv"
+QS_USNEWS_RANKING_FILE = "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx"
 
 RANKING_SOURCES = agent_runtime.normalize_ranking_sources(
     SUBJECT_REQUEST.get("ranking_sources"),
@@ -213,11 +214,13 @@ def canonical_indicator_name(source: str, indicator_name: Any) -> str:
     the_map = {
         "\u7bc7\u5747\u88ab\u5f15": "\u79d1\u7814\u8d28\u91cf",
         "\u7bc7\u5747\u88ab\u5f15\u6392\u540d": "\u79d1\u7814\u8d28\u91cf\u6392\u540d",
+        "\u7814\u7a76": "\u79d1\u7814\u73af\u5883",
+        "\u7814\u7a76\u6392\u540d": "\u79d1\u7814\u73af\u5883\u6392\u540d",
     }
     if source in {"ARWU", "\u8f6f\u79d1", "ARWU GRAS public web"}:
         return arwu_map.get(key, name)
     if source == "THE":
-        return the_map.get(name, name)
+        return the_map.get(key, the_map.get(name, name))
     return name
 
 
@@ -732,8 +735,7 @@ def load_usnews_bilingual_subject_aliases() -> dict[str, tuple[str, ...]]:
         pairs.setdefault(normalize_text_key(right_text), set()).add(left_text)
 
     configs = [
-        ("2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx", "全球排名", "学科中文", "学科"),
-        ("2025-2026年度US News世界学科排名20251124.xlsx", "Sheet1", "学科中文", "学科英文"),
+        (QS_USNEWS_RANKING_FILE, "USnews（2021-2025）", "学科中文", "学科英文"),
     ]
     for filename, sheet, cn_col, en_col in configs:
         path = DATA_DIR / filename
@@ -1344,7 +1346,7 @@ def rank_midpoint_from_raw(value: Any) -> float | None:
 
 
 def supplement_the_tongji_history(tongji: pd.DataFrame, subject: dict[str, Any]) -> pd.DataFrame:
-    paths = sorted(DATA_DIR.glob("世界大学学科排名THE*2022-2026*.xlsx"))
+    paths = sorted(DATA_DIR.glob("*THE*2023-2026*.xlsx"))
     if not paths:
         return tongji
     try:
@@ -1384,6 +1386,8 @@ def supplement_the_tongji_history(tongji: pd.DataFrame, subject: dict[str, Any])
         if not match:
             continue
         year = int(match.group(1))
+        if year < 2023 or year > 2026:
+            continue
         if year in existing_years:
             continue
         rank_raw = clean_text(row.get(column))
@@ -2494,7 +2498,7 @@ def render_peer_indicator_summary_chart(chart_df: pd.DataFrame, title: str, out_
     rank_col = "tongji_relative_rank_with_peer_reference"
     if rank_col not in work.columns:
         rank_col = "tongji_relative_rank_in_peer_scope"
-    size_col = "comparison_scope_size" if "comparison_scope_size" in work.columns else "peer_scope_size"
+    size_col = "peer_scope_size" if "peer_scope_size" in work.columns else "comparison_scope_size"
     work[rank_col] = pd.to_numeric(work[rank_col], errors="coerce")
     work[size_col] = pd.to_numeric(work[size_col], errors="coerce")
     work = work.dropna(subset=[rank_col, size_col]).copy()
@@ -2626,7 +2630,9 @@ def build_peer_history_matrix(
     for idx, peer in top.iterrows():
         name = clean_text(peer.get("_display_university"))
         peer_history = history[history["_display_university"] == name].copy()
-        row = {"序号": idx + 1, "学校名称": name, "省份": lookup_province(province_map, name)}
+        row_kind = clean_text(peer.get("_word_row_kind", ""))
+        row_label = "同济参照" if row_kind == "tongji_reference" else str(idx + 1)
+        row = {"序号/说明": row_label, "学校名称": name, "省份": lookup_province(province_map, name)}
         for year in year_cols:
             values = peer_history[peer_history["_year"] == year]["rank_raw"]
             col_name = f"{source} {year}" if include_source_prefix else year
@@ -2640,14 +2646,27 @@ def build_peer_history_matrix(
 
 def compact_peer_scope_for_word(latest_peers: pd.DataFrame, max_rows: int = MAIN_WORD_PEER_TABLE_MAX_ROWS) -> pd.DataFrame:
     if latest_peers.empty or len(latest_peers) <= max_rows:
-        return latest_peers.copy()
+        compact = latest_peers.copy()
+        compact["_word_row_kind"] = "top_sample"
+        return compact
     compact = latest_peers.head(max_rows).copy()
+    compact["_word_row_kind"] = "top_sample"
     is_tongji = latest_peers.get("is_tongji", pd.Series([""] * len(latest_peers), index=latest_peers.index)).astype(str).str.lower().isin(["true", "1"])
-    tongji_rows = latest_peers[is_tongji | latest_peers.get("university_name_cn", pd.Series(dtype=str)).astype(str).str.contains("同济", na=False)].copy()
+    tongji_rows = latest_peers[
+        is_tongji
+        | latest_peers.get("university_name_cn", pd.Series(dtype=str)).astype(str).str.contains("同济", na=False)
+        | latest_peers.get("university_name_en", pd.Series(dtype=str)).astype(str).str.lower().str.contains("tongji", na=False)
+    ].copy()
     if not tongji_rows.empty:
-        compact_has_tongji = compact.get("is_tongji", pd.Series([""] * len(compact), index=compact.index)).astype(str).str.lower().isin(["true", "1"]).any() or compact.get("university_name_cn", pd.Series(dtype=str)).astype(str).str.contains("同济", na=False).any()
+        compact_has_tongji = (
+            compact.get("is_tongji", pd.Series([""] * len(compact), index=compact.index)).astype(str).str.lower().isin(["true", "1"]).any()
+            or compact.get("university_name_cn", pd.Series(dtype=str)).astype(str).str.contains("同济", na=False).any()
+            or compact.get("university_name_en", pd.Series(dtype=str)).astype(str).str.lower().str.contains("tongji", na=False).any()
+        )
         if not compact_has_tongji:
-            compact = pd.concat([compact.head(max_rows - 1), tongji_rows.head(1)], ignore_index=True)
+            reference = tongji_rows.head(1).copy()
+            reference["_word_row_kind"] = "tongji_reference"
+            compact = pd.concat([compact, reference], ignore_index=True)
     return compact.reset_index(drop=True)
 
 
@@ -2939,11 +2958,18 @@ def build_peer_table(run_dir: Path, subject: dict[str, Any], records: pd.DataFra
     mainland = latest[latest.apply(is_mainland, axis=1)].copy() if not latest.empty else latest
     top = mainland[pd.to_numeric(mainland["rank_midpoint"], errors="coerce") <= TOP_RANK_MIDPOINT].copy()
     top, duplicate_rows = dedupe_university_rows(top, subject, source)
-    top = top.sort_values(["rank_midpoint", "university_name_cn", "university_name_en"]).reset_index(drop=True)
+    top["_rank_midpoint_sort"] = pd.to_numeric(top["rank_midpoint"], errors="coerce")
+    top = (
+        top.sort_values(["_rank_midpoint_sort", "university_name_cn", "university_name_en"], na_position="last")
+        .drop(columns=["_rank_midpoint_sort"])
+        .reset_index(drop=True)
+    )
     if top.empty:
         return {"artifact_id": artifact_id, "status": "skipped", "reason": f"no {source} top200 mainland peers"}
     full_top = top.copy()
     top = compact_peer_scope_for_word(top)
+    word_rows = len(top)
+    tongji_appended = bool(top.get("_word_row_kind", pd.Series(dtype=str)).astype(str).eq("tongji_reference").any())
     source_records = filter_to_selected_source_area(records[records["ranking_source"] == source].copy(), subject, source)
     table, history = build_peer_history_matrix(source_records, top, source)
     if table.empty:
@@ -2954,7 +2980,7 @@ def build_peer_table(run_dir: Path, subject: dict[str, Any], records: pd.DataFra
     full_top.to_csv(out / "latest_peer_records_full_top200.csv", index=False, encoding="utf-8-sig")
     duplicate_rows.to_csv(out / "deduped_duplicate_records.csv", index=False, encoding="utf-8-sig")
     history.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
-    render_table(table, f"{source}{clean_text(subject['target_subject'])}内地高校排名历史（前{MAIN_WORD_PEER_TABLE_MAX_ROWS}项）", out / "table.png", max_rows=MAIN_WORD_PEER_TABLE_MAX_ROWS)
+    render_table(table, f"{source}{clean_text(subject['target_subject'])}内地高校排名历史（前{MAIN_WORD_PEER_TABLE_MAX_ROWS}名样本，同济不在前{MAIN_WORD_PEER_TABLE_MAX_ROWS}时另列参照）", out / "table.png", max_rows=word_rows)
     (out / "table.md").write_text(dataframe_to_markdown(table), encoding="utf-8", newline="\n")
     write_common_outputs(
         out,
@@ -2965,7 +2991,10 @@ def build_peer_table(run_dir: Path, subject: dict[str, Any], records: pd.DataFra
         {
             "ranking_source": source,
             "table_shape": "compact peer multi-year history",
+            "top_rows": MAIN_WORD_PEER_TABLE_MAX_ROWS,
             "word_rows": len(table),
+            "tongji_appended": tongji_appended,
+            "comparison_note": f"Rows numbered 1-{MAIN_WORD_PEER_TABLE_MAX_ROWS} are the latest-year top sample; a Tongji reference row is not a rank-order row.",
             "full_top200_rows": len(full_top),
             "deduped_duplicate_rows": len(duplicate_rows),
         },
@@ -2974,6 +3003,7 @@ def build_peer_table(run_dir: Path, subject: dict[str, Any], records: pd.DataFra
 
 
 def build_the_indicator_history(run_dir: Path, subject: dict[str, Any]) -> dict[str, Any]:
+    return build_processed_indicator_history_table(run_dir, subject, "table_03_the_tongji_indicator_history", "THE")
     artifact_id = "table_03_the_tongji_indicator_history"
     out = artifact_dir(run_dir, artifact_id)
     indicators = read_indicators()
@@ -3004,6 +3034,130 @@ def build_the_indicator_history(run_dir: Path, subject: dict[str, Any]) -> dict[
     (out / "table.md").write_text(dataframe_to_markdown(matrix), encoding="utf-8", newline="\n")
     write_common_outputs(out, artifact_id, "table", len(df), len(df), {"years": years})
     return {"artifact_id": artifact_id, "status": "generated", "rows": len(df), "output_dir": str(out)}
+
+
+def select_processed_tongji_indicator_history(subject: dict[str, Any], source_name: str) -> pd.DataFrame:
+    indicators = read_indicators()
+    df = indicators[
+        (indicators["ranking_source"] == source_name)
+        & (indicators["is_tongji"].astype(str).str.lower().isin(["true", "1"]))
+    ].copy()
+    df = filter_to_selected_source_area(df, subject, source_name)
+    if df.empty:
+        return df
+    df["display_indicator_name"] = df["indicator_name"].map(lambda value: canonical_indicator_name(source_name, value))
+    df = df[df["display_indicator_name"].astype(str).str.len() > 0].copy()
+    df["indicator_value"] = df["metric_raw"].map(clean_text)
+    empty_value_mask = df["indicator_value"].astype(str).str.len() == 0
+    if empty_value_mask.any():
+        df.loc[empty_value_mask, "indicator_value"] = df.loc[empty_value_mask, "metric_value"].map(clean_text)
+    df["indicator_value_num"] = pd.to_numeric(df["metric_value"], errors="coerce")
+    if "metric_rank_midpoint" in df.columns:
+        rank_midpoint = pd.to_numeric(df["metric_rank_midpoint"], errors="coerce")
+        rank_mask = df["metric_type"].astype(str).str.lower().eq("rank")
+        df.loc[rank_mask, "indicator_value_num"] = rank_midpoint.loc[rank_mask].fillna(df.loc[rank_mask, "indicator_value_num"])
+    legacy_keys = {
+        normalize_text_key("\u7bc7\u5747\u88ab\u5f15"),
+        normalize_text_key("\u7bc7\u5747\u88ab\u5f15\u6392\u540d"),
+        normalize_text_key("\u7814\u7a76"),
+        normalize_text_key("\u7814\u7a76\u6392\u540d"),
+    }
+    df["_canonical_priority"] = df["indicator_name"].map(lambda value: 1 if normalize_text_key(value) in legacy_keys else 0)
+    return df.sort_values(["ranking_year", "display_indicator_name", "_canonical_priority", "metric_type", "indicator_name"]).copy()
+
+
+def year_int(value: Any) -> int | None:
+    number = pd.to_numeric(pd.Series([value]), errors="coerce").iloc[0]
+    if pd.isna(number):
+        return None
+    return int(number)
+
+
+def indicator_history_year_label(row: pd.Series, source_name: str) -> str:
+    release_year = year_int(row.get("release_year"))
+    ranking_year = year_int(row.get("ranking_year"))
+    if source_name == "US News" and release_year and ranking_year and release_year != ranking_year:
+        return f"{release_year}-{ranking_year}"
+    if ranking_year:
+        return str(ranking_year)
+    if release_year:
+        return str(release_year)
+    return ""
+
+
+def add_indicator_history_display_years(df: pd.DataFrame, source_name: str) -> pd.DataFrame:
+    work = df.copy()
+    if source_name == "US News":
+        work["_display_year_sort"] = pd.to_numeric(work.get("release_year", pd.Series(dtype=str)), errors="coerce")
+        work["_display_year_sort"] = work["_display_year_sort"].fillna(
+            pd.to_numeric(work.get("ranking_year", pd.Series(dtype=str)), errors="coerce")
+        )
+    else:
+        work["_display_year_sort"] = pd.to_numeric(work.get("ranking_year", pd.Series(dtype=str)), errors="coerce")
+        work["_display_year_sort"] = work["_display_year_sort"].fillna(
+            pd.to_numeric(work.get("release_year", pd.Series(dtype=str)), errors="coerce")
+        )
+    work["_display_year_label"] = work.apply(lambda row: indicator_history_year_label(row, source_name), axis=1)
+    return work
+
+
+def ordered_display_years(df: pd.DataFrame) -> list[tuple[str, float]]:
+    pairs = (
+        df[["_display_year_label", "_display_year_sort"]]
+        .dropna(subset=["_display_year_sort"])
+        .drop_duplicates()
+        .sort_values("_display_year_sort")
+        .itertuples(index=False, name=None)
+    )
+    return [(clean_text(label), float(sort_value)) for label, sort_value in pairs if clean_text(label)]
+
+
+def build_processed_indicator_history_table(
+    run_dir: Path,
+    subject: dict[str, Any],
+    artifact_id: str,
+    source_name: str,
+) -> dict[str, Any]:
+    out = artifact_dir(run_dir, artifact_id)
+    df = select_processed_tongji_indicator_history(subject, source_name)
+    if df.empty or df["ranking_year"].nunique() < 2:
+        return {"artifact_id": artifact_id, "status": "skipped", "reason": f"{source_name} indicator history is missing or single-year only"}
+    df = add_indicator_history_display_years(df, source_name)
+    display_years = ordered_display_years(df)
+    rows = []
+    for indicator in df["display_indicator_name"].drop_duplicates().tolist():
+        row = {"\u6307\u6807": indicator}
+        for label, _ in display_years:
+            value = df[(df["display_indicator_name"] == indicator) & (df["_display_year_label"] == label)]["indicator_value"]
+            measured = [clean_text(item) for item in value.tolist() if clean_text(item)]
+            row[label] = measured[0] if measured else display_missing_label("not_measured")
+        rows.append(row)
+    matrix = pd.DataFrame(rows)
+    df.to_csv(out / "table_data.csv", index=False, encoding="utf-8-sig")
+    matrix.to_csv(out / "table_matrix.csv", index=False, encoding="utf-8-sig")
+    df.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
+    render_table(matrix, f"{source_name} {clean_text(subject['target_subject'])} Tongji indicator history", out / "table.png")
+    (out / "table.md").write_text(dataframe_to_markdown(matrix), encoding="utf-8", newline="\n")
+    source_files = sorted({clean_text(value) for value in df.get("source_file", pd.Series(dtype=str)).tolist() if clean_text(value)})
+    write_common_outputs(
+        out,
+        artifact_id,
+        "table",
+        len(df),
+        len(df),
+        {
+            "ranking_source": source_name,
+            "years": [label for label, _ in display_years],
+            "year_axis": "release_year-ranking_year" if source_name == "US News" else "ranking_year",
+            "source_files": source_files,
+            "data_source": "processed/fact_ranking_indicator.csv",
+        },
+    )
+    return {"artifact_id": artifact_id, "status": "generated", "rows": len(df), "output_dir": str(out)}
+
+
+def build_usnews_indicator_history(run_dir: Path, subject: dict[str, Any]) -> dict[str, Any]:
+    return build_processed_indicator_history_table(run_dir, subject, "table_02_usnews_tongji_indicator_history", "US News")
 
 
 def build_external_indicator_history_table(
@@ -3214,9 +3368,11 @@ def build_arwu_public_indicator_history_table(run_dir: Path, subject: dict[str, 
     df["indicator_value_num"] = pd.to_numeric(df["indicator_value"], errors="coerce")
     df["display_indicator_name"] = df["indicator_name"].map(lambda value: canonical_indicator_name("ARWU GRAS public web", value))
     df = df[df["display_indicator_name"].astype(str).str.len() > 0].copy()
+    df["_source_priority"] = 1
     if not local_df.empty:
         local_df["ranking_year"] = pd.to_numeric(local_df["ranking_year"], errors="coerce")
         local_df["indicator_value_num"] = pd.to_numeric(local_df["indicator_value"], errors="coerce")
+        local_df["_source_priority"] = 0
         for column in df.columns:
             if column not in local_df.columns:
                 local_df[column] = ""
@@ -3224,8 +3380,11 @@ def build_arwu_public_indicator_history_table(run_dir: Path, subject: dict[str, 
             if column not in df.columns:
                 df[column] = ""
         df = pd.concat([df, local_df[df.columns]], ignore_index=True, sort=False)
-        df = df.sort_values(["ranking_year", "display_indicator_name", "ranking_source"])
+        df = df.sort_values(["ranking_year", "display_indicator_name", "_source_priority", "ranking_source"])
         df = df.drop_duplicates(subset=["ranking_year", "display_indicator_name"], keep="first").copy()
+    source_files = sorted({clean_text(value) for value in df.get("source_file", pd.Series(dtype=str)).tolist() if clean_text(value)})
+    public_rows_used = df["ranking_source"].map(clean_text).eq("ARWU GRAS public web").any() if "ranking_source" in df.columns else False
+    df = df.drop(columns=["_source_priority"], errors="ignore")
     years = sorted(int(x) for x in df["ranking_year"].dropna().unique())
     if len(years) < 2:
         return {"artifact_id": artifact_id, "status": "skipped", "reason": "ARWU public history is single-year only"}
@@ -3242,25 +3401,29 @@ def build_arwu_public_indicator_history_table(run_dir: Path, subject: dict[str, 
     df.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
     render_table(matrix, f"ARWU GRAS {clean_text(subject['target_subject'])}同济分项指标历史", out / "table.png")
     (out / "table.md").write_text(dataframe_to_markdown(matrix), encoding="utf-8", newline="\n")
-    write_common_outputs(
-        out,
-        artifact_id,
-        "table",
-        len(df),
-        len(df),
-        {
-            "ranking_source": "ARWU GRAS public web",
-            "years": years,
-            "matched_public_subjects": sorted(set(df["arwu_subject_name_en"].tolist())),
-            "external_source": str(ARWU_PUBLIC_TONGJI_LONG_CSV),
-        },
-    )
+    extra = {
+        "ranking_source": "软科",
+        "years": years,
+        "matched_subjects": sorted({clean_text(value) for value in df["arwu_subject_name_en"].tolist() if clean_text(value)}),
+        "data_source": "processed/fact_ranking_indicator.csv" if source_files else "",
+        "source_files": source_files,
+        "public_web_rows_used": bool(public_rows_used),
+    }
+    if public_rows_used:
+        extra["external_source"] = str(ARWU_PUBLIC_TONGJI_LONG_CSV)
+    write_common_outputs(out, artifact_id, "table", len(df), len(df), extra)
     return {"artifact_id": artifact_id, "status": "generated", "rows": len(df), "output_dir": str(out)}
 
 
 def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None:
     plot = df.copy()
     plot["ranking_year"] = pd.to_numeric(plot["ranking_year"], errors="coerce")
+    if "_display_year_sort" not in plot.columns:
+        plot["_display_year_sort"] = plot["ranking_year"]
+    else:
+        plot["_display_year_sort"] = pd.to_numeric(plot["_display_year_sort"], errors="coerce")
+    if "_display_year_label" not in plot.columns:
+        plot["_display_year_label"] = plot["ranking_year"].map(lambda value: str(int(value)) if pd.notna(value) else "")
     if "indicator_value_num" in plot.columns:
         numeric_values = pd.to_numeric(plot["indicator_value_num"], errors="coerce")
     else:
@@ -3270,9 +3433,11 @@ def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None
         errors="coerce",
     )
     plot["_plot_value"] = numeric_values.fillna(fallback_values)
-    plot = plot.dropna(subset=["ranking_year", "_plot_value"])
+    plot = plot.dropna(subset=["_display_year_sort", "_plot_value"])
     indicators = plot["indicator_name"].drop_duplicates().tolist()
-    years = sorted(int(x) for x in plot["ranking_year"].dropna().unique())
+    year_pairs = ordered_display_years(plot)
+    years = [sort_value for _, sort_value in year_pairs]
+    year_labels = {sort_value: label for label, sort_value in year_pairs}
     if len(indicators) > 8:
         cols = 2
         rows = math.ceil(len(indicators) / cols)
@@ -3297,7 +3462,7 @@ def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None
         start_x, start_y = 112, 178
         gap_x, gap_y = 112, 86
 
-        def mini_xp(year: int, left: int) -> float:
+        def mini_xp(year: float, left: int) -> float:
             return left + (year - min(years)) / max(1, max(years) - min(years)) * mini_w
 
         def mini_yp(value: float, top: int) -> float:
@@ -3320,8 +3485,8 @@ def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None
                     draw_text_right(draw, left - 12, y - 10, str(tick), load_font(17, True), "#697586")
             draw.line((left, top, left, bottom), fill="#A0AAB7", width=2)
             draw.line((left, bottom, right, bottom), fill="#A0AAB7", width=2)
-            group = plot[plot["indicator_name"] == indicator].sort_values("ranking_year")
-            points = [(mini_xp(int(item["ranking_year"]), left), mini_yp(float(item["_plot_value"]), top)) for _, item in group.iterrows()]
+            group = plot[plot["indicator_name"] == indicator].sort_values("_display_year_sort")
+            points = [(mini_xp(float(item["_display_year_sort"]), left), mini_yp(float(item["_plot_value"]), top)) for _, item in group.iterrows()]
             if len(points) > 1:
                 draw.line(points, fill=color, width=6)
             for point_x, point_y in points:
@@ -3331,14 +3496,14 @@ def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None
                 draw.text((points[-1][0] + 10, max(top, points[-1][1] - 16)), f"{float(last_row['_plot_value']):g}", font=load_font(18, True), fill=color)
             for year in years:
                 x = mini_xp(year, left)
-                draw_center(draw, (x - 36, bottom + 14, x + 36, bottom + 42), str(year), load_font(18, True), "#52606D")
+                draw_center(draw, (x - 58, bottom + 14, x + 58, bottom + 42), year_labels.get(year, str(int(year))), load_font(16, True), "#52606D")
         draw.text((62, image.height - 48), f"注：本图以小多图展示全部 {len(indicators)} 个分项指标，避免多线叠加造成遮挡；纵轴统一为排名数值。", font=load_font(20), fill="#697586")
         save_png(image, out_path)
         return
 
     left, top, right, bottom = 142, 150, 1320, 770
 
-    def xp(year: int) -> float:
+    def xp(year: float) -> float:
         return left + (year - min(years)) / max(1, max(years) - min(years)) * (right - left)
 
     def yp(value: float) -> float:
@@ -3352,11 +3517,11 @@ def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None
     draw.line((left, bottom, right, bottom), fill="#8792A0", width=3)
     for year in years:
         x = xp(year)
-        draw_center(draw, (x - 48, bottom + 18, x + 48, bottom + 54), str(year), font_axis, "#52606D")
+        draw_center(draw, (x - 70, bottom + 18, x + 70, bottom + 54), year_labels.get(year, str(int(year))), load_font(20, True), "#52606D")
     for idx, indicator in enumerate(indicators):
         color = palette[idx % len(palette)]
-        group = plot[plot["indicator_name"] == indicator].sort_values("ranking_year")
-        points = [(xp(int(row["ranking_year"])), yp(float(row["_plot_value"]))) for _, row in group.iterrows()]
+        group = plot[plot["indicator_name"] == indicator].sort_values("_display_year_sort")
+        points = [(xp(float(row["_display_year_sort"])), yp(float(row["_plot_value"]))) for _, row in group.iterrows()]
         if len(points) > 1:
             draw.line(points, fill=color, width=6)
         for x, y in points:
@@ -3370,17 +3535,18 @@ def render_indicator_trend(df: pd.DataFrame, title: str, out_path: Path) -> None
 def build_usnews_indicator_history_trend(run_dir: Path, subject: dict[str, Any]) -> dict[str, Any]:
     artifact_id = "figure_10_usnews_indicator_history_trend"
     out = artifact_dir(run_dir, artifact_id)
-    df = read_external_csv(USNEWS_HISTORY_CSV)
+    df = select_processed_tongji_indicator_history(subject, "US News")
     if df.empty:
-        return {"artifact_id": artifact_id, "status": "skipped", "reason": "missing US News external indicator history"}
-    df = filter_external_subject_history(df, subject, "US News")
-    if df.empty:
-        return {"artifact_id": artifact_id, "status": "skipped", "reason": f"missing US News external indicator history for subject: {clean_text(subject.get('target_subject'))}"}
-    df = normalize_external_history_subject_display(df, subject, "US News")
+        return {"artifact_id": artifact_id, "status": "skipped", "reason": f"missing US News processed indicator history for subject: {clean_text(subject.get('target_subject'))}"}
+    df = df[df["metric_type"].astype(str).str.lower().eq("rank")].copy()
+    if df.empty or df["ranking_year"].nunique() < 2:
+        return {"artifact_id": artifact_id, "status": "skipped", "reason": "US News processed rank indicator history is missing or single-year only"}
+    df = add_indicator_history_display_years(df, "US News")
+    df["indicator_name"] = df["display_indicator_name"]
     df.to_csv(out / "chart_data.csv", index=False, encoding="utf-8-sig")
     df.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
     render_indicator_trend(df, f"U.S. News {clean_text(subject['target_subject'])}同济分项指标历史趋势", out / "chart.png")
-    years = sorted(pd.to_numeric(df["ranking_year"], errors="coerce").dropna().astype(int).unique().tolist())
+    display_years = ordered_display_years(df)
     indicator_count = int(df["indicator_name"].map(clean_text).replace("", pd.NA).dropna().nunique()) if "indicator_name" in df.columns else 0
     ranking_subjects = sorted({clean_text(value) for value in df.get("ranking_subject_raw", pd.Series(dtype=str)).tolist() if clean_text(value)})
     write_common_outputs(
@@ -3391,12 +3557,14 @@ def build_usnews_indicator_history_trend(run_dir: Path, subject: dict[str, Any])
         len(df),
         {
             "ranking_source": "US News",
-            "years": years,
+            "years": [label for label, _ in display_years],
+            "year_axis": "release_year-ranking_year",
             "indicator_count": indicator_count,
             "ranking_subjects": ranking_subjects,
             "rendering_strategy": "all_indicator_small_multiples" if indicator_count > 8 else "single_panel_all_indicators",
-            "numeric_value_source": "indicator_value_num_with_cleaned_indicator_value_fallback",
-            "external_source": str(USNEWS_HISTORY_CSV),
+            "numeric_value_source": "processed_fact_ranking_indicator.metric_rank_midpoint",
+            "data_source": "processed/fact_ranking_indicator.csv",
+            "source_files": sorted({clean_text(value) for value in df.get("source_file", pd.Series(dtype=str)).tolist() if clean_text(value)}),
         },
     )
     return {"artifact_id": artifact_id, "status": "generated", "rows": len(df), "output_dir": str(out)}
@@ -3949,7 +4117,7 @@ def build_appendix(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
             midpoint = to_float(row.get("rank_midpoint"), default=math.nan)
             if name and not math.isnan(midpoint):
                 latest_rank_values.setdefault(name, []).append(midpoint)
-        keep_cols = [col for col in matrix.columns if col not in {"序号", "省份"}]
+        keep_cols = [col for col in matrix.columns if col not in {"序号", "序号/说明", "省份"}]
         matrix = matrix[keep_cols].copy()
         wide = matrix if wide is None else wide.merge(matrix, on="学校名称", how="outer")
 
@@ -3966,7 +4134,7 @@ def build_appendix(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
                 continue
             label = display_missing_label("not_listed") if year_text in source_years.get(source, set()) else display_missing_label("not_published")
             matrix.at[idx, col] = label
-    matrix.insert(0, "序号", range(1, len(matrix) + 1))
+    matrix.insert(0, "序号/说明", range(1, len(matrix) + 1))
     matrix.insert(2, "省份", matrix["学校名称"].map(lambda name: lookup_province(province_map, name)))
     matrix["排名平均位次"] = matrix["学校名称"].map(
         lambda name: round(sum(latest_rank_values.get(clean_text(name), [])) / len(latest_rank_values.get(clean_text(name), [])), 1)
@@ -3977,21 +4145,39 @@ def build_appendix(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
     matrix = matrix.assign(_avg_sort=avg_sort).sort_values(["_avg_sort", "学校名称"], na_position="last").drop(columns=["_avg_sort"])
     # Word 版附表控制在模板接近的篇幅内；完整长表仍保留在 table_data/source_trace 中。
     max_word_rows = APPENDIX_WORD_MAX_ROWS
+    tongji_appended = False
     if len(matrix) > max_word_rows:
         tongji_rows = matrix[matrix["学校名称"].astype(str).str.contains("同济", na=False)].copy()
         compact_matrix = matrix.head(max_word_rows).copy()
         if not tongji_rows.empty and not compact_matrix["学校名称"].astype(str).str.contains("同济", na=False).any():
-            compact_matrix = pd.concat([compact_matrix.head(max_word_rows - 1), tongji_rows.head(1)], ignore_index=True)
+            compact_matrix = pd.concat([compact_matrix, tongji_rows.head(1)], ignore_index=True)
+            tongji_appended = True
         matrix = compact_matrix.copy()
-    matrix["序号"] = range(1, len(matrix) + 1)
-    ordered_cols = ["序号", "学校名称", "省份"] + source_cols + ["排名平均位次"]
+    row_labels = [str(index + 1) for index in range(len(matrix))]
+    if tongji_appended and row_labels:
+        row_labels[-1] = "同济参照"
+    matrix["序号/说明"] = row_labels
+    ordered_cols = ["序号/说明", "学校名称", "省份"] + source_cols + ["排名平均位次"]
     matrix = matrix[ordered_cols]
     table_data.to_csv(out / "table_data.csv", index=False, encoding="utf-8-sig")
     matrix.to_csv(out / "table_matrix.csv", index=False, encoding="utf-8-sig")
     table_data.to_csv(out / "source_trace.csv", index=False, encoding="utf-8-sig")
-    render_table(matrix, f"{clean_text(subject['target_subject'])}对标高校排名历史附表（前32项）", out / "table.png", max_rows=32)
+    render_table(matrix, f"{clean_text(subject['target_subject'])}对标高校排名历史附表（前{max_word_rows}名样本，同济不在前{max_word_rows}时另列参照）", out / "table.png", max_rows=len(matrix))
     (out / "table.md").write_text(dataframe_to_markdown(matrix), encoding="utf-8", newline="\n")
-    write_common_outputs(out, artifact_id, "table", len(matrix), len(table_data), {"table_shape": "template-like wide peer history"})
+    write_common_outputs(
+        out,
+        artifact_id,
+        "table",
+        len(matrix),
+        len(table_data),
+        {
+            "table_shape": "template-like wide peer history",
+            "top_rows": max_word_rows,
+            "word_rows": len(matrix),
+            "tongji_appended": tongji_appended,
+            "comparison_note": f"Rows numbered 1-{max_word_rows} are the compact comparison sample; a Tongji reference row is not a rank-order row.",
+        },
+    )
     return {"artifact_id": artifact_id, "status": "generated", "rows": len(matrix), "output_dir": str(out)}
 
 
@@ -4066,18 +4252,9 @@ def build_subject_run_artifacts(
                 missing_years=[2024],
             )
         )
-    if USNEWS_HISTORY_CSV.exists():
-        append_builder_result(
-            results,
-            "table_02_usnews_tongji_indicator_history",
-            lambda: build_external_indicator_history_table(
-                run_dir,
-                subject,
-                "table_02_usnews_tongji_indicator_history",
-                "US News",
-                USNEWS_HISTORY_CSV,
-            )
-        )
+    if "table_02_usnews_tongji_indicator_history" in ready_ids:
+        append_builder_result(results, "table_02_usnews_tongji_indicator_history", lambda: build_usnews_indicator_history(run_dir, subject))
+    if "figure_10_usnews_indicator_history_trend" in ready_ids:
         append_builder_result(results, "figure_10_usnews_indicator_history_trend", lambda: build_usnews_indicator_history_trend(run_dir, subject))
     if "table_09_peer_full_ranking_history_appendix" in ready_ids:
         append_builder_result(results, "table_09_peer_full_ranking_history_appendix", lambda: build_appendix(run_dir, subject, records))

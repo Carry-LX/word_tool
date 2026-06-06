@@ -36,6 +36,7 @@ CWTS_CHINA_ALL_FIELDS_CSV = EXTERNAL_DATA_DIR / "processed" / "cwts_traditional_
 WOS_SUBJECT_PAPER_CSV = EXTERNAL_DATA_DIR / "processed" / "wos_37_university_subject_paper_metrics_20260511.csv"
 ARWU_PUBLIC_TONGJI_LONG_CSV = EXTERNAL_DATA_DIR / "processed" / "arwu_gras_public_tongji_history_2023_2025_long.csv"
 USNEWS_TONGJI_HISTORY_CSV = EXTERNAL_DATA_DIR / "processed" / "usnews_tongji_subject_indicator_history_2022_2026_long.csv"
+QS_USNEWS_RANKING_FILE = "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx"
 
 SQLITE_PATH = PROCESSED_DIR / "ranking.sqlite"
 DIM_SUBJECT_CSV = PROCESSED_DIR / "dim_subject.csv"
@@ -365,8 +366,7 @@ def load_usnews_bilingual_subject_aliases() -> dict[str, tuple[str, ...]]:
         pairs.setdefault(normalize_key(right_text), set()).add(left_text)
 
     configs = [
-        ("2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx", "全球排名", "学科中文", "学科"),
-        ("2025-2026年度US News世界学科排名20251124.xlsx", "Sheet1", "学科中文", "学科英文"),
+        (QS_USNEWS_RANKING_FILE, "USnews（2021-2025）", "学科中文", "学科英文"),
     ]
     for filename, sheet, cn_col, en_col in configs:
         path = DATA_DIR / filename
@@ -613,7 +613,7 @@ def rank_midpoint_from_raw(value: Any) -> float | None:
 
 
 def supplement_the_tongji_history_records(records: pd.DataFrame, subject: dict[str, Any]) -> pd.DataFrame:
-    paths = sorted(DATA_DIR.glob("*THE*2022-2026*.xlsx"))
+    paths = sorted(DATA_DIR.glob("*THE*2023-2026*.xlsx"))
     if not paths:
         return records
     try:
@@ -657,6 +657,8 @@ def supplement_the_tongji_history_records(records: pd.DataFrame, subject: dict[s
         if not match:
             continue
         year = int(match.group(1))
+        if year < 2023 or year > 2026:
+            continue
         if (year, area_key) in existing_keys:
             continue
         rank_raw = clean_text(row.get(column))

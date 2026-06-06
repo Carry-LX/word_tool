@@ -20,6 +20,12 @@ LOG_DIR = PROJECT_DIR / "logs"
 MANUAL_ALIASES_PATH = PROJECT_DIR / "configs" / "runtime" / "manual_subject_aliases.json"
 THE_RANKING_AREA_CROSSWALK_JSON = PROJECT_DIR / "configs" / "runtime" / "the_ranking_area_crosswalk.json"
 TONGJI_SUBJECT_PROXY_SUPPLEMENT_CSV = PROJECT_DIR / "configs" / "runtime" / "tongji_subject_proxy_supplement.csv"
+MINISTRY_MAPPING_FILE = "教育部学科与四大国际学科排名映射关系.xlsx"
+TONGJI_MAPPING_FILE = "同济大学学院+学科映射关系（20260603更新）.xlsx"
+TONGJI_MAPPING_FALLBACK_FILE = "同济大学学院+学科映射关系20260509.xlsx"
+ARWU_RANKING_FILE = "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx"
+QS_USNEWS_RANKING_FILE = "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx"
+THE_RANKING_FILE = "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
 
 DIM_SUBJECT_CSV = PROCESSED_DIR / "dim_subject.csv"
 DIM_SUBJECT_ALIAS_CSV = PROCESSED_DIR / "dim_subject_alias.csv"
@@ -124,6 +130,13 @@ def read_sheet(file_name: str, sheet_name: str, header: int = 0) -> pd.DataFrame
     df.columns = [clean_text(column) for column in df.columns]
     df = df.dropna(how="all").copy()
     return df
+
+
+def data_file_name(preferred: str, *fallbacks: str) -> str:
+    for file_name in (preferred, *fallbacks):
+        if (DATA_DIR / file_name).exists():
+            return file_name
+    return preferred
 
 
 def load_manual_alias_config() -> dict[str, Any]:
@@ -240,14 +253,17 @@ def apply_tongji_subject_proxy_supplement(tongji: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_dim_subject() -> pd.DataFrame:
-    ministry = read_sheet("教育部学科与四大国际学科排名映射关系.xlsx", "学科映射关系")
-    tongji = read_sheet("同济大学学院+学科映射关系20260509.xlsx", "Sheet1")
+    ministry = read_sheet(MINISTRY_MAPPING_FILE, "学科映射关系")
+    tongji = read_sheet(data_file_name(TONGJI_MAPPING_FILE, TONGJI_MAPPING_FALLBACK_FILE), "Sheet1")
     official = read_sheet("1.研究生教育学科专业目录（2022年）.xlsx", "Sheet1")
     tongji = apply_tongji_subject_proxy_supplement(tongji)
 
     for column in ["编号", "学院"]:
         if column in tongji.columns:
             tongji[column] = tongji[column].ffill()
+    if "一级学科学科代码" in tongji.columns:
+        tongji["一级学科学科代码"] = tongji["一级学科学科代码"].map(clean_text)
+        tongji = tongji[tongji["一级学科学科代码"].str.fullmatch(r"\d{4}")].copy()
 
     tongji_grouped = (
         tongji.groupby("一级学科学科代码", dropna=True)
@@ -308,6 +324,15 @@ def build_dim_subject() -> pd.DataFrame:
             dim.loc[dim["ministry_subject_code"].eq(subject_code), column] = value
     dim = dim.merge(official_small, on="ministry_subject_code", how="left")
     dim = dim.merge(tongji_grouped, on="ministry_subject_code", how="left")
+    for target_column, tongji_column in [
+        ("arwu_subject_name", "tongji_arwu_subject"),
+        ("qs_subject_name", "tongji_qs_subject"),
+        ("usnews_subject_name", "tongji_usnews_subject"),
+        ("the_subject_area", "tongji_the_area"),
+    ]:
+        if target_column in dim.columns and tongji_column in dim.columns:
+            mask = dim[tongji_column].map(clean_text).astype(bool)
+            dim.loc[mask, target_column] = dim.loc[mask, tongji_column]
 
     dim["subject_id"] = dim["ministry_subject_code"].apply(lambda value: f"subject_{clean_text(value)}" if clean_text(value) else "")
 
@@ -364,8 +389,7 @@ def load_usnews_bilingual_subject_aliases() -> dict[str, list[str]]:
         pairs.setdefault(normalize_key(right_text), set()).add(left_text)
 
     configs = [
-        ("2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx", "全球排名", "学科中文", "学科"),
-        ("2025-2026年度US News世界学科排名20251124.xlsx", "Sheet1", "学科中文", "学科英文"),
+        (data_file_name(QS_USNEWS_RANKING_FILE), "USnews（2021-2025）", "学科中文", "学科英文"),
     ]
     for filename, sheet, cn_col, en_col in configs:
         path = DATA_DIR / filename
@@ -385,7 +409,7 @@ def build_dim_subject_alias(dim_subject: pd.DataFrame) -> pd.DataFrame:
     invalid_alias_values.update(normalize_key(value) for value in manual_alias_config.get("invalid_alias_values", []))
     the_ranking_area_crosswalk = load_the_ranking_area_crosswalk()
     usnews_bilingual_aliases = load_usnews_bilingual_subject_aliases()
-    mapping_sheet_reverse = read_sheet("教育部学科与四大国际学科排名映射关系.xlsx", "Sheet1")
+    mapping_sheet_reverse = read_sheet(MINISTRY_MAPPING_FILE, "Sheet1")
     ministry_name_to_id = {
         normalize_key(row["ministry_subject_name"]): clean_text(row["subject_id"])
         for _, row in dim_subject.iterrows()
@@ -719,52 +743,8 @@ def ranking_record(
 def append_arwu(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list[str]]) -> None:
     configs = [
         {
-            "file": "2021年软科世界一流学科排名-20211119.xlsx",
-            "sheet": "arwu_gras_detail",
-            "release_year": "Time",
-            "subject": "Subject",
-            "university_cn": "Institution",
-            "university_en": "",
-            "region": "Country_Region",
-            "rank": "World_Rank",
-            "score": "Total_Score",
-        },
-        {
-            "file": "2022年软科世界一流学科排名-20220720.xlsx",
-            "sheet": "Sheet1",
-            "release_year": "Time",
-            "subject": "Subject",
-            "university_cn": "Institution",
-            "university_en": "",
-            "region": "Country_Region",
-            "rank": "World_Rank",
-            "score": "Total_Score",
-        },
-        {
-            "file": "2023年软科世界一流学科排名-20231030.xlsx",
-            "sheet": "名单",
-            "release_year": "发布年度",
-            "subject": "学科领域",
-            "university_cn": "中文名称",
-            "university_en": "学校名称",
-            "region": "所在地区",
-            "rank": "国际排名",
-            "score": "总得分",
-        },
-        {
-            "file": "2024年软科世界一流学科排名-20241111.xlsx",
-            "sheet": "所有高校",
-            "release_year": "年份",
-            "subject": "学科领域",
-            "university_cn": "中文校名",
-            "university_en": "英文校名",
-            "region": "国家",
-            "rank": "排名",
-            "score": "总分",
-        },
-        {
-            "file": "2025年软科世界一流学科排名20251118.xlsx",
-            "sheet": "数据",
+            "file": data_file_name(ARWU_RANKING_FILE),
+            "sheet": "2021-2025",
             "release_year": "发布年度",
             "subject": "学科名称",
             "university_cn": "学校名称",
@@ -802,57 +782,8 @@ def append_arwu(records: list[dict[str, Any]], lookups: dict[tuple[str, str], li
 def append_qs(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list[str]]) -> None:
     configs = [
         {
-            "file": "2022年QS学科排名202203.xlsx",
-            "sheet": "Sheet1",
-            "header": 1,
-            "release_year": "pubyear",
-            "ranking_year": "pubyear",
-            "subject": "subject_name",
-            "university_cn": "uni",
-            "university_en": "",
-            "region": "location",
-            "rank": "overall_rank_dis",
-            "score": "overall",
-        },
-        {
-            "file": "2023年QS世界学科排名.xlsx",
-            "sheet": "2023",
-            "release_year": 2023,
-            "ranking_year": 2023,
-            "subject": "学科",
-            "university_cn": "高校名称",
-            "university_en": "",
-            "region": "地区",
-            "rank": "国际排名",
-            "score": "综合得分",
-        },
-        {
-            "file": "2024年QS世界学科排名-20240412.xlsx",
-            "sheet": "数据",
-            "release_year": "发布年度",
-            "ranking_year": "发布年度",
-            "subject": "学科中文",
-            "university_cn": "中文名称",
-            "university_en": "英文名称",
-            "region": "所在地区",
-            "rank": "国际排名",
-            "score": "总得分",
-        },
-        {
-            "file": "2025年QS世界大学学科排名20250313.xlsx",
-            "sheet": "明细数",
-            "release_year": "年份",
-            "ranking_year": "年份",
-            "subject": "学科中文",
-            "university_cn": "大学",
-            "university_en": "",
-            "region": "地区",
-            "rank": "排名",
-            "score": "综合得分",
-        },
-        {
-            "file": "2026年QS世界学科排名20260326.xlsx",
-            "sheet": "数据",
+            "file": data_file_name(QS_USNEWS_RANKING_FILE),
+            "sheet": "QS（2021-2026）",
             "release_year": "发布年度",
             "ranking_year": "发布年度",
             "subject": "学科中文",
@@ -894,64 +825,8 @@ def append_qs(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list
 def append_usnews(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list[str]]) -> None:
     configs = [
         {
-            "file": "2021US News世界学科排名2020年发布.xlsx",
-            "sheet": "Sheet1",
-            "fallback_release_year": 2020,
-            "fallback_ranking_year": 2021,
-            "release_year": "pubyear",
-            "ranking_year": "",
-            "subject": "subject",
-            "university_cn": "university_zh",
-            "university_en": "university",
-            "region": "location",
-            "rank": "subjectrank",
-            "score": "subjectscore",
-        },
-        {
-            "file": "2022US News世界学科排名20211026.xlsx",
-            "sheet": "Sheet2",
-            "fallback_release_year": 2021,
-            "fallback_ranking_year": 2022,
-            "release_year": "pubyear",
-            "ranking_year": "",
-            "subject": "subject",
-            "university_cn": "university_zh",
-            "university_en": "university",
-            "region": "",
-            "rank": "subjectrank",
-            "score": "overallscore",
-        },
-        {
-            "file": "2023US News世界学科排名20221026.xlsx",
-            "sheet": "sheet",
-            "fallback_release_year": 2022,
-            "fallback_ranking_year": 2023,
-            "release_year": "发布时间",
-            "ranking_year": "Time",
-            "subject": "Subject",
-            "university_cn": "",
-            "university_en": "Name",
-            "region": "Country",
-            "rank": "Rank",
-            "score": "OVERALL_SCORE",
-        },
-        {
-            "file": "2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx",
-            "sheet": "全球排名",
-            "fallback_release_year": 2024,
-            "fallback_ranking_year": 2025,
-            "release_year": "发布年份",
-            "ranking_year": "排名年份",
-            "subject": "学科中文",
-            "university_cn": "中文名称",
-            "university_en": "名称",
-            "region": "国家",
-            "rank": "世界排名",
-            "score": "总得分.1",
-        },
-        {
-            "file": "2025-2026年度US News世界学科排名20251124.xlsx",
-            "sheet": "Sheet1",
+            "file": data_file_name(QS_USNEWS_RANKING_FILE),
+            "sheet": "USnews（2021-2025）",
             "fallback_release_year": 2025,
             "fallback_ranking_year": 2026,
             "release_year": "发布年度",
@@ -993,37 +868,10 @@ def append_usnews(records: list[dict[str, Any]], lookups: dict[tuple[str, str], 
 
 
 def append_the(records: list[dict[str, Any]], lookups: dict[tuple[str, str], list[str]]) -> None:
-    the_2022_subject_map = {
-        "arts & humanities": "艺术与人文学",
-        "business & economics": "商业与经济学",
-        "clinical & health": "临床与健康",
-        "computer science": "计算机科学",
-        "education": "教育学",
-        "engineering": "工学",
-        "law": "法学",
-        "life sciences": "生命科学",
-        "physical sciences": "理学",
-        "psychology": "心理学",
-        "social sciences": "社会科学",
-    }
-    the_2022_subject_map = {normalize_key(key): value for key, value in the_2022_subject_map.items()}
     configs = [
         {
-            "file": "2022THE学科领域排名.xlsx",
-            "sheet": "Sheet1",
-            "release_year": "pubyear",
-            "ranking_year": "pubyear",
-            "subject": "subject",
-            "subject_map": the_2022_subject_map,
-            "university_cn": "university_zh",
-            "university_en": "university",
-            "region": "location",
-            "rank": "worldrank",
-            "score": "overall",
-        },
-        {
-            "file": "世界大学学科排名THE（2022-2026年）20260123.xlsx",
-            "sheet": "数据",
+            "file": data_file_name(THE_RANKING_FILE),
+            "sheet": "数据（2023-2026）",
             "release_year": "发布年度",
             "ranking_year": "排名年度",
             "subject": "学科中文",
@@ -1329,7 +1177,7 @@ def append_run_log(summary: dict[str, Any]) -> None:
         "### 输入",
         "",
         "- 学科映射：教育部学科与四大国际学科排名映射关系、同济大学学院+学科映射关系、研究生教育学科专业目录。",
-        "- 排名明细：软科2023-2025、QS2023-2026、US News2021-2026、THE 2022-2026总库。",
+        "- 排名明细：软科2021-2025、QS2021-2026、US News2021-2026、THE 2023-2026总库。",
         "",
         "### 输出",
         "",
