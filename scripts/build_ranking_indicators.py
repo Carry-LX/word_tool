@@ -19,6 +19,7 @@ QA_DIR = PROCESSED_DIR / "qa" / "ranking_indicators"
 LOG_DIR = PROJECT_DIR / "logs"
 ARWU_RANKING_FILE = "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx"
 QS_USNEWS_RANKING_FILE = "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx"
+USNEWS_2026_RANKING_FILE = "2026年US News世界学科排名20260616.xlsx"
 THE_RANKING_FILE = "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
 
 SQLITE_PATH = PROCESSED_DIR / "ranking.sqlite"
@@ -281,6 +282,34 @@ def build_records() -> pd.DataFrame:
             ],
         },
         {
+            "ranking_source": "US News",
+            "file": data_file_name(USNEWS_2026_RANKING_FILE),
+            "sheet": "数据",
+            "release_year_col": "发布年度",
+            "ranking_year_col": "排名年度",
+            "subject_col": "学科中文",
+            "university_cn_col": "中文名称",
+            "university_en_col": "外文名称",
+            "region_col": "所在地区",
+            "world_rank_col": "国际排名",
+            "indicators": [
+                {"column": "总得分", "name": "总得分", "metric_type": "score"},
+                {"column": "全球学术声誉排名", "name": "全球学术声誉排名", "metric_type": "rank"},
+                {"column": "地区学术声誉排名", "name": "地区学术声誉排名", "metric_type": "rank"},
+                {"column": "出版物排名", "name": "出版物排名", "metric_type": "rank"},
+                {"column": "图书排名", "name": "图书排名", "metric_type": "rank"},
+                {"column": "标准化论文引用影响指数排名", "name": "标准化论文引用影响指数排名", "metric_type": "rank"},
+                {"column": "总被引频次排名", "name": "总被引频次排名", "metric_type": "rank"},
+                {"column": "被引用最多的10%的出版物数量排名", "name": "被引用最多的10%的出版物数量排名", "metric_type": "rank"},
+                {"column": "总被引率占总被引文献的10%排名", "name": "总被引率占总被引文献的10%排名", "metric_type": "rank"},
+                {"column": "具有国际合作出版物的比例排名", "name": "具有国际合作出版物的比例排名", "metric_type": "rank"},
+                {"column": "国际合作排名", "name": "国际合作排名", "metric_type": "rank"},
+                {"column": "排名前1%的高被引论文数量排名", "name": "排名前1%的高被引论文数量排名", "metric_type": "rank"},
+                {"column": "前1%的高被引论文占论文总数的百分比排名", "name": "前1%的高被引论文占论文总数的百分比排名", "metric_type": "rank"},
+                {"column": "会议排名", "name": "会议排名", "metric_type": "rank"},
+            ],
+        },
+        {
             "ranking_source": "THE",
             "file": data_file_name(THE_RANKING_FILE),
             "sheet": "数据（2023-2026）",
@@ -334,10 +363,17 @@ def compute_relative_ranks(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def replace_sqlite_table(conn: sqlite3.Connection, df: pd.DataFrame, table_name: str) -> None:
+    temp_table = f"_{table_name}_build"
+    conn.execute(f"DROP TABLE IF EXISTS {temp_table}")
+    df.to_sql(temp_table, conn, index=False, chunksize=50000)
+    conn.execute(f"DROP TABLE IF EXISTS {table_name}")
+    conn.execute(f"ALTER TABLE {temp_table} RENAME TO {table_name}")
+
+
 def write_sqlite(df: pd.DataFrame) -> None:
     with sqlite3.connect(SQLITE_PATH) as conn:
-        conn.execute("DROP TABLE IF EXISTS fact_ranking_indicator")
-        df.to_sql("fact_ranking_indicator", conn, index=False)
+        replace_sqlite_table(conn, df, "fact_ranking_indicator")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_ri_source_subject ON fact_ranking_indicator(ranking_source, ranking_subject_norm)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_ri_indicator ON fact_ranking_indicator(ranking_source, indicator_norm)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_ri_university ON fact_ranking_indicator(university_name_cn, university_name_en)")
@@ -356,8 +392,7 @@ def build_indicator_subject_bridge(df: pd.DataFrame) -> pd.DataFrame:
 
 def write_bridge_sqlite(bridge: pd.DataFrame) -> None:
     with sqlite3.connect(SQLITE_PATH) as conn:
-        conn.execute("DROP TABLE IF EXISTS fact_ranking_indicator_subject_bridge")
-        bridge.to_sql("fact_ranking_indicator_subject_bridge", conn, index=False)
+        replace_sqlite_table(conn, bridge, "fact_ranking_indicator_subject_bridge")
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_ri_bridge_subject ON fact_ranking_indicator_subject_bridge(subject_id)"
         )

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Word Report Standard"
+  short_description: "Generate polished, data-faithful Word reports"
+  default_prompt: "Use the Word report generation standard to create or revise this DOCX so the data, prose, charts, tables, captions, spacing, and render QA are all delivery-ready."

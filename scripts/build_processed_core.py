@@ -25,6 +25,7 @@ TONGJI_MAPPING_FILE = "同济大学学院+学科映射关系（20260603更新）
 TONGJI_MAPPING_FALLBACK_FILE = "同济大学学院+学科映射关系20260509.xlsx"
 ARWU_RANKING_FILE = "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx"
 QS_USNEWS_RANKING_FILE = "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx"
+USNEWS_2026_RANKING_FILE = "2026年US News世界学科排名20260616.xlsx"
 THE_RANKING_FILE = "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
 
 DIM_SUBJECT_CSV = PROCESSED_DIR / "dim_subject.csv"
@@ -333,6 +334,9 @@ def build_dim_subject() -> pd.DataFrame:
         if target_column in dim.columns and tongji_column in dim.columns:
             mask = dim[tongji_column].map(clean_text).astype(bool)
             dim.loc[mask, target_column] = dim.loc[mask, tongji_column]
+    for (subject_code, column), value in SUBJECT_MAPPING_DISPLAY_CORRECTIONS.items():
+        if column in dim.columns:
+            dim.loc[dim["ministry_subject_code"].eq(subject_code), column] = value
 
     dim["subject_id"] = dim["ministry_subject_code"].apply(lambda value: f"subject_{clean_text(value)}" if clean_text(value) else "")
 
@@ -390,6 +394,7 @@ def load_usnews_bilingual_subject_aliases() -> dict[str, list[str]]:
 
     configs = [
         (data_file_name(QS_USNEWS_RANKING_FILE), "USnews（2021-2025）", "学科中文", "学科英文"),
+        (data_file_name(USNEWS_2026_RANKING_FILE), "数据", "学科中文", "学科英文"),
     ]
     for filename, sheet, cn_col, en_col in configs:
         path = DATA_DIR / filename
@@ -838,6 +843,20 @@ def append_usnews(records: list[dict[str, Any]], lookups: dict[tuple[str, str], 
             "rank": "国际排名",
             "score": "总得分",
         },
+        {
+            "file": data_file_name(USNEWS_2026_RANKING_FILE),
+            "sheet": "数据",
+            "fallback_release_year": 2026,
+            "fallback_ranking_year": 2027,
+            "release_year": "发布年度",
+            "ranking_year": "排名年度",
+            "subject": "学科中文",
+            "university_cn": "中文名称",
+            "university_en": "外文名称",
+            "region": "所在地区",
+            "rank": "国际排名",
+            "score": "总得分",
+        },
     ]
     for config in configs:
         df = read_sheet(config["file"], config["sheet"])
@@ -1177,7 +1196,7 @@ def append_run_log(summary: dict[str, Any]) -> None:
         "### 输入",
         "",
         "- 学科映射：教育部学科与四大国际学科排名映射关系、同济大学学院+学科映射关系、研究生教育学科专业目录。",
-        "- 排名明细：软科2021-2025、QS2021-2026、US News2021-2026、THE 2023-2026总库。",
+        "- 排名明细：软科2021-2025、QS2021-2026、US News2021-2027、THE 2023-2026总库。",
         "",
         "### 输出",
         "",

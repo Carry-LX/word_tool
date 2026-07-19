@@ -463,14 +463,50 @@ def native_table_font_size(column_count: int) -> float:
     return 8.5
 
 
+def emu_widths_to_dxa(widths_emu: list[int]) -> list[int]:
+    if not widths_emu:
+        return []
+    widths_dxa = [max(1, int(width // 635)) for width in widths_emu]
+    target_total = max(1, int(sum(widths_emu) // 635))
+    drift = target_total - sum(widths_dxa)
+    widths_dxa[-1] = max(1, widths_dxa[-1] + drift)
+    return widths_dxa
+
+
+def set_exact_table_grid(table: Any, widths_dxa: list[int]) -> None:
+    if not widths_dxa:
+        return
+    tbl = table._tbl
+    tbl_pr = tbl.tblPr
+    tbl_layout = tbl_pr.find(qn("w:tblLayout"))
+    if tbl_layout is None:
+        tbl_layout = OxmlElement("w:tblLayout")
+        tbl_pr.append(tbl_layout)
+    tbl_layout.set(qn("w:type"), "fixed")
+
+    tbl_w = tbl_pr.find(qn("w:tblW"))
+    if tbl_w is None:
+        tbl_w = OxmlElement("w:tblW")
+        tbl_pr.append(tbl_w)
+    tbl_w.set(qn("w:type"), "dxa")
+    tbl_w.set(qn("w:w"), str(sum(widths_dxa)))
+
+    for old_grid in list(tbl.findall(qn("w:tblGrid"))):
+        tbl.remove(old_grid)
+    tbl_grid = OxmlElement("w:tblGrid")
+    for width in widths_dxa:
+        grid_col = OxmlElement("w:gridCol")
+        grid_col.set(qn("w:w"), str(width))
+        tbl_grid.append(grid_col)
+    tbl.insert(1, tbl_grid)
+
+
 def apply_table_widths(table: Any, column_count: int, total_width_emu: int) -> None:
     if column_count <= 0:
         return
     column_width = int(total_width_emu / column_count)
-    table.autofit = False
-    for row in table.rows:
-        for cell in row.cells:
-            cell.width = Emu(column_width)
+    widths_emu = [column_width] * column_count
+    apply_table_fixed_widths(table, widths_emu)
 
 
 def table_widths_by_header(matrix: list[list[str]], total_width_emu: int) -> list[int]:
@@ -505,21 +541,12 @@ def apply_table_fixed_widths(table: Any, widths_emu: list[int]) -> None:
     if not widths_emu:
         return
     table.autofit = False
-    tbl_pr = table._tbl.tblPr
-    tbl_layout = tbl_pr.find(qn("w:tblLayout"))
-    if tbl_layout is None:
-        tbl_layout = OxmlElement("w:tblLayout")
-        tbl_pr.append(tbl_layout)
-    tbl_layout.set(qn("w:type"), "fixed")
-    tbl_w = tbl_pr.find(qn("w:tblW"))
-    if tbl_w is None:
-        tbl_w = OxmlElement("w:tblW")
-        tbl_pr.append(tbl_w)
-    tbl_w.set(qn("w:type"), "dxa")
-    tbl_w.set(qn("w:w"), str(sum(widths_emu) // 635))
+    widths_dxa = emu_widths_to_dxa(widths_emu)
+    set_exact_table_grid(table, widths_dxa)
     for row in table.rows:
         for column_index, cell in enumerate(row.cells):
             width = widths_emu[min(column_index, len(widths_emu) - 1)]
+            width_dxa = widths_dxa[min(column_index, len(widths_dxa) - 1)]
             cell.width = Emu(width)
             tc_pr = cell._tc.get_or_add_tcPr()
             tc_w = tc_pr.find(qn("w:tcW"))
@@ -527,7 +554,7 @@ def apply_table_fixed_widths(table: Any, widths_emu: list[int]) -> None:
                 tc_w = OxmlElement("w:tcW")
                 tc_pr.append(tc_w)
             tc_w.set(qn("w:type"), "dxa")
-            tc_w.set(qn("w:w"), str(width // 635))
+            tc_w.set(qn("w:w"), str(width_dxa))
 
 
 def build_native_table(document: Document, matrix: list[list[str]], total_width_emu: int | None = None) -> Any:
@@ -1213,6 +1240,22 @@ def read_source_decision_by_source() -> dict[str, dict[str, str]]:
         }
 
 
+def read_ranking_availability_by_source() -> dict[str, dict[str, str]]:
+    path = SUBJECT_RUN_DIR / "ranking_availability.csv"
+    if not path.exists():
+        return {}
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        return {
+            clean_text(row.get("ranking_source", "")): {str(key): clean_text(value) for key, value in row.items()}
+            for row in csv.DictReader(handle)
+        }
+
+
+def source_selection_info(source: str) -> dict[str, str]:
+    source_key = "US News" if source in {"U.S. News", "US News"} else source
+    return read_ranking_availability_by_source().get(source_key, {})
+
+
 def source_has_tongji_latest(source: str) -> bool:
     row = read_source_decision_by_source().get(source, {})
     return clean_text(row.get("has_tongji_latest_rank", "")).lower() in {"true", "1", "yes"}
@@ -1248,22 +1291,199 @@ def read_mapping_table_aliases(source: str) -> list[str]:
                 or "教育部学科映射Sheet1" in source_note
                 or source_note in {"arwu_subject_name", "qs_subject_name", "usnews_subject_name", "the_subject_area"}
             )
-            is_runtime_crosswalk = any(
-                token in source_note or token in alias_type
-                for token in [
-                    "crosswalk",
-                    "manual",
-                    "public",
-                    "supplement",
-                    "runtime",
-                ]
-            )
-            if not is_mapping_table_source or is_runtime_crosswalk:
+            if not is_mapping_table_source:
                 continue
             alias = clean_text(row.get("ranking_subject_alias", ""))
             if alias and not is_missing_subject_label(alias):
                 aliases.append(alias)
-    return ordered_unique(aliases)
+    aliases = ordered_unique(aliases)
+    alias_by_key = {subject_mapping_key(alias): alias for alias in aliases}
+    configured_value = {
+        "软科": resolved_subject_value("arwu_subject_name"),
+        "QS": resolved_subject_value("qs_subject_name"),
+        "US News": resolved_subject_value("usnews_subject_name"),
+        "THE": resolved_subject_value("the_subject_area"),
+    }.get(source_key, "")
+    ordered: list[str] = []
+    for item in split_scope_values(configured_value):
+        matched = alias_by_key.get(subject_mapping_key(item))
+        if matched and matched not in ordered:
+            ordered.append(matched)
+    return ordered + [alias for alias in aliases if alias not in ordered]
+
+
+def mapping_table_report_label_for_source(source: str, default: str = "") -> str:
+    aliases = read_mapping_table_aliases(source)
+    if not aliases:
+        return default
+    alias_by_key = {subject_mapping_key(alias): alias for alias in aliases}
+    source_key = "US News" if source in {"U.S. News", "US News"} else source
+    configured_value = {
+        "QS": resolved_subject_value("qs_subject_name"),
+        "US News": resolved_subject_value("usnews_subject_name"),
+        "THE": resolved_subject_value("the_subject_area"),
+    }.get(source_key, "")
+    ordered: list[str] = []
+    for item in split_scope_values(configured_value):
+        key = subject_mapping_key(item)
+        if key in alias_by_key and alias_by_key[key] not in ordered:
+            ordered.append(alias_by_key[key])
+    for alias in aliases:
+        if alias not in ordered:
+            ordered.append(alias)
+    return "\uFF1B".join(ordered)
+
+
+def observed_subject_label_for_source(source: str) -> str:
+    source_key = "US News" if source in {"U.S. News", "US News"} else source
+    rows = read_artifact_rows("figure_01_tongji_subject_ranking_overview", "chart_data.csv")
+    for row in rows:
+        if clean_text(row.get("ranking_source", "")) != source_key:
+            continue
+        return first_present(
+            row,
+            [
+                "source_ranking_subject_raw",
+                "ranking_subject_raw",
+                "ranking_subject_alias",
+            ],
+        )
+    return ""
+
+
+def selected_mapping_table_alias_for_source(source: str, default: str = "") -> str:
+    selection = source_selection_info(source)
+    selected = clean_text(selection.get("selected_ranking_subject_or_area", ""))
+    if selected:
+        return selected
+    aliases = read_mapping_table_aliases(source)
+    if not aliases:
+        return default
+    source_key = "US News" if source in {"U.S. News", "US News"} else source
+    observed = observed_subject_label_for_source(source_key)
+    observed_key = subject_mapping_key(observed)
+    for alias in aliases:
+        if subject_mapping_key(alias) == observed_key:
+            return alias
+    candidate_statuses = [
+        (mapping_candidate_data_status(source_key, alias), -index, alias)
+        for index, alias in enumerate(aliases)
+    ]
+    available = [item for item in candidate_statuses if item[0]["has_data"]]
+    if available:
+        available.sort(
+            key=lambda item: (
+                bool(item[0]["has_tongji"]),
+                to_number(item[0]["year"]) or 0,
+                item[1],
+            ),
+            reverse=True,
+        )
+        return available[0][2]
+    configured_value = {
+        "软科": resolved_subject_value("arwu_subject_name"),
+        "QS": resolved_subject_value("qs_subject_name"),
+        "US News": resolved_subject_value("usnews_subject_name"),
+        "THE": resolved_subject_value("the_subject_area"),
+    }.get(source_key, "")
+    alias_by_key = {subject_mapping_key(alias): alias for alias in aliases}
+    for item in split_scope_values(configured_value):
+        matched = alias_by_key.get(subject_mapping_key(item))
+        if matched:
+            return matched
+    return aliases[0]
+
+
+def mapping_candidate_data_status(source: str, alias: str) -> dict[str, Any]:
+    status = {
+        "has_data": False,
+        "has_tongji": False,
+        "year": "",
+        "rank": "",
+        "total_rows": 0,
+        "first_year": "",
+        "latest_year": "",
+        "latest_rows": 0,
+        "latest_mainland_rows": 0,
+        "latest_mainland_top200_rows": 0,
+        "tongji_rows": 0,
+    }
+    selection = source_selection_info(source)
+    candidate_status_json = clean_text(selection.get("mapping_candidate_status_json", ""))
+    if candidate_status_json:
+        try:
+            candidate_rows = json.loads(candidate_status_json)
+        except json.JSONDecodeError:
+            candidate_rows = []
+        alias_key = subject_mapping_key(alias)
+        for row in candidate_rows:
+            if subject_mapping_key(row.get("candidate")) != alias_key:
+                continue
+            status.update(
+                has_data=bool(row.get("has_data")),
+                has_tongji=bool(row.get("tongji_latest_rank")),
+                year=clean_text(row.get("latest_year")),
+                rank=clean_text(row.get("tongji_latest_rank")),
+                total_rows=int(row.get("total_rows") or 0),
+                first_year=clean_text(row.get("first_year")),
+                latest_year=clean_text(row.get("latest_year")),
+                latest_rows=int(row.get("latest_rows") or 0),
+                latest_mainland_rows=int(row.get("latest_mainland_rows") or 0),
+                latest_mainland_top200_rows=int(row.get("latest_mainland_top200_rows") or 0),
+                tongji_rows=int(row.get("tongji_rows") or 0),
+            )
+            return status
+    if not SQLITE_PATH.exists():
+        return status
+    source_key = "US News" if source in {"U.S. News", "US News"} else source
+    alias_key = subject_mapping_key(alias)
+    if not alias_key:
+        return status
+    query = """
+    SELECT ranking_year, release_year, ranking_subject_raw, ranking_subject_norm,
+           rank_raw, rank_midpoint, is_tongji, university_name_cn, university_name_en
+    FROM fact_ranking
+    WHERE ranking_source = ?
+    """
+    try:
+        with sqlite3.connect(SQLITE_PATH) as conn:
+            rows = conn.execute(query, [source_key]).fetchall()
+    except Exception:
+        return status
+    matched_rows: list[tuple[float, str]] = []
+    tongji_rows: list[tuple[float, str]] = []
+    for ranking_year, release_year, raw, norm, rank_raw, rank_midpoint, is_tongji, name_cn, name_en in rows:
+        if alias_key not in {subject_mapping_key(raw), subject_mapping_key(norm)}:
+            continue
+        status["has_data"] = True
+        year = to_number(ranking_year) or to_number(release_year) or 0
+        matched_rows.append((year, clean_rank_display(rank_raw) or format_number(rank_midpoint)))
+        tongji_flag = clean_text(is_tongji).lower() in {"1", "true", "yes"}
+        is_tongji_name = "同济" in clean_text(name_cn) or "tongji" in clean_text(name_en).lower()
+        if not tongji_flag and not is_tongji_name:
+            continue
+        rank = clean_rank_display(rank_raw) or format_number(rank_midpoint)
+        if rank:
+            tongji_rows.append((year, rank))
+    if matched_rows:
+        years = sorted({int(item[0]) for item in matched_rows if item[0]})
+        latest_year = years[-1] if years else 0
+        status.update(
+            total_rows=len(matched_rows),
+            first_year=str(years[0]) if years else "",
+            latest_year=str(latest_year) if latest_year else "",
+            latest_rows=sum(1 for item in matched_rows if latest_year and int(item[0]) == latest_year),
+            tongji_rows=len(tongji_rows),
+        )
+    if tongji_rows:
+        tongji_rows.sort(key=lambda item: item[0])
+        year, rank = tongji_rows[-1]
+        status.update(
+            has_tongji=True,
+            year=str(int(year)) if year else "",
+            rank=rank,
+        )
+    return status
 
 
 def latest_tongji_rank_for_mapping_alias(source: str, alias: str) -> str:
@@ -1305,8 +1525,10 @@ def mapping_table_scope_note_for_source(source: str, selected_label: str) -> str
     aliases = read_mapping_table_aliases(source)
     if len(aliases) <= 1:
         return ""
-    selected_key = subject_mapping_key(selected_label)
-    alternatives = [alias for alias in aliases if subject_mapping_key(alias) != selected_key]
+    selected_keys = {subject_mapping_key(item) for item in split_scope_values(selected_label)}
+    if not selected_keys and selected_label:
+        selected_keys = {subject_mapping_key(selected_label)}
+    alternatives = [alias for alias in aliases if subject_mapping_key(alias) not in selected_keys]
     if not alternatives:
         return ""
     selected_text = selected_label if selected_label and not is_missing_subject_label(selected_label) else aliases[0]
@@ -1428,10 +1650,11 @@ def source_runtime_override_value(source: str, key: str, default: str = "") -> s
 
 def report_subject_label_for_source(source: str, default: str = "") -> str:
     if source == "软科":
-        return arwu_public_subject_label(default)
+        return selected_mapping_table_alias_for_source("软科", arwu_public_subject_label(default))
     if source == "QS":
         return (
-            single_mapping_label(resolved_subject_value("qs_subject_name"))
+            selected_mapping_table_alias_for_source("QS", "")
+            or single_mapping_label(resolved_subject_value("qs_subject_name"))
             or report_selected_subject_label("QS", "")
             or source_runtime_override_value("QS", "ranking_subject_or_area")
             or source_runtime_override_value("QS", "weight_subject_or_area")
@@ -1439,15 +1662,17 @@ def report_subject_label_for_source(source: str, default: str = "") -> str:
         )
     if source in {"US News", "U.S. News"}:
         return (
-            report_selected_subject_label("US News", "")
+            selected_mapping_table_alias_for_source("US News", "")
             or source_runtime_override_value("US News", "ranking_subject_or_area")
             or source_runtime_override_value("US News", "weight_subject_or_area")
             or resolved_subject_value("usnews_subject_name")
+            or report_selected_subject_label("US News", "")
             or default
         )
     if source == "THE":
         return (
-            report_selected_subject_label("THE", "")
+            selected_mapping_table_alias_for_source("THE", "")
+            or report_selected_subject_label("THE", "")
             or source_runtime_override_value("THE", "ranking_subject_or_area")
             or resolved_subject_value("the_subject_area")
             or source_runtime_override_value("THE", "weight_subject_or_area")
@@ -1475,37 +1700,115 @@ def rank_text(row: dict[str, str]) -> str:
     return clean_rank_display(raw) or format_number(row.get("rank_midpoint", ""))
 
 
+def describe_mapping_candidate_data(source: str, candidate: str) -> str:
+    status = mapping_candidate_data_status(source, candidate)
+    if not status["has_data"]:
+        return f"“{candidate}”未匹配到精确榜单数据"
+    year_range = ""
+    if status["first_year"] and status["latest_year"]:
+        year_range = (
+            status["latest_year"]
+            if status["first_year"] == status["latest_year"]
+            else f"{status['first_year']}-{status['latest_year']}"
+        )
+    coverage = f"，覆盖{year_range}年" if year_range else ""
+    latest_sample = (
+        f"，最新{status['latest_year']}年共{status['latest_rows']}条榜单记录"
+        if status["latest_year"] and status["latest_rows"]
+        else ""
+    )
+    mainland_sample = (
+        f"，其中内地高校{status['latest_mainland_rows']}所、前200位{status['latest_mainland_top200_rows']}所"
+        if status["latest_mainland_rows"]
+        else ""
+    )
+    if status["has_tongji"]:
+        tongji_text = f"，同济最新为{status['year']}年第{status['rank']}"
+    else:
+        tongji_text = "，其中未匹配到同济综合位次"
+    return (
+        f"“{candidate}”有{status['total_rows']}条榜单记录"
+        f"{coverage}{latest_sample}{mainland_sample}{tongji_text}"
+    )
+
+
 def summarize_overview(artifact_id: str) -> str:
     rows = read_artifact_rows(artifact_id, "chart_data.csv")
-    if not rows:
-        return ""
+    rows_by_source = {
+        clean_text(row.get("ranking_source", "")): row
+        for row in rows
+        if clean_text(row.get("ranking_source", ""))
+    }
     parts = []
-    scope_parts = []
-    mapping_notes = []
-    for row in rows:
-        source = clean_text(row.get("ranking_source", ""))
+    mapping_parts = []
+    selection_parts = []
+    candidate_data_parts = []
+    for source in RANKING_SOURCES:
+        row = rows_by_source.get(source, {})
         raw_subject = clean_text(row.get("ranking_subject_raw", ""))
-        subject = report_subject_label_for_source(source, raw_subject) if source == "THE" else raw_subject
+        selection = source_selection_info(source)
+        selection_mode = clean_text(selection.get("selection_mode", ""))
+        subject = clean_text(selection.get("selected_ranking_subject_or_area", "")) or report_subject_label_for_source(source, raw_subject)
+        source_label = display_source_name(source)
+        candidates = read_mapping_table_aliases(source)
         year = first_present(row, ["ranking_year", "release_year"])
         rank = rank_text(row)
         if source and rank:
             subject_part = f"{subject}" if subject else "对应学科"
-            parts.append(f"{display_source_name(source)} {year}年{subject_part}第{rank}")
-        if source and subject:
-            scope_parts.append(f"{display_source_name(source)}：{subject}")
-            note = mapping_table_scope_note_for_source(source, subject)
-            if note:
-                mapping_notes.append(note)
+            parts.append(f"{source_label} {year}年{subject_part}第{rank}")
+        if candidates:
+            mapping_parts.append(
+                f"{source_label}：{'、'.join(f'“{candidate}”' for candidate in candidates)}"
+            )
+            candidate_data_parts.append(
+                f"{source_label}候选数据："
+                + "；".join(describe_mapping_candidate_data(source, candidate) for candidate in candidates)
+            )
+        if selection_mode == "fallback_mapping" and subject:
+            note = clean_text(selection.get("fallback_mapping_note", ""))
+            mapping_class = clean_text(selection.get("fallback_mapping_class", ""))
+            reason = f"，依据为“{note}”" if note else ""
+            selection_parts.append(
+                f"{source_label}的映射表候选均无数据，才启用内部保底口径“{subject}”"
+                f"（{mapping_class or '受控补充映射'}{reason}）"
+            )
+        elif selection_mode == "mapping_table_candidate" and subject:
+            usage = "用于同济排名图表和后续分析" if source_has_tongji_latest(source) else "用于内地高校对标表和后续分析；同济趋势与分项不作补造"
+            selection_parts.append(f"{source_label}最终选用映射表候选“{subject}”，{usage}")
+        elif candidates:
+            selection_parts.append(f"{source_label}全部候选均无数据，且未启用不满足条件的补充映射")
     if not parts:
-        return ""
-    source_count = len(parts)
-    scope = "四类国际学科排名" if source_count >= 4 else f"{source_count}类可用国际学科排名"
-    scope_text = f"当前实际采用口径分别为：{'；'.join(ordered_unique(scope_parts))}。" if scope_parts else ""
-    mapping_text = "".join(ordered_unique(mapping_notes))
+        ranking_text = f"同济大学{read_target_subject_name()}学科当前未形成可直接列示的最新综合位次。"
+    else:
+        source_count = len(parts)
+        scope = "四类国际学科排名" if source_count >= 4 else f"{source_count}类可用国际学科排名"
+        ranking_text = (
+            f"同济大学{read_target_subject_name()}学科在{scope}中形成最新记录："
+            + "，".join(parts)
+            + "。"
+        )
+    candidate_text = (
+        f"学科映射表给出的候选口径为：{'；'.join(ordered_unique(mapping_parts))}。"
+        if mapping_parts
+        else ""
+    )
+    selected_text = (
+        "口径选择严格执行“映射表候选优先、候选全部无数据才允许受控保底”的规则："
+        f"{'；'.join(ordered_unique(selection_parts))}。"
+        if selection_parts
+        else ""
+    )
+    candidate_status_text = (
+        f"各候选口径的实际数据情况如下：{'；'.join(ordered_unique(candidate_data_parts))}。"
+        if candidate_data_parts
+        else ""
+    )
     return (
-        f"同济大学{read_target_subject_name()}学科在{scope}中形成最新记录："
-        + "，".join(parts)
-        + f"。{scope_text}{mapping_text}未覆盖榜单不作强行补齐，解读时应同时说明榜单口径差异和数据缺口。"
+        candidate_text
+        + selected_text
+        + candidate_status_text
+        + ranking_text
+        + "未覆盖榜单不作强行补齐，解读时应同时说明榜单口径差异和数据缺口。"
     )
 
 
@@ -1537,10 +1840,8 @@ def summarize_weight(artifact_id: str) -> str:
         return ""
     group_text = "、".join(f"{name}{value:.1f}%" for name, value in top_groups)
     source_name = display_source_name(source)
-    subject_label = subject or read_target_subject_name()
-    if source_name == "THE":
-        subject_label = read_target_subject_area() or subject_label
     source_status_key = "US News" if source_name == "U.S. News" else source_name
+    subject_label = report_subject_label_for_source(source_status_key, subject or read_target_subject_name())
     mapping_note = mapping_table_scope_note_for_source(source_status_key, subject_label)
     if not source_has_tongji_latest(source_status_key):
         return (
@@ -1606,13 +1907,22 @@ def summarize_history(artifact_id: str) -> str:
     supplemental_note = ""
     if supplemental_rows:
         supplemental_items = []
-        for row in sorted(supplemental_rows, key=lambda item: clean_text(item.get("ranking_subject_raw", "")))[:5]:
+        allowed_alias_keys = {
+            subject_mapping_key(item)
+            for item in read_mapping_table_aliases("US News")
+        }
+        for row in sorted(supplemental_rows, key=lambda item: clean_text(item.get("ranking_subject_raw", ""))):
             area = clean_text(row.get("ranking_subject_alias", "")) or clean_text(row.get("ranking_subject_raw", ""))
             year = clean_text(row.get("ranking_year", "")) or clean_text(row.get("release_year", ""))
+            area_key = subject_mapping_key(area)
+            if allowed_alias_keys and area_key not in allowed_alias_keys:
+                continue
             if area:
                 supplemental_items.append(f"“{area}”{year}年{rank_text(row)}" if year else f"“{area}”{rank_text(row)}")
+            if len(supplemental_items) >= 5:
+                break
         if supplemental_items:
-            main_label = report_selected_subject_label("US News", "") or "主口径"
+            main_label = report_subject_label_for_source("US News", "") or "主口径"
             supplemental_note = (
                 f" U.S. News 主趋势线按“{main_label}”主口径绘制；"
                 f"同一一级学科下其他相关子口径最新可见数据包括{'、'.join(supplemental_items)}，"
@@ -1677,7 +1987,7 @@ def summarize_peer_indicator(artifact_id: str) -> str:
     source = "软科" if "figure_09" in artifact_id else "QS" if "figure_10_qs" in artifact_id else "U.S. News" if "figure_11" in artifact_id else "THE"
     source_key = source.replace("U.S. News", "US News")
     default_subject = read_target_subject_name()
-    subject_label = report_subject_label_for_source(source_key, default_subject) if source == "THE" else subject_label_from_artifact_rows(rows, report_subject_label_for_source(source_key, default_subject))
+    subject_label = report_subject_label_for_source(source_key, subject_label_from_artifact_rows(rows, default_subject))
     trace_rows = read_artifact_rows(artifact_id, "source_trace.csv")
     trace_subjects = []
     for row in trace_rows:
@@ -1704,7 +2014,8 @@ def summarize_peer_table(artifact_id: str) -> str:
     source = "软科" if "table_05" in artifact_id else "U.S. News" if "table_06" in artifact_id else "QS" if "table_07" in artifact_id else "THE" if "table_08" in artifact_id else ""
     full_rows = read_artifact_rows(artifact_id, "latest_peer_records_full_top200.csv")
     source_key = "US News" if source == "U.S. News" else source
-    subject_label = report_subject_label_for_source("THE", read_target_subject_name()) if source == "THE" else subject_label_from_artifact_rows(full_rows, report_subject_label_for_source(source_key, read_target_subject_name()))
+    artifact_subject_label = subject_label_from_artifact_rows(full_rows, read_target_subject_name())
+    subject_label = report_subject_label_for_source("THE", read_target_subject_name()) if source == "THE" else report_subject_label_for_source(source_key, artifact_subject_label)
     source_scope = f"{source}{subject_label}口径" if source and subject_label else f"{source}最新口径"
     row_label_keys = ["序号/说明", "序号"]
     top_sample_count = sum(
@@ -1728,6 +2039,12 @@ def summarize_peer_table(artifact_id: str) -> str:
     if source == "软科" and not source_has_tongji_latest("软科"):
         subject_label = arwu_public_subject_label(read_target_subject_name())
         return f"软科{subject_label}口径下，{display_note}。当前事实层尚未匹配到同济大学在该软科口径下的最新综合位次，因此该表仅用于观察头部高校格局，不用于判断同济软科位次或竞争梯队。"
+    if source_key and not source_has_tongji_latest(source_key):
+        return (
+            f"{source_scope}下，{display_note}。该精确口径有可用内地高校排名数据，"
+            "但未匹配到同济大学综合位次，因此表中不追加同济参照行，也不据此推断同济名次；"
+            "该表仅用于观察该候选口径的头部高校格局。"
+        )
     return f"{source_scope}下，{display_note}。该表的重点不是罗列名单，而是识别头部高校集中度和同济所处的竞争梯队。"
 
 
@@ -3123,9 +3440,6 @@ def replace_visible_figure_media_by_order(rows: list[dict[str, str]], docx_path:
         artifact_id = row.get("artifact_id", "")
         target_member = image_targets.get(visible_image_index, "")
         image_path = artifact_png_path(artifact_id)
-        svg_path = artifact_svg_path(artifact_id)
-        if target_member.lower().endswith(".svg") and svg_path is not None:
-            image_path = svg_path
         if image_path is None or not target_member:
             log_rows.append(
                 {
@@ -3157,7 +3471,15 @@ def replace_visible_figure_media_by_order(rows: list[dict[str, str]], docx_path:
 
 def refresh_visible_figure_media(rows: list[dict[str, str]], docx_path: Path) -> list[dict[str, Any]]:
     log_rows = replace_visible_figure_media_by_order(rows, docx_path)
-    log_rows.extend(inject_available_svg_images(rows, docx_path))
+    log_rows.append(
+        {
+            "slot": "image_compatibility",
+            "artifact_id": "",
+            "operation": "skip_svg_image_injection",
+            "status": "ok",
+            "reason": "formal_word_outputs_use_png_for_microsoft_word_compatibility",
+        }
+    )
     caption_changes = renumber_captions_in_docx_xml(docx_path)
     log_rows.append(
         {
@@ -3383,6 +3705,9 @@ def artifact_subject_or_area(artifact_id: str) -> str:
 
 def report_selected_subject_label(source: str, default: str = "") -> str:
     source_key = "US News" if source in {"U.S. News", "US News"} else source
+    selected = clean_text(source_selection_info(source_key).get("selected_ranking_subject_or_area", ""))
+    if selected:
+        return selected
     if source_key == "THE":
         mapped = resolved_subject_value("the_subject_area")
         if mapped:
@@ -3480,7 +3805,17 @@ def source_indicator_history_artifact_ids(source: str) -> list[str]:
 
 def source_unavailable_text(source: str, subject_name: str, context: str) -> str:
     source_label = display_source_name(source)
-    if context == "history":
+    if context in {"history", "indicator_history"}:
+        selection = source_selection_info(source)
+        selected = clean_text(selection.get("selected_ranking_subject_or_area", ""))
+        status = mapping_candidate_data_status(source, selected) if selected else {}
+        if status.get("has_data") and not status.get("has_tongji"):
+            return (
+                f"{source_label}当前选用映射表候选“{selected}”作为同行样本口径，"
+                f"该口径有{status.get('total_rows', 0)}条榜单记录，但未匹配到同济大学综合位次历史。"
+                "因此本节不绘制同济趋势线；相关内地高校样本仅在对标章节单独展示，"
+                "不借用其他口径补造同济历史。"
+            )
         return f"当前{subject_name}学科暂无可核验的 {source_label} 综合位次历史序列，本节不使用其他榜单或代理口径替代；待补充对应数据后再展开趋势分析。"
     if context == "peer_table":
         return f"当前{subject_name}学科暂无可核验的 {source_label} 前200内地高校对标样本，本报告不生成该榜单对标表；相关同行分析以已生成图表为准。"
@@ -4080,7 +4415,7 @@ def proxy_label_replacements(text: str, subject_name: str) -> str:
         }
         for old, new in replacements.items():
             result = result.replace(old, new)
-    usnews_label = report_selected_subject_label("US News", "")
+    usnews_label = report_subject_label_for_source("US News", "")
     if usnews_label and usnews_label != subject_name:
         replacements = {
             f"U.S. News 学科排名{subject_name}学科指标权重": f"U.S. News 学科排名{usnews_label}口径指标权重",
@@ -4429,7 +4764,7 @@ def insert_styled_paragraph_after(paragraph: Paragraph, text: str, template_styl
 
 
 def split_scope_values(value: str) -> list[str]:
-    return [item.strip() for item in re.split(r"[\n\r,，、;；|]+", clean_text(value)) if item.strip()]
+    return [item.strip() for item in re.split(r"[\n\r,;\uFF0C\u3001\uFF1B/|]+", clean_text(value)) if item.strip()]
 
 
 def final_scope_boundary_text(subject_name: str) -> str:
@@ -4445,17 +4780,23 @@ def final_scope_boundary_text(subject_name: str) -> str:
     alternative_items: list[str] = []
     seen_alternatives: set[str] = set()
     for source in RANKING_SOURCES:
-        selected = main_by_source.get(source, "")
+        selected = (
+            main_by_source.get(source, "")
+            or clean_text(source_selection_info(source).get("selected_ranking_subject_or_area", ""))
+        )
         if source and selected:
             main_scope_parts.append(f"{display_source_name(source)}“{selected}”")
     for row in availability_rows:
         source = clean_text(row.get("ranking_source", ""))
         selected = main_by_source.get(source, "") or clean_text(row.get("selected_ranking_subject_or_area", ""))
         observed = clean_text(row.get("observed_latest_subject_or_area", ""))
+        allowed_alias_keys = {subject_mapping_key(alias) for alias in read_mapping_table_aliases(source)}
         selected_keys = {subject_mapping_key(item) for item in split_scope_values(selected)}
         for alias in split_scope_values(observed):
             alias_key = subject_mapping_key(alias)
             if not alias_key or alias_key in selected_keys:
+                continue
+            if allowed_alias_keys and alias_key not in allowed_alias_keys:
                 continue
             latest = latest_tongji_rank_for_mapping_alias(source, alias)
             item_key = f"{source}:{alias}:{latest}"
@@ -4474,7 +4815,11 @@ def final_scope_boundary_text(subject_name: str) -> str:
         alias = clean_text(row.get("ranking_subject_raw", ""))
         year = clean_text(row.get("ranking_year", "")) or clean_text(row.get("release_year", ""))
         rank = rank_text(row)
+        allowed_alias_keys = {subject_mapping_key(item) for item in read_mapping_table_aliases(source)}
+        alias_key = subject_mapping_key(alias)
         if not alias or not rank:
+            continue
+        if allowed_alias_keys and alias_key not in allowed_alias_keys:
             continue
         item_key = f"{source}:{alias}:{year}:{rank}"
         if item_key in seen_alternatives:
@@ -5017,20 +5362,150 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     ] + excluded_slot_cleanups + image_extent_changes
 
 
+
+def all_sources_missing_tongji_latest_rank() -> bool:
+    decisions = read_source_decision_by_source()
+    if not decisions:
+        return False
+    source_keys = ["\u8f6f\u79d1", "QS", "US News", "THE"]
+    present_rows = [decisions.get(source, {}) for source in source_keys if decisions.get(source)]
+    if not present_rows:
+        return False
+    return all(clean_text(row.get("has_tongji_latest_rank", "")).lower() not in {"true", "1", "yes"} for row in present_rows)
+
+
+def apply_basic_report_fonts(document: Document) -> None:
+    for style_name in ["Normal", "Heading 1", "Heading 2", "Heading 3"]:
+        try:
+            style = document.styles[style_name]
+        except KeyError:
+            continue
+        is_body = style_name == "Normal"
+        style.font.name = "\u4eff\u5b8b_GB2312" if is_body else "\u9ed1\u4f53"
+        style.font.size = Pt(12 if is_body else 14)
+        r_pr = style.element.get_or_add_rPr()
+        r_fonts = r_pr.rFonts
+        if r_fonts is None:
+            r_fonts = OxmlElement("w:rFonts")
+            r_pr.append(r_fonts)
+        r_fonts.set(qn("w:eastAsia"), "\u4eff\u5b8b_GB2312" if is_body else "\u9ed1\u4f53")
+
+
+def add_unavailable_paragraph(document: Document, text: str) -> None:
+    paragraph = document.add_paragraph()
+    run = paragraph.add_run(text)
+    run.font.name = "\u4eff\u5b8b_GB2312"
+    run.font.size = Pt(12)
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "\u4eff\u5b8b_GB2312")
+    paragraph.paragraph_format.first_line_indent = Pt(24)
+    paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
+    paragraph.paragraph_format.line_spacing = 1.2
+    paragraph.paragraph_format.space_after = Pt(6)
+
+
+def add_unavailable_table(document: Document) -> None:
+    ranking_rows = read_ranking_availability_by_source()
+    decision_rows = read_source_decision_by_source()
+    table = document.add_table(rows=1, cols=5)
+    table.style = "Table Grid"
+    headers = ["\u6392\u540d\u4f53\u7cfb", "\u6620\u5c04\u5019\u9009\u53e3\u5f84", "\u6700\u7ec8\u91c7\u7528\u53e3\u5f84", "\u540c\u6d4e\u6700\u65b0\u7efc\u5408\u4f4d\u6b21", "\u5904\u7406\u7ed3\u8bba"]
+    for index, header in enumerate(headers):
+        table.rows[0].cells[index].text = header
+    for source in ["\u8f6f\u79d1", "QS", "US News", "THE"]:
+        ranking = ranking_rows.get(source, {})
+        decision = decision_rows.get(source, {})
+        cells = table.add_row().cells
+        candidates = clean_text(ranking.get("mapping_candidate_subjects", ""))
+        selected = clean_text(ranking.get("selected_ranking_subject_or_area", ""))
+        latest_rank = clean_text(ranking.get("tongji_latest_rank", ""))
+        cells[0].text = source
+        cells[1].text = candidates or "\u6620\u5c04\u8868\u672a\u63d0\u4f9b\u53ef\u7528\u5019\u9009\u53e3\u5f84"
+        cells[2].text = selected or "\u672a\u9009\u7528"
+        cells[3].text = latest_rank or "\u65e0"
+        status = clean_text(decision.get("overall_status", ""))
+        cells[4].text = "\u6682\u4e0d\u751f\u6210\u6392\u540d\u56fe\u8868" if status == "blocked_ranking_gap" or not latest_rank else status
+    for row in table.rows:
+        for cell in row.cells:
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            for paragraph in cell.paragraphs:
+                paragraph.paragraph_format.space_after = Pt(0)
+                for run in paragraph.runs:
+                    run.font.name = "\u4eff\u5b8b_GB2312"
+                    run.font.size = Pt(10.5)
+                    run._element.rPr.rFonts.set(qn("w:eastAsia"), "\u4eff\u5b8b_GB2312")
+
+
+def generate_no_rank_data_report() -> list[dict[str, Any]]:
+    subject_name = read_target_subject_name()
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    document = Document()
+    apply_basic_report_fonts(document)
+
+    title = document.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = title.add_run(f"\u540c\u6d4e\u5927\u5b66{subject_name}\u5b66\u79d1\u56fd\u9645\u6392\u540d\u6570\u636e\u8986\u76d6\u8bf4\u660e")
+    run.bold = True
+    run.font.name = "\u9ed1\u4f53"
+    run.font.size = Pt(18)
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "\u9ed1\u4f53")
+
+    subtitle = document.add_paragraph()
+    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    subtitle_run = subtitle.add_run("\u53d1\u5c55\u89c4\u5212\u4e0e\u5b66\u79d1\u5efa\u8bbe\u90e8")
+    subtitle_run.font.name = "\u4eff\u5b8b_GB2312"
+    subtitle_run.font.size = Pt(12)
+    subtitle_run._element.rPr.rFonts.set(qn("w:eastAsia"), "\u4eff\u5b8b_GB2312")
+
+    document.add_heading("\u4e00\u3001\u751f\u6210\u7ed3\u8bba", level=1)
+    add_unavailable_paragraph(
+        document,
+        f"\u7ecf\u6309\u6700\u65b0\u5b66\u79d1\u6620\u5c04\u8868\u548c\u56db\u5927\u6392\u540d\u6570\u636e\u9010\u9879\u6838\u67e5\uff0c{subject_name}\u5b66\u79d1\u5f53\u524d\u672a\u5339\u914d\u5230\u8f6f\u79d1\u3001QS\u3001U.S. News\u3001THE \u4efb\u4e00\u699c\u5355\u4e2d\u53ef\u7528\u4e8e\u62a5\u544a\u5236\u56fe\u548c\u8d8b\u52bf\u5206\u6790\u7684\u540c\u6d4e\u6700\u65b0\u7efc\u5408\u4f4d\u6b21\u3002\u56e0\u6b64\uff0c\u672c\u6b21\u4e0d\u751f\u6210\u5e38\u89c4\u7684\u6392\u540d\u53d1\u5c55\u5206\u6790\u6b63\u6587\uff0c\u4e0d\u4f7f\u7528\u8fd1\u90bb\u5b66\u79d1\u3001\u4ee3\u7406\u53e3\u5f84\u6216\u6a21\u677f\u5360\u4f4d\u5185\u5bb9\u66ff\u4ee3\u3002",
+    )
+    add_unavailable_paragraph(
+        document,
+        "\u8be5\u8bf4\u660e\u6587\u6863\u4ec5\u8bb0\u5f55\u6570\u636e\u8986\u76d6\u72b6\u6001\u548c\u540e\u7eed\u8865\u6570\u65b9\u5411\uff0c\u907f\u514d\u8bfb\u8005\u5c06\u7f3a\u5931\u6570\u636e\u8bef\u89e3\u4e3a\u771f\u5b9e\u6392\u540d\u8868\u73b0\u3002",
+    )
+
+    document.add_heading("\u4e8c\u3001\u6620\u5c04\u53e3\u5f84\u6838\u67e5", level=1)
+    add_unavailable_table(document)
+
+    document.add_heading("\u4e09\u3001\u540e\u7eed\u5904\u7406\u5efa\u8bae", level=1)
+    for item in [
+        "\u5982\u9700\u5f62\u6210\u6b63\u5f0f\u6392\u540d\u53d1\u5c55\u5206\u6790\u62a5\u544a\uff0c\u5e94\u5148\u8865\u5145\u8be5\u4e00\u7ea7\u5b66\u79d1\u5728\u56db\u5927\u6392\u540d\u4e2d\u7684\u660e\u786e\u6620\u5c04\u53e3\u5f84\uff0c\u5e76\u786e\u8ba4\u540c\u6d4e\u5927\u5b66\u5728\u5bf9\u5e94\u53e3\u5f84\u4e0b\u5b58\u5728\u6700\u65b0\u7efc\u5408\u4f4d\u6b21\u3002",
+        "\u82e5\u672a\u6765\u5141\u8bb8\u91c7\u7528\u8de8\u53e3\u5f84\u4fdd\u5e95\u6620\u5c04\uff0c\u5e94\u5728\u6620\u5c04\u8868\u6216\u6cbb\u7406\u89c4\u5219\u4e2d\u663e\u5f0f\u8bb0\u5f55\uff0c\u5e76\u5728\u6b63\u6587\u4e2d\u62ab\u9732\u5019\u9009\u53e3\u5f84\u65e0\u6570\u636e\u3001\u4fdd\u5e95\u53e3\u5f84\u6765\u6e90\u548c\u4f7f\u7528\u539f\u56e0\u3002",
+        "\u5728\u672a\u8865\u9f50\u4ee5\u4e0a\u6570\u636e\u524d\uff0c\u672c\u5b66\u79d1\u4e0d\u5b9c\u7eb3\u5165\u56fe\u8868\u5316\u6392\u540d\u6bd4\u8f83\u3001\u5386\u53f2\u8d8b\u52bf\u5f52\u56e0\u548c\u5bf9\u6807\u9ad8\u6821\u6392\u5e8f\u5206\u6790\u3002",
+    ]:
+        add_unavailable_paragraph(document, item)
+
+    document.save(str(OUTPUT_DOCX))
+    return [
+        {
+            "slot": "no_rank_data_report",
+            "artifact_id": "",
+            "operation": "generate_no_rank_data_report",
+            "status": "ok",
+            "subject_name": subject_name,
+            "reason": "all_sources_missing_tongji_latest_rank",
+        }
+    ]
+
 def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     all_rows = read_all_slot_mapping()
     rows, excluded_rows = split_slot_rows_by_manifest(all_rows)
 
-    working_docx = OUTPUT_DOCX.with_name(OUTPUT_DOCX.stem + "_tables_first.docx")
-    shutil.copy2(TEMPLATE_DOCX, working_docx)
-
     log_rows: list[dict[str, Any]] = []
-    log_rows.extend(replace_tables_and_caption_only_figures(rows, working_docx, OUTPUT_DOCX))
-    working_docx.unlink(missing_ok=True)
-    log_rows.extend(replace_embedded_images(rows, TEMPLATE_DOCX, OUTPUT_DOCX))
-    log_rows.extend(postprocess_final_document(rows, excluded_rows))
-    log_rows.extend(refresh_visible_figure_media(rows, OUTPUT_DOCX))
+    if all_sources_missing_tongji_latest_rank():
+        log_rows.extend(generate_no_rank_data_report())
+    else:
+        working_docx = OUTPUT_DOCX.with_name(OUTPUT_DOCX.stem + "_tables_first.docx")
+        shutil.copy2(TEMPLATE_DOCX, working_docx)
+
+        log_rows.extend(replace_tables_and_caption_only_figures(rows, working_docx, OUTPUT_DOCX))
+        working_docx.unlink(missing_ok=True)
+        log_rows.extend(replace_embedded_images(rows, TEMPLATE_DOCX, OUTPUT_DOCX))
+        log_rows.extend(postprocess_final_document(rows, excluded_rows))
+        log_rows.extend(refresh_visible_figure_media(rows, OUTPUT_DOCX))
     audit_rows = audit_replacements(rows, OUTPUT_DOCX)
     write_audit_files(audit_rows)
 

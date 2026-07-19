@@ -910,6 +910,13 @@ def source_area_candidates(subject: dict[str, Any], source: str) -> list[str]:
 def filter_to_selected_source_area(df: pd.DataFrame, subject: dict[str, Any], source: str) -> pd.DataFrame:
     if df.empty:
         return df
+    mapping_candidates = mapping_table_aliases(subject, source)
+    if mapping_candidates:
+        selection = stored_source_selection(subject, source) or select_source_area(df, subject, source)
+        selected = clean_text(selection.get("selected_ranking_subject_or_area"))
+        if not selected:
+            return df.iloc[0:0].copy()
+        return df[exact_subject_mask(df, [selected])].copy()
     primary_keys = primary_source_area_keys_for_frame(df, subject, source)
     if primary_keys:
         masks = []
@@ -961,6 +968,206 @@ def candidate_subject_areas(value: Any) -> list[str]:
         return []
     parts = [part.strip() for part in re.split(r"[\n\r、，,;；]+", text) if part.strip()]
     return parts or [text]
+
+
+def split_scope_values(value: Any) -> list[str]:
+    text = clean_text(value)
+    if not text:
+        return []
+    return [part.strip() for part in re.split(r"[\n\r,;\uFF0C\u3001\uFF1B/|]+", text) if part.strip()]
+
+
+def mapping_table_aliases(subject: dict[str, Any], source: str) -> list[str]:
+    aliases: list[str] = []
+    for row in subject.get("alias_details", []):
+        if clean_text(row.get("ranking_source")) != source:
+            continue
+        source_note = clean_text(row.get("source_note"))
+        alias_type = clean_text(row.get("alias_type"))
+        is_mapping_table_source = (
+            "mapping_sheet1" in alias_type
+            or "dim_subject_column" in alias_type
+            or "教育部学科映射Sheet1" in source_note
+            or source_note in {"arwu_subject_name", "qs_subject_name", "usnews_subject_name", "the_subject_area"}
+        )
+        if not is_mapping_table_source:
+            continue
+        alias = valid_mapping_value(row.get("ranking_subject_alias"))
+        if alias:
+            aliases.append(alias)
+    aliases = ordered_unique(aliases)
+    configured_value = {
+        "软科": subject.get("arwu_subject_name"),
+        "QS": subject.get("qs_subject_name"),
+        "US News": subject.get("usnews_subject_name"),
+        "THE": subject.get("the_subject_area"),
+    }.get(source, "")
+    alias_by_key = {normalize_text_key(alias): alias for alias in aliases}
+    ordered: list[str] = []
+    for item in split_scope_values(configured_value):
+        matched = alias_by_key.get(normalize_text_key(item))
+        if matched and matched not in ordered:
+            ordered.append(matched)
+    return ordered + [alias for alias in aliases if alias not in ordered]
+
+
+def mapping_table_display_label(subject: dict[str, Any], source: str, default: str = "") -> str:
+    aliases = mapping_table_aliases(subject, source)
+    if not aliases:
+        return default
+    alias_by_key = {normalize_text_key(alias): alias for alias in aliases}
+    configured_value = {
+        "软科": subject.get("arwu_subject_name"),
+        "QS": subject.get("qs_subject_name"),
+        "US News": subject.get("usnews_subject_name"),
+        "THE": subject.get("the_subject_area"),
+    }.get(source, "")
+    ordered: list[str] = []
+    for item in split_scope_values(configured_value):
+        key = normalize_text_key(item)
+        if key in alias_by_key and alias_by_key[key] not in ordered:
+            ordered.append(alias_by_key[key])
+    for alias in aliases:
+        if alias not in ordered:
+            ordered.append(alias)
+    return "；".join(ordered)
+
+
+def selected_mapping_table_label(
+    subject: dict[str, Any],
+    source: str,
+    observed: str,
+    default: str = "",
+) -> str:
+    aliases = mapping_table_aliases(subject, source)
+    if not aliases:
+        return default
+    observed_key = normalize_text_key(observed)
+    if observed_key:
+        for alias in aliases:
+            if normalize_text_key(alias) == observed_key:
+                return alias
+    configured_value = {
+        "软科": subject.get("arwu_subject_name"),
+        "QS": subject.get("qs_subject_name"),
+        "US News": subject.get("usnews_subject_name"),
+        "THE": subject.get("the_subject_area"),
+    }.get(source, "")
+    alias_by_key = {normalize_text_key(alias): alias for alias in aliases}
+    for item in split_scope_values(configured_value):
+        matched = alias_by_key.get(normalize_text_key(item))
+        if matched:
+            return matched
+    return aliases[0]
+
+
+def exact_subject_mask(df: pd.DataFrame, aliases: list[str]) -> pd.Series:
+    mask = pd.Series(False, index=df.index)
+    alias_keys = {normalize_text_key(alias) for alias in aliases if normalize_text_key(alias)}
+    for column in ["ranking_subject_raw", "ranking_subject_norm"]:
+        if column in df.columns:
+            mask = mask | df[column].map(normalize_text_key).isin(alias_keys)
+    return mask
+
+
+def score_exact_subject_aliases(df: pd.DataFrame, aliases: list[str]) -> list[tuple[int, int, int, int, str]]:
+    scored: list[tuple[int, int, int, int, str]] = []
+    for index, alias in enumerate(aliases):
+        matched = df[exact_subject_mask(df, [alias])].copy()
+        if matched.empty:
+            continue
+        years = matched.get("ranking_year", pd.Series(dtype=str)).map(clean_text).nunique()
+        tongji = matched[
+            matched.get("is_tongji", pd.Series([""] * len(matched), index=matched.index))
+            .astype(str)
+            .str.lower()
+            .isin(["true", "1"])
+        ]
+        tongji_years = tongji.get("ranking_year", pd.Series(dtype=str)).map(clean_text).nunique()
+        latest_year_value = pd.to_numeric(matched.get("ranking_year"), errors="coerce").max()
+        latest_year = int(latest_year_value) if pd.notna(latest_year_value) else 0
+        scored.append((int(tongji_years), int(years), latest_year, -index, alias))
+    return sorted(scored, reverse=True)
+
+
+def selected_exact_mapping_candidate(df: pd.DataFrame, subject: dict[str, Any], source: str) -> str:
+    scored = score_exact_subject_aliases(df, mapping_table_aliases(subject, source))
+    return scored[0][4] if scored else ""
+
+
+def reasonable_fallback_rules(subject: dict[str, Any], source: str) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for row in subject.get("alias_details", []):
+        if clean_text(row.get("ranking_source")) != source:
+            continue
+        alias_type = clean_text(row.get("alias_type"))
+        source_note = clean_text(row.get("source_note"))
+        if alias_type.startswith("manual_subject_alias_rule:"):
+            mapping_class = alias_type.split(":", 1)[1]
+            rule_id = source_note.rsplit(":", 1)[-1]
+            if mapping_class not in {"deterministic", "broad_multi_subject"}:
+                continue
+        elif source == "THE" and (
+            "the_ranking_area_crosswalk" in alias_type
+            or "manual_area_alias_rule" in alias_type
+        ):
+            mapping_class = "deterministic_area_crosswalk"
+            rule_id = "THE_AREA_NAME_CROSSWALK"
+        else:
+            continue
+        if rule_id == "USNEWS_ENGINEERING_BROAD":
+            continue
+        alias = valid_mapping_value(row.get("ranking_subject_alias"))
+        if not alias:
+            continue
+        item = grouped.setdefault(
+            rule_id,
+            {"rule_id": rule_id, "mapping_class": mapping_class, "aliases": []},
+        )
+        item["aliases"].append(alias)
+    return [
+        {**item, "aliases": ordered_unique(item["aliases"])}
+        for item in grouped.values()
+    ]
+
+
+def select_source_area(df: pd.DataFrame, subject: dict[str, Any], source: str) -> dict[str, Any]:
+    primary = selected_exact_mapping_candidate(df, subject, source)
+    if primary:
+        return {
+            "selection_mode": "mapping_table_candidate",
+            "selected_ranking_subject_or_area": primary,
+        }
+    fallback_scores: list[tuple[int, int, int, int, int, str]] = []
+    for rule_index, rule in enumerate(reasonable_fallback_rules(subject, source)):
+        for score in score_exact_subject_aliases(df, rule["aliases"]):
+            class_priority = 1 if rule["mapping_class"] in {"deterministic", "deterministic_area_crosswalk"} else 0
+            fallback_scores.append((*score[:3], class_priority, -rule_index, score[4]))
+    if fallback_scores:
+        fallback_scores.sort(reverse=True)
+        return {
+            "selection_mode": "fallback_mapping",
+            "selected_ranking_subject_or_area": fallback_scores[0][5],
+        }
+    return {"selection_mode": "missing", "selected_ranking_subject_or_area": ""}
+
+
+def stored_source_selection(subject: dict[str, Any], source: str) -> dict[str, Any]:
+    selections = subject.get("ranking_selection_by_source", {})
+    return selections.get(source, {}) if isinstance(selections, dict) else {}
+
+
+def chart_subject_display_label(subject: dict[str, Any], source: str, row: pd.Series | dict[str, Any]) -> str:
+    observed = clean_text(row.get("source_ranking_subject_raw", "")) or clean_text(row.get("ranking_subject_raw", ""))
+    selection = stored_source_selection(subject, source)
+    if clean_text(selection.get("selection_mode")) == "fallback_mapping":
+        return clean_text(selection.get("selected_ranking_subject_or_area")) or observed
+    mapping_label = selected_mapping_table_label(subject, source, observed)
+    if mapping_label:
+        return mapping_label
+    if isinstance(row, pd.Series):
+        return clean_text(row.get("ranking_subject_alias", "")) or clean_text(row.get("ranking_subject_raw", ""))
+    return clean_text(row.get("ranking_subject_alias", "")) or clean_text(row.get("ranking_subject_raw", ""))
 
 
 def subject_alias_values(subject: dict[str, Any], source: str) -> set[str]:
@@ -1152,6 +1359,37 @@ def append_builder_result(results: list[dict[str, Any]], artifact_id: str, build
     results.append(result)
 
 
+def draw_wrapped_text(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    text: str,
+    font: ImageFont.ImageFont,
+    fill: str,
+    max_width: int,
+    max_lines: int = 2,
+    line_gap: int = 4,
+) -> None:
+    x, y = xy
+    lines: list[str] = []
+    current = ""
+    for char in clean_text(text):
+        candidate = current + char
+        bbox = draw.textbbox((0, 0), candidate, font=font)
+        if current and (bbox[2] - bbox[0]) > max_width:
+            lines.append(current)
+            current = char
+            if len(lines) >= max_lines:
+                break
+        else:
+            current = candidate
+    if current and len(lines) < max_lines:
+        lines.append(current)
+    for index, line in enumerate(lines[:max_lines]):
+        bbox = draw.textbbox((0, 0), line, font=font)
+        line_height = bbox[3] - bbox[1]
+        draw.text((x, y + index * (line_height + line_gap)), line, font=font, fill=fill)
+
+
 def render_cards(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
     image = Image.new("RGB", (1600, 900), "#FFFFFF")
     draw = ImageDraw.Draw(image)
@@ -1181,7 +1419,8 @@ def render_cards(df: pd.DataFrame, subject_name: str, out_path: Path) -> None:
         draw.text((x + 30, y + 118), clean_rank_display(item["rank_raw"]), font=font_rank, fill="#111827")
         draw.text((x + 30, y + 214), f"发布年份：{int(item['release_year'])}", font=font_meta, fill="#374151")
         draw.text((x + 30, y + 252), f"排名年份：{int(item['ranking_year'])}", font=font_meta, fill="#374151")
-        draw.text((x + 30, y + 292), f"排名口径：{clean_text(item['ranking_subject_raw'])}"[:24], font=font_meta, fill="#4B5563")
+        subject_label = clean_text(item.get("ranking_subject_display")) or clean_text(item["ranking_subject_raw"])
+        draw_wrapped_text(draw, (x + 30, y + 292), f"排名口径：{subject_label}", font_meta, "#4B5563", card_w - 60)
         score = clean_text(item.get("total_score", ""))
         if score:
             draw.text((x + 30, y + 354), f"总分：{score}", font=font_meta, fill="#4B5563")
@@ -1208,6 +1447,7 @@ def build_figure_01(run_dir: Path, subject: dict[str, Any], records: pd.DataFram
         source_rows["_sort_release_year"] = pd.to_numeric(source_rows.get("release_year", pd.Series(dtype=str)), errors="coerce")
         source_rows = source_rows.sort_values(["_sort_ranking_year", "_sort_release_year"], ascending=[False, False])
         item = source_rows.iloc[0].drop(labels=["_sort_ranking_year", "_sort_release_year"], errors="ignore").to_dict()
+        item["ranking_subject_display"] = chart_subject_display_label(subject, source, item)
         rows.append(item)
         traces.extend(source_rows.drop(columns=["_sort_ranking_year", "_sort_release_year"], errors="ignore").to_dict("records"))
     chart_df = pd.DataFrame(rows)
@@ -1438,6 +1678,11 @@ def build_figure_07(run_dir: Path, subject: dict[str, Any], records: pd.DataFram
         if source == "US News" and not all_source_rows.empty:
             selected_ids = set(source_rows.get("fact_id", pd.Series(dtype=str)).astype(str).tolist())
             supplemental = all_source_rows[~all_source_rows.get("fact_id", pd.Series(dtype=str)).astype(str).isin(selected_ids)].copy()
+            mapping_candidates = mapping_table_aliases(subject, source)
+            if mapping_candidates:
+                supplemental = supplemental[exact_subject_mask(supplemental, mapping_candidates)].copy()
+            else:
+                supplemental = supplemental.iloc[0:0].copy()
             if not supplemental.empty:
                 supplemental["_sort_ranking_year"] = pd.to_numeric(supplemental.get("ranking_year", pd.Series(dtype=str)), errors="coerce")
                 supplemental["_sort_release_year"] = pd.to_numeric(supplemental.get("release_year", pd.Series(dtype=str)), errors="coerce")
@@ -2149,6 +2394,17 @@ def ranked_sources_with_tongji_latest(run_dir: Path) -> set[str]:
     if "tongji_latest_rows" not in df.columns:
         return set(RANKING_SOURCES)
     rows = df[pd.to_numeric(df["tongji_latest_rows"], errors="coerce").fillna(0) > 0]
+    return {clean_text(value) for value in rows["ranking_source"].tolist() if clean_text(value)}
+
+
+def ranked_sources_with_peer_latest(run_dir: Path) -> set[str]:
+    path = run_dir / "ranking_availability.csv"
+    if not path.exists():
+        return set(RANKING_SOURCES)
+    df = read_external_csv(path)
+    if df.empty or "ranking_source" not in df.columns or "mainland_top200_rows" not in df.columns:
+        return set(RANKING_SOURCES)
+    rows = df[pd.to_numeric(df["mainland_top200_rows"], errors="coerce").fillna(0) > 0]
     return {clean_text(value) for value in rows["ranking_source"].tolist() if clean_text(value)}
 
 
@@ -2923,7 +3179,7 @@ def build_table_04(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
     bands = [(1, 50, "1-50"), (51, 100, "51-100"), (101, 200, "101-200")]
     rows = []
     peer_records = []
-    ranked_sources = ranked_sources_with_tongji_latest(run_dir)
+    ranked_sources = ranked_sources_with_peer_latest(run_dir)
     for source in RANKING_SOURCES:
         if source not in ranked_sources:
             continue
@@ -2939,7 +3195,7 @@ def build_table_04(run_dir: Path, subject: dict[str, Any], records: pd.DataFrame
             rows.append({"榜单": source, "位次区间": label, "高校数量": count})
         rows.append({"榜单": source, "位次区间": "1-200合计", "高校数量": len(top200)})
     if not rows:
-        return {"artifact_id": artifact_id, "status": "skipped", "reason": "no ranked sources with Tongji latest records"}
+        return {"artifact_id": artifact_id, "status": "skipped", "reason": "no ranked sources with latest mainland peer records"}
     df = pd.DataFrame(rows)
     peer_df = pd.DataFrame(peer_records)
     df.to_csv(out / "table_data.csv", index=False, encoding="utf-8-sig")

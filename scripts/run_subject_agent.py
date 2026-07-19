@@ -49,6 +49,7 @@ LOGICAL_SLOT_MAPPING_CSV = CONFIG_DIR / "template_slot_inventory" / "logical_slo
 CURRENT_REQUEST_JSON = CONFIG_DIR / "runtime" / "current_subject_request.json"
 THE_WEIGHT_AREA_CROSSWALK_JSON = CONFIG_DIR / "runtime" / "the_weight_area_crosswalk.json"
 THE_RANKING_AREA_CROSSWALK_JSON = CONFIG_DIR / "runtime" / "the_ranking_area_crosswalk.json"
+MANUAL_SUBJECT_ALIASES_JSON = CONFIG_DIR / "runtime" / "manual_subject_aliases.json"
 README_PATH = PROJECT_DIR / "README.md"
 RECOMMENDED_PYTHON = agent_runtime.resolve_project_path(
     RUNTIME_PROFILE.get("recommended_python"),
@@ -734,9 +735,183 @@ def source_area_candidates(subject: dict[str, Any], source: str) -> list[str]:
     return candidates
 
 
+def mapping_table_aliases(subject: dict[str, Any], source: str) -> list[str]:
+    aliases: list[str] = []
+    for row in subject.get("alias_details", []):
+        if clean_text(row.get("ranking_source")) != source:
+            continue
+        source_note = clean_text(row.get("source_note"))
+        alias_type = clean_text(row.get("alias_type"))
+        is_mapping_table_source = (
+            "mapping_sheet1" in alias_type
+            or "dim_subject_column" in alias_type
+            or "教育部学科映射Sheet1" in source_note
+            or source_note in {"arwu_subject_name", "qs_subject_name", "usnews_subject_name", "the_subject_area"}
+        )
+        if not is_mapping_table_source:
+            continue
+        alias = valid_mapping_value(row.get("ranking_subject_alias"))
+        if alias:
+            aliases.append(alias)
+    aliases = ordered_unique(aliases)
+    configured_value = {
+        "软科": subject.get("arwu_subject_name"),
+        "QS": subject.get("qs_subject_name"),
+        "US News": subject.get("usnews_subject_name"),
+        "THE": subject.get("the_subject_area"),
+    }.get(source, "")
+    alias_by_key = {normalize_key(alias): alias for alias in aliases}
+    ordered: list[str] = []
+    for item in candidate_subject_areas(configured_value):
+        matched = alias_by_key.get(normalize_key(item))
+        if matched and matched not in ordered:
+            ordered.append(matched)
+    return ordered + [alias for alias in aliases if alias not in ordered]
+
+
+def exact_subject_mask(df: pd.DataFrame, aliases: list[str]) -> pd.Series:
+    mask = pd.Series(False, index=df.index)
+    alias_keys = {normalize_key(alias) for alias in aliases if normalize_key(alias)}
+    for column in ["ranking_subject_raw", "ranking_subject_norm"]:
+        if column in df.columns:
+            mask = mask | df[column].map(normalize_key).isin(alias_keys)
+    return mask
+
+
+def score_exact_subject_aliases(df: pd.DataFrame, aliases: list[str]) -> list[tuple[int, int, int, int, str]]:
+    scored: list[tuple[int, int, int, int, str]] = []
+    for index, alias in enumerate(aliases):
+        matched = df[exact_subject_mask(df, [alias])].copy()
+        if matched.empty:
+            continue
+        years = matched.get("ranking_year", pd.Series(dtype=str)).map(clean_text).nunique()
+        tongji = matched[
+            matched.get("is_tongji", pd.Series([""] * len(matched), index=matched.index))
+            .astype(str)
+            .str.lower()
+            .isin(["true", "1"])
+        ]
+        tongji_years = tongji.get("ranking_year", pd.Series(dtype=str)).map(clean_text).nunique()
+        latest_year_value = pd.to_numeric(matched.get("ranking_year"), errors="coerce").max()
+        latest_year = int(latest_year_value) if pd.notna(latest_year_value) else 0
+        scored.append((int(tongji_years), int(years), latest_year, -index, alias))
+    return sorted(scored, reverse=True)
+
+
+def selected_exact_mapping_candidate(df: pd.DataFrame, subject: dict[str, Any], source: str) -> str:
+    scored = score_exact_subject_aliases(df, mapping_table_aliases(subject, source))
+    return scored[0][4] if scored else ""
+
+
+@lru_cache(maxsize=1)
+def manual_subject_alias_rule_notes() -> dict[str, str]:
+    if not MANUAL_SUBJECT_ALIASES_JSON.exists():
+        return {}
+    payload = json.loads(MANUAL_SUBJECT_ALIASES_JSON.read_text(encoding="utf-8"))
+    return {
+        clean_text(row.get("rule_id")): clean_text(row.get("note"))
+        for row in payload.get("subject_alias_rules", [])
+        if clean_text(row.get("rule_id"))
+    }
+
+
+def reasonable_fallback_rules(subject: dict[str, Any], source: str) -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for row in subject.get("alias_details", []):
+        if clean_text(row.get("ranking_source")) != source:
+            continue
+        alias_type = clean_text(row.get("alias_type"))
+        source_note = clean_text(row.get("source_note"))
+        if alias_type.startswith("manual_subject_alias_rule:"):
+            mapping_class = alias_type.split(":", 1)[1]
+            rule_id = source_note.rsplit(":", 1)[-1]
+            note = manual_subject_alias_rule_notes().get(rule_id, "")
+            if mapping_class not in {"deterministic", "broad_multi_subject"}:
+                continue
+        elif source == "THE" and (
+            "the_ranking_area_crosswalk" in alias_type
+            or "manual_area_alias_rule" in alias_type
+        ):
+            mapping_class = "deterministic_area_crosswalk"
+            rule_id = "THE_AREA_NAME_CROSSWALK"
+            note = "THE排名数据与映射表使用了同一领域的不同规范名称，仅作领域名称归一化。"
+        else:
+            continue
+        if rule_id == "USNEWS_ENGINEERING_BROAD":
+            continue
+        alias = valid_mapping_value(row.get("ranking_subject_alias"))
+        if not alias:
+            continue
+        item = grouped.setdefault(
+            rule_id,
+            {
+                "rule_id": rule_id,
+                "mapping_class": mapping_class,
+                "note": note,
+                "aliases": [],
+            },
+        )
+        item["aliases"].append(alias)
+    return [
+        {**item, "aliases": ordered_unique(item["aliases"])}
+        for item in grouped.values()
+    ]
+
+
+def select_source_area(df: pd.DataFrame, subject: dict[str, Any], source: str) -> dict[str, Any]:
+    mapping_candidates = mapping_table_aliases(subject, source)
+    primary = selected_exact_mapping_candidate(df, subject, source)
+    if primary:
+        return {
+            "selection_mode": "mapping_table_candidate",
+            "selected_ranking_subject_or_area": primary,
+            "mapping_candidates": mapping_candidates,
+            "fallback_rule_id": "",
+            "fallback_mapping_class": "",
+            "fallback_mapping_note": "",
+        }
+    fallback_scores: list[tuple[int, int, int, int, int, str, dict[str, Any]]] = []
+    for rule_index, rule in enumerate(reasonable_fallback_rules(subject, source)):
+        for score in score_exact_subject_aliases(df, rule["aliases"]):
+            class_priority = 1 if rule["mapping_class"] in {"deterministic", "deterministic_area_crosswalk"} else 0
+            fallback_scores.append((*score[:3], class_priority, -rule_index, score[4], rule))
+    if fallback_scores:
+        fallback_scores.sort(reverse=True, key=lambda item: item[:5])
+        selected = fallback_scores[0]
+        rule = selected[6]
+        return {
+            "selection_mode": "fallback_mapping",
+            "selected_ranking_subject_or_area": selected[5],
+            "mapping_candidates": mapping_candidates,
+            "fallback_rule_id": rule["rule_id"],
+            "fallback_mapping_class": rule["mapping_class"],
+            "fallback_mapping_note": rule["note"],
+        }
+    return {
+        "selection_mode": "missing",
+        "selected_ranking_subject_or_area": "",
+        "mapping_candidates": mapping_candidates,
+        "fallback_rule_id": "",
+        "fallback_mapping_class": "",
+        "fallback_mapping_note": "",
+    }
+
+
+def stored_source_selection(subject: dict[str, Any], source: str) -> dict[str, Any]:
+    selections = subject.get("ranking_selection_by_source", {})
+    return selections.get(source, {}) if isinstance(selections, dict) else {}
+
+
 def filter_to_selected_source_area(df: pd.DataFrame, subject: dict[str, Any], source: str) -> pd.DataFrame:
     if df.empty:
         return df
+    mapping_candidates = mapping_table_aliases(subject, source)
+    if mapping_candidates:
+        selection = stored_source_selection(subject, source) or select_source_area(df, subject, source)
+        selected = clean_text(selection.get("selected_ranking_subject_or_area"))
+        if not selected:
+            return df.iloc[0:0].copy()
+        return df[exact_subject_mask(df, [selected])].copy()
     primary_keys = primary_source_area_keys_for_frame(df, subject, source)
     if primary_keys:
         masks = []
@@ -771,14 +946,56 @@ def build_ranking_availability(subject: dict[str, Any], records: pd.DataFrame) -
     base_records = records
     records = supplement_the_tongji_history_records(records, subject)
     for source in RANKING_SOURCES:
-        latest = latest_source_rows(records, source)
-        latest = filter_to_selected_source_area(latest, subject, source)
-        latest_for_peer = latest_source_rows(base_records, source)
-        latest_for_peer = filter_to_selected_source_area(latest_for_peer, subject, source)
+        source_records = records[records["ranking_source"] == source].copy()
+        source_base_records = base_records[base_records["ranking_source"] == source].copy()
+        selection = select_source_area(source_records, subject, source)
+        selected_area = clean_text(selection.get("selected_ranking_subject_or_area"))
+        selected_records = source_records[exact_subject_mask(source_records, [selected_area])].copy() if selected_area else source_records.iloc[0:0].copy()
+        selected_base_records = source_base_records[exact_subject_mask(source_base_records, [selected_area])].copy() if selected_area else source_base_records.iloc[0:0].copy()
+        latest = latest_source_rows(selected_records, source)
+        latest_for_peer = latest_source_rows(selected_base_records, source)
         tongji = latest[latest["is_tongji"].astype(str).str.lower().isin(["true", "1"])].copy()
         mainland = latest_for_peer[latest_for_peer.apply(is_mainland, axis=1)].copy() if not latest_for_peer.empty else latest_for_peer
         top200 = mainland[pd.to_numeric(mainland["rank_midpoint"], errors="coerce") <= TOP_RANK_MIDPOINT].copy()
-        selected_area = expected_ranking_area(subject, source)
+        candidate_statuses = []
+        for candidate in mapping_table_aliases(subject, source):
+            matched = source_base_records[exact_subject_mask(source_base_records, [candidate])].copy()
+            years = sorted(
+                {
+                    int(value)
+                    for value in pd.to_numeric(matched.get("ranking_year"), errors="coerce").dropna().tolist()
+                }
+            )
+            latest_candidate = latest_source_rows(matched, source)
+            latest_mainland = (
+                latest_candidate[latest_candidate.apply(is_mainland, axis=1)].copy()
+                if not latest_candidate.empty
+                else latest_candidate
+            )
+            latest_top200 = latest_mainland[
+                pd.to_numeric(latest_mainland.get("rank_midpoint"), errors="coerce") <= TOP_RANK_MIDPOINT
+            ].copy()
+            candidate_tongji = matched[
+                matched.get("is_tongji", pd.Series([""] * len(matched), index=matched.index))
+                .astype(str)
+                .str.lower()
+                .isin(["true", "1"])
+            ]
+            latest_tongji = latest_source_rows(candidate_tongji, source)
+            candidate_statuses.append(
+                {
+                    "candidate": candidate,
+                    "has_data": not matched.empty,
+                    "total_rows": int(len(matched)),
+                    "first_year": years[0] if years else "",
+                    "latest_year": years[-1] if years else "",
+                    "latest_rows": int(len(latest_candidate)),
+                    "latest_mainland_rows": int(len(latest_mainland)),
+                    "latest_mainland_top200_rows": int(len(latest_top200)),
+                    "tongji_rows": int(len(candidate_tongji)),
+                    "tongji_latest_rank": clean_text(latest_tongji.iloc[0]["rank_raw"]) if not latest_tongji.empty else "",
+                }
+            )
         observed_latest_area = ""
         if not latest.empty:
             observed_areas = ordered_unique(
@@ -793,6 +1010,12 @@ def build_ranking_availability(subject: dict[str, Any], records: pd.DataFrame) -
         row = {
             "ranking_source": source,
             "selected_ranking_subject_or_area": selected_area,
+            "selection_mode": selection["selection_mode"],
+            "mapping_candidate_subjects": "；".join(selection["mapping_candidates"]),
+            "mapping_candidate_status_json": json.dumps(candidate_statuses, ensure_ascii=False),
+            "fallback_rule_id": selection["fallback_rule_id"],
+            "fallback_mapping_class": selection["fallback_mapping_class"],
+            "fallback_mapping_note": selection["fallback_mapping_note"],
             "observed_latest_subject_or_area": observed_latest_area,
             "latest_release_year": int(latest["release_year"].max()) if not latest.empty else "",
             "latest_ranking_year": int(latest["ranking_year"].max()) if not latest.empty else "",
@@ -1270,11 +1493,11 @@ def build_artifact_readiness(
         ("figure_05_usnews_indicator_weight", "chart", "US News 权重图", has_tongji("US News") and has_weight("US News"), "需要 US News 对应口径权重，且同济在该口径下有最新综合排名。"),
         ("figure_06_the_indicator_weight", "chart", "THE 权重图", has_tongji("THE") and has_weight("THE"), "需要 THE 对应领域权重，且同济在该口径下有最新综合排名。"),
         ("figure_07_all_rankings_history", "chart", "四大排名历史趋势", sum(has_tongji(s) for s in RANKING_SOURCES) >= 1, "至少一个榜单有同济历史排名即可生成历史图；单榜单时用于展示当前可核验历史，缺失榜单不补造。"),
-        ("table_04_mainland_rank_band_distribution", "table", "内地高校位次分布", sum(has_peer_with_tongji(s) for s in RANKING_SOURCES) >= 2, "需要各榜单最新内地高校排名样本。"),
-        ("table_05_arwu_mainland_peer_ranking", "table", "软科 peer 排名表", has_peer_with_tongji("软科"), "需要软科前200内地高校样本。"),
-        ("table_06_usnews_mainland_peer_ranking", "table", "US News peer 排名表", has_peer_with_tongji("US News"), "需要 US News 前200内地高校样本。"),
-        ("table_07_qs_mainland_peer_ranking", "table", "QS peer 排名表", has_peer_with_tongji("QS"), "需要 QS 前200内地高校样本。"),
-        ("table_08_the_mainland_peer_ranking", "table", "THE peer 排名表", has_peer_with_tongji("THE"), "需要 THE 前200内地高校样本。"),
+        ("table_04_mainland_rank_band_distribution", "table", "内地高校位次分布", sum(has_peer(s) for s in RANKING_SOURCES) >= 2, "需要各榜单最新内地高校排名样本；同济缺位的榜单仍可展示总体分布，但必须明确数据缺口。"),
+        ("table_05_arwu_mainland_peer_ranking", "table", "软科 peer 排名表", has_peer("软科"), "需要软科前200内地高校样本；同济不在该口径时不追加虚构参照行。"),
+        ("table_06_usnews_mainland_peer_ranking", "table", "US News peer 排名表", has_peer("US News"), "需要 US News 前200内地高校样本；同济不在该口径时仍展示前列高校，并明确同济缺位。"),
+        ("table_07_qs_mainland_peer_ranking", "table", "QS peer 排名表", has_peer("QS"), "需要 QS 前200内地高校样本；同济不在该口径时不追加虚构参照行。"),
+        ("table_08_the_mainland_peer_ranking", "table", "THE peer 排名表", has_peer("THE"), "需要 THE 前200内地高校样本；同济不在该口径时不追加虚构参照行。"),
         ("table_01_arwu_tongji_indicator_history", "table", "软科同济分项指标历史表", has_tongji("软科") and has_indicator_years("软科", 2), "需要同济在软科对应口径下有最新综合排名，并具备软科多年分项指标；否则不使用近邻学科或外部候选口径替代。"),
         ("table_02_usnews_tongji_indicator_history", "table", "US News 同济分项指标历史表", has_indicator_years("US News", 2), "模板要求多年历史；当前若只有单年，只能降级为最新年表。"),
         ("figure_10_usnews_indicator_history_trend", "chart", "US News 分项指标历史趋势图", has_indicator_years("US News", 2), "趋势图需要 US News 多年分项指标。"),
@@ -1602,8 +1825,22 @@ def run_subject_agent() -> dict[str, Any]:
 
     records = combine_ranking_records(query_ranking_records(subject["subject_id"]), query_supplemental_ranking_records(subject))
     subject = attach_runtime_public_supplements(subject, records)
-    request_info = write_current_request(run_dir, subject)
     ranking_rows, ranking_summary = build_ranking_availability(subject, records)
+    subject["ranking_selection_by_source"] = {
+        row["ranking_source"]: {
+            key: row.get(key, "")
+            for key in [
+                "selection_mode",
+                "selected_ranking_subject_or_area",
+                "mapping_candidate_subjects",
+                "fallback_rule_id",
+                "fallback_mapping_class",
+                "fallback_mapping_note",
+            ]
+        }
+        for row in ranking_rows
+    }
+    request_info = write_current_request(run_dir, subject)
     weight_rows = build_weight_availability(subject, records)
     indicator_rows = build_indicator_availability(subject)
     paper_metric_sources = detect_paper_metric_sources()

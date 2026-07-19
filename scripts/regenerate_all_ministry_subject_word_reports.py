@@ -36,6 +36,7 @@ GENERATE_NARRATIVE_WITH_LLM = False
 USE_DEMO_NARRATIVE_RESULT = False
 UPDATE_WORD_FIELDS_WITH_COM = False
 NORMALIZE_DOCX_FOR_WORD_OPEN = False
+BATCH_PROGRESS_EVERY = 5
 
 
 def now_text() -> str:
@@ -121,6 +122,10 @@ def prepend_soffice_wrapper_to_path() -> None:
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+
+
+def print_progress(message: str) -> None:
+    print(f"[{now_text()}] {message}", flush=True)
 
 
 def request_payload_for_subject(row: dict[str, str]) -> dict[str, Any]:
@@ -249,14 +254,18 @@ def main() -> None:
         "results": [],
     }
     write_json(batch_dir / "progress.json", progress)
+    print_progress(f"batch started: total={len(subjects)}, batch_dir={batch_dir}")
 
     for index, row in enumerate(subjects, start=1):
         code = row["code"]
         subject = row["subject"]
         run_dir = run_dirs_by_subject.get((code, subject)) or run_dirs_by_code.get(code)
         progress["current_code"] = code
+        progress["current_subject"] = subject
+        progress["current_index"] = index
         progress["completed"] = index - 1
         write_json(batch_dir / "progress.json", progress)
+        print_progress(f"start {index}/{len(subjects)} {code} {subject}")
         if not RUN_SUBJECT_AGENT_FIRST and run_dir is None:
             item = {"code": code, "subject": subject, "status": "missing_subject_run_dir"}
             progress["failed"] += 1
@@ -268,7 +277,7 @@ def main() -> None:
         stderr_path = log_dir / f"{code}_stderr.log"
         try:
             if RUN_SUBJECT_AGENT_FIRST:
-                request_path = request_dir / f"current_request_{code}_{slug_text(subject)}.json"
+                request_path = request_dir / f"current_request_{code}.json"
                 write_json(request_path, request_payload_for_subject(row))
                 payload = run_subject_report_child(request_path, stdout_path, stderr_path)
                 run_dir = Path(clean_text(payload.get("run_dir")))
@@ -294,6 +303,10 @@ def main() -> None:
             item["stdout_log"] = str(stdout_path)
             item["stderr_log"] = str(stderr_path)
             progress["results"].append(item)
+            print_progress(
+                f"done {index}/{len(subjects)} {code} {subject}: "
+                f"status={item.get('overall_status') or item.get('status')}, docx={bool(item.get('docx'))}"
+            )
         except Exception as exc:
             stderr_path.write_text(traceback.format_exc(), encoding="utf-8", newline="\n")
             progress["failed"] += 1
@@ -307,13 +320,23 @@ def main() -> None:
                     "stderr_log": str(stderr_path),
                 }
             )
+            print_progress(f"error {index}/{len(subjects)} {code} {subject}: {exc}")
         progress["completed"] = index
+        progress["last_progress_at"] = now_text()
         write_json(batch_dir / "progress.json", progress)
+        if index % BATCH_PROGRESS_EVERY == 0 or index == len(subjects):
+            ok_count = sum(1 for item in progress["results"] if item.get("status") == "ok")
+            print_progress(
+                f"batch progress: completed={index}/{len(subjects)}, ok={ok_count}, "
+                f"failed={progress['failed']}"
+            )
 
     progress["finished_at"] = now_text()
     progress["current_code"] = ""
+    progress["current_subject"] = ""
     write_json(batch_dir / "progress.json", progress)
     write_json(batch_dir / "summary.json", progress)
+    print_progress(f"batch finished: completed={progress['completed']}/{progress['total']}, failed={progress['failed']}")
     print(json.dumps(progress, ensure_ascii=False, indent=2))
 
 
