@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "source_docx": "E:/微信聊天记录/xwechat_files/wxid_zdf5dzzvjjdo22_974d/msg/attach/4f05c5641b261e5fd910580ce97bc1db/2026-10/Rec/7ee48ad652bbae53/F/0/同济ESI报告-含8个千分之一学科的趋势分析.docx",
+  "reference_screenshot": "C:/temp/codex-clipboard-d36822c6-1ff5-456a-8835-be636844cdac.png",
+  "figure_numbers": [3, 4, 5, 6, 7, 8, 9, 10],
+  "output_dir": "outputs/esi_subject_trends",
+  "source_snapshot_dir": "outputs/esi_subject_trends/source",
+  "local_source_docx": "data/esi_reference/tongji_esi_reference_20261014.docx",
+  "render_script": "C:/Users/李鑫/.codex/plugins/cache/openai-primary-runtime/documents/26.1011.11113/skills/documents/render_docx.py",
+  "soffice_wrapper_dir": "E:/tools/codex-bin",
+  "python_path": "E:/conda_envs/graph-rag/python.exe",
+  "report_title": "同济大学八个ESI千分之一学科发展趋势",
+  "highlight_narrative": true,
+  "standalone_only": true
+}

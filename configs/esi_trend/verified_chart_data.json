@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "source_sha256": "05535e73eb57d4bf0df544c921e0c4f2ac4b4c26b290e41f32c2cfbdd70ff205",
+  "transcription_method": "codex_agent_visual_transcription_of_visible_point_labels",
+  "verification_scope": "图3至图10的标题、12个日期标签及全部96个数值标签已逐图视觉核对；未推算未显示数值。",
+  "metric_name": "ESI排名千分位",
+  "metric_unit": "‰",
+  "better_direction": "lower",
+  "top_one_per_mille_threshold": 1.0,
+  "top_one_per_ten_thousand_threshold": 0.1,
+  "dates": ["2024-11", "2025-01", "2025-03", "2025-05", "2025-07", "2025-09", "2025-11", "2026-01", "2026-03", "2026-05", "2026-07", "2026-09"],
+  "subjects": [
+    {
+      "subject_key": "environment_ecology",
+      "subject_name": "环境/生态学",
+      "source_figure_number": 3,
+      "source_media": "word/media/image4.png",
+      "source_block_index": 49,
+      "source_render_page": 9,
+      "values": [0.380, 0.369, 0.363, 0.338, 0.324, 0.319, 0.315, 0.300, 0.277, 0.238, 0.235, 0.231],
+      "y_ticks": [0.100, 0.150, 0.200, 0.250, 0.300, 0.350, 0.400],
+      "narrative": "环境/生态学：冲击万分之一的基础最好，千分位始终处于0.4‰以内，且持续稳步优化，已达到0.23‰，学科国际竞争力突出。"
+    },
+    {
+      "subject_key": "materials_science",
+      "subject_name": "材料科学",
+      "source_figure_number": 4,
+      "source_media": "word/media/image5.png",
+      "source_block_index": 51,
+      "source_render_page": 10,
+      "values": [0.364, 0.350, 0.336, 0.322, 0.316, 0.310, 0.305, 0.292, 0.285, 0.289, 0.279, 0.272],
+      "y_ticks": [0.100, 0.150, 0.200, 0.250, 0.300, 0.350, 0.400],
+      "narrative": "材料科学：千分位由0.364‰优化至0.272‰，整体持续前移，发展基础较好。2026年5月小幅回升后继续改善，是八个学科中冲击万分之一基础较好的学科。"
+    },
+    {
+      "subject_key": "chemistry",
+      "subject_name": "化学",
+      "source_figure_number": 5,
+      "source_media": "word/media/image6.png",
+      "source_block_index": 53,
+      "source_render_page": 11,
+      "values": [0.751, 0.727, 0.713, 0.686, 0.674, 0.659, 0.629, 0.608, 0.580, 0.537, 0.525, 0.505],
+      "y_ticks": [0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700, 0.800],
+      "narrative": "化学：千分位由0.751‰持续优化至0.505‰，各期均向前改善，提升态势平稳。目前已接近0.5‰，进一步前移仍有空间。"
+    },
+    {
+      "subject_key": "computer_science",
+      "subject_name": "计算机科学",
+      "source_figure_number": 6,
+      "source_media": "word/media/image7.png",
+      "source_block_index": 55,
+      "source_render_page": 12,
+      "values": [0.682, 0.671, 0.659, 0.658, 0.660, 0.649, 0.639, 0.581, 0.600, 0.551, 0.546, 0.522],
+      "y_ticks": [0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700],
+      "narrative": "计算机科学：千分位由0.682‰优化至0.522‰，总体位次持续前移。2025年7月和2026年3月略有波动，随后恢复改善，当前接近0.5‰。"
+    },
+    {
+      "subject_key": "clinical_medicine",
+      "subject_name": "临床医学",
+      "source_figure_number": 7,
+      "source_media": "word/media/image8.png",
+      "source_block_index": 57,
+      "source_render_page": 13,
+      "values": [0.660, 0.648, 0.629, 0.651, 0.640, 0.622, 0.611, 0.596, 0.574, 0.588, 0.576, 0.553],
+      "y_ticks": [0.100, 0.200, 0.300, 0.400, 0.500, 0.600, 0.700],
+      "narrative": "临床医学：千分位由0.660‰优化至0.553‰，整体发展向好。2025年5月和2026年5月小幅回升后均继续前移，最新一期达到本轮观察期最好水平。"
+    },
+    {
+      "subject_key": "social_sciences_general",
+      "subject_name": "社会科学总论",
+      "source_figure_number": 8,
+      "source_media": "word/media/image9.png",
+      "source_block_index": 59,
+      "source_render_page": 14,
+      "values": [1.339, 1.300, 1.250, 1.141, 1.114, 1.084, 1.055, 1.012, 0.984, 0.909, 0.878, 0.843],
+      "y_ticks": [0.100, 0.300, 0.500, 0.700, 0.900, 1.100, 1.300, 1.500],
+      "narrative": "社会科学总论：千分位由1.339‰持续优化至0.843‰，进步幅度显著。2026年3月进入前1‰，此后连续三期改善，前千分之一地位进一步巩固。"
+    },
+    {
+      "subject_key": "geosciences",
+      "subject_name": "地球科学",
+      "source_figure_number": 9,
+      "source_media": "word/media/image10.png",
+      "source_block_index": 61,
+      "source_render_page": 15,
+      "values": [1.384, 1.333, 1.291, 1.247, 1.227, 1.200, 1.172, 1.133, 1.109, 1.014, 0.982, 0.944],
+      "y_ticks": [0.100, 0.300, 0.500, 0.700, 0.900, 1.100, 1.300, 1.500],
+      "narrative": "地球科学：千分位由1.384‰持续优化至0.944‰，位次稳步前移。2026年7月以0.982‰进入前1‰，9月进一步改善，新晋千分之一学科的发展势头延续。"
+    },
+    {
+      "subject_key": "pharmacology_toxicology",
+      "subject_name": "药理学与毒理学",
+      "source_figure_number": 10,
+      "source_media": "word/media/image11.png",
+      "source_block_index": 63,
+      "source_render_page": 16,
+      "values": [1.496, 1.462, 1.441, 1.281, 1.241, 1.174, 1.164, 1.145, 1.077, 0.998, 0.985, 0.946],
+      "y_ticks": [0.100, 0.300, 0.500, 0.700, 0.900, 1.100, 1.300, 1.500, 1.700],
+      "narrative": "药理学与毒理学：千分位由1.496‰持续优化至0.946‰，2025年5月出现较大幅度提升。2026年5月以0.998‰进入前1‰，随后继续前移，学科竞争力持续增强。"
+    }
+  ],
+  "source_corrections": [
+    {"source_figure_number": 10, "source_caption": "图 10：地球科学近两年排名变化趋势", "corrected_caption": "图10 药理学与毒理学近两年排名变化趋势", "reason": "图内标题、前置黄色分析文字及图片数值均对应药理学与毒理学，原图题存在复制残留。"}
+  ],
+  "source_context_notes": [
+    "源报告封面及总体表格标注2026年7月，但图3至图10包含2026年9月节点；趋势样例采用图中2024年11月至2026年9月序列，不用7月表格替代9月值。",
+    "工程学已进入前万分之一，原报告8个趋势学科不包含工程学；本样例严格复用图3至图10范围。",
+    "图中千分位与源附表万分位单位不同；例如环境/生态学2026年7月为0.235‰，附表为2.35万分位。",
+    "材料科学与计算机科学存在单期回升；临床医学存在两次回升。正文按实际序列描述。",
+    "千分位越小表示位次越靠前；万分之一阈值为0.1‰，不是1‰。"
+  ]
+}
