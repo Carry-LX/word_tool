@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "conclusion_mode": "concise_evidence_points",
+  "max_recommendation_characters": 180,
+  "esi_data_path": "configs/esi_trend/verified_chart_data.json",
+  "esi_artifacts_dir": "outputs/esi_subject_trends/artifacts",
+  "batch_output_dir": "outputs/esi_integrated_reports_20261015",
+  "selected_report_codes": ["0830", "0805", "0703", "0812", "1002", "1007"],
+  "include_unmapped_esi_topics": false,
+  "bindings": {
+    "0830": {"report_subject": "环境科学与工程", "esi_key": "environment_ecology", "action": "优先培育高影响力成果，把提升论文质量作为下一阶段重点。"},
+    "0805": {"report_subject": "材料科学与工程", "esi_key": "materials_science", "action": "支持优势团队持续产出代表性成果，重点跟踪规范化引文影响的改善。"},
+    "0703": {"report_subject": "化学", "esi_key": "chemistry", "action": "围绕重点课题深化国际合作，提升成果影响力。"},
+    "0812": {"report_subject": "计算机科学与技术", "esi_key": "computer_science", "action": "聚焦优势研究方向培育代表性成果，优先提升论文引用影响。"},
+    "1002": {"report_subject": "临床医学", "esi_key": "clinical_medicine", "action": "围绕重点临床问题组织高质量研究，提升成果引用影响。"},
+    "1007": {"report_subject": "药学", "esi_key": "pharmacology_toxicology", "action": "聚焦优势研究方向培育代表性成果，持续跟踪论文质量指标。"}
+  },
+  "unmapped_esi_topics": ["geosciences", "social_sciences_general"],
+  "esi_narratives": {
+    "environment_ecology": "环境/生态学千分位由0.380‰持续优化至0.231‰，各期均向前改善。在本次六个学科中最接近前万分之一，发展基础较好。",
+    "materials_science": "材料科学千分位由0.364‰优化至0.272‰，整体稳步前移。2026年5月小幅回升后继续改善，在本次六个学科中处于较靠前位置。",
+    "chemistry": "化学千分位由0.751‰持续优化至0.505‰，各期均向前改善。目前接近0.5‰，位次提升态势平稳。",
+    "computer_science": "计算机科学千分位由0.682‰优化至0.522‰，总体位次持续前移。中间两个节点略有回升，随后恢复改善，目前接近0.5‰。",
+    "clinical_medicine": "临床医学千分位由0.660‰优化至0.553‰，整体向好。两次小幅回升后均继续改善，最新一期达到观察期内最好水平。",
+    "pharmacology_toxicology": "药理学与毒理学千分位由1.496‰持续优化至0.946‰，2025年5月提升较明显。2026年5月进入前1‰，此后继续前移。",
+    "geosciences": "地球科学千分位由1.384‰持续优化至0.944‰，位次稳步前移。2026年7月进入前1‰，9月进一步改善，发展势头延续。",
+    "social_sciences_general": "社会科学总论千分位由1.339‰持续优化至0.843‰，进步幅度较大。2026年3月进入前1‰，此后连续三期改善。"
+  },
+  "topic_recommendations": {
+    "geosciences": ["1. 发展基础：ESI千分位持续改善，2026年7月新晋前1‰。", "2. 阶段重点：最新为0.944‰，优先巩固前千分之一位置。", "3. 建设建议：持续培育代表性成果，逐期跟踪ESI位次变化。"],
+    "social_sciences_general": ["1. 发展基础：2026年3月进入ESI前1‰，最新改善至0.843‰。", "2. 阶段重点：保持当前前移势头，巩固前千分之一位置。", "3. 建设建议：围绕优势方向积累代表性成果，持续跟踪引用表现。"]
+  }
+}

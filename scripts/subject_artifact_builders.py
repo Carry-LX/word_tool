@@ -17,6 +17,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFont
 
 import agent_runtime
 import ranking_public_supplements as public_supplements
+from pipeline_observer import report_progress
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -1357,6 +1358,8 @@ def append_builder_result(results: list[dict[str, Any]], artifact_id: str, build
         }
     result["elapsed_seconds"] = round(time.perf_counter() - started, 3)
     results.append(result)
+    report_progress("artifacts", "running", "已完成一项分析素材", completed_artifacts=sum(row.get("status") == "generated" for row in results),
+                    artifact_id=artifact_id, artifact_output_dir=result.get("output_dir", ""), artifact_status=result.get("status", ""))
 
 
 def draw_wrapped_text(

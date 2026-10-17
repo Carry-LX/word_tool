@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "default_subject_code": "0830",
+  "runs_dir": "outputs/web_demo_runs",
+  "delivery_dir": "outputs/web_demo_delivery_v2",
+  "video_idle_speed": 15,
+  "coverage_csv": "outputs/subject_coverage_audit/tongji_49_academic_degree_generation_coverage_after_supplement.csv",
+  "catalog_manifests": ["outputs/release_audit/latest/release_quality_gate.json", "outputs/esi_integrated_reports_20261015/batch_manifest.json"],
+  "default_sample_count": 3,
+  "minimum_sample_source_count": 3,
+  "excluded_report_ids": ["geosciences", "social_sciences_general"],
+  "maximum_sample_count": 6,
+  "update_word_fields": true,
+  "enable_narrative_api": false,
+  "stages": [
+    {"id": "data", "name": "数据检查", "description": "检查排名数据与学科映射"},
+    {"id": "resolve", "name": "学科解析", "description": "关联目标学科与榜单记录"},
+    {"id": "sources", "name": "来源决策", "description": "确定各榜单口径与可用图表"},
+    {"id": "artifacts", "name": "图表分析", "description": "生成图表、分析文字与来源记录"},
+    {"id": "word", "name": "Word组装", "description": "填充报告并更新目录"},
+    {"id": "qa", "name": "渲染核查", "description": "检查页面并准备预览"}
+  ]
+}

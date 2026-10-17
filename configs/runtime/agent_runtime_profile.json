@@ -1,6 +1,11 @@
 {
   "version": 1,
   "profile_name": "default_local_report_agent",
+  "web_demo": {
+    "host": "127.0.0.1",
+    "port": 8766,
+    "config_path": "configs/runtime/web_demo_profile.json"
+  },
   "active_subject_request_path": "configs/runtime/current_subject_request.json",
   "recommended_python": "E:/conda_envs/graph-rag/python.exe",
   "execution": {
@@ -18,6 +23,7 @@
     "update_readme_on_run": false
   },
   "word_pipeline": {
+    "editorial_policy_path": "configs/runtime/report_editorial_policy.json",
     "run_subject_agent_first": true,
     "subject_run_dir": "",
     "build_narrative_bundle": true,

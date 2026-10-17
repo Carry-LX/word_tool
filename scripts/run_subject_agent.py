@@ -15,6 +15,7 @@ import pandas as pd
 
 import agent_runtime
 import ranking_public_supplements as public_supplements
+from pipeline_observer import report_progress
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -1814,16 +1815,23 @@ def maybe_run_math_pipeline() -> dict[str, Any]:
 
 
 def run_subject_agent() -> dict[str, Any]:
+    report_progress("data", "running", "正在检查数据与请求")
     input_issues = validate_required_inputs()
     if input_issues:
         raise FileNotFoundError(json.dumps(input_issues, ensure_ascii=False, indent=2))
 
+    report_progress("data", "success", "核心数据检查通过", checked_inputs=7)
+    report_progress("resolve", "running", "正在关联目标学科与榜单记录")
     subject = resolve_subject()
     run_slug = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{TARGET_SUBJECT_CODE}_{slug_text(TARGET_SUBJECT)}"
     run_dir = OUTPUT_DIR / run_slug
     run_dir.mkdir(parents=True, exist_ok=True)
 
     records = combine_ranking_records(query_ranking_records(subject["subject_id"]), query_supplemental_ranking_records(subject))
+    matched_sources = [{"source": str(source), "records": int(len(group))}
+                       for source, group in records.groupby("ranking_source")]
+    report_progress("resolve", "success", "学科记录关联完成", ranking_records=int(len(records)), subject_code=str(TARGET_SUBJECT_CODE), run_dir=str(run_dir), matched_sources=matched_sources)
+    report_progress("sources", "running", "正在确定各榜单的可用口径", run_dir=str(run_dir))
     subject = attach_runtime_public_supplements(subject, records)
     ranking_rows, ranking_summary = build_ranking_availability(subject, records)
     subject["ranking_selection_by_source"] = {
@@ -1847,6 +1855,7 @@ def run_subject_agent() -> dict[str, Any]:
     readiness_rows, gaps = build_artifact_readiness(ranking_rows, weight_rows, indicator_rows, paper_metric_sources)
     source_decision_rows = build_source_decision_matrix(subject, ranking_rows, weight_rows, indicator_rows)
     agent_decision_summary = build_agent_decision_summary(source_decision_rows, readiness_rows, gaps)
+    report_progress("sources", "success", "来源决策完成", available_sources=int(agent_decision_summary.get("ready_source_count", 0)), ready_artifacts=int(agent_decision_summary.get("ready_artifact_count", 0)), disclosed_gaps=int(len(gaps)), run_dir=str(run_dir), source_rows=ranking_rows)
 
     write_csv(run_dir / "ranking_availability.csv", ranking_rows, list(ranking_rows[0].keys()))
     write_csv(run_dir / "weight_availability.csv", weight_rows, list(weight_rows[0].keys()))
@@ -1904,6 +1913,7 @@ def run_subject_agent() -> dict[str, Any]:
         gaps,
     )
     parameterized_artifacts = {"generated_count": 0, "attempted_count": 0, "skipped_count": 0, "results": []}
+    report_progress("artifacts", "running", "正在生成图表与分析素材")
     if BUILD_PARAMETERIZED_READY_ARTIFACTS:
         from subject_artifact_builders import build_subject_run_artifacts
 
@@ -1955,6 +1965,7 @@ def run_subject_agent() -> dict[str, Any]:
             "visual_contact_sheet": audit_report.get("visual_contact_sheet", ""),
         }
         (run_dir / "agent_run_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
+    report_progress("artifacts", "success", "图表与素材审计完成", generated_artifacts=int(parameterized_artifacts.get("generated_count", 0)), audit_failures=int(summary.get("subject_artifact_audit", {}).get("fail_count", 0)))
     append_run_log(run_dir, ready_count, len(readiness_rows), len(gaps))
     if UPDATE_README_ON_RUN:
         update_readme_agent_section()

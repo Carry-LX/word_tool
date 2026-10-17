@@ -25,6 +25,7 @@ from lxml import etree
 from PIL import Image
 
 import sanitize_docx_ooxml_namespaces
+import report_editorial
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
@@ -4861,27 +4862,7 @@ def final_paper_evidence_text(subject_name: str) -> str:
 
 
 def final_recommendation_paragraphs() -> list[str]:
-    subject_name = read_target_subject_name()
-    overview = summarize_overview("figure_01_tongji_subject_ranking_overview")
-    history = summarize_history("figure_07_all_rankings_history")
-    scope_text = final_scope_boundary_text(subject_name)
-    paper_text = final_paper_evidence_text(subject_name)
-    source_phrase = available_source_phrase()
-    if not overview:
-        overview = (
-            f"综合{source_phrase}可核验图表看，同济大学{subject_name}学科的国际竞争状态不能只由单一榜单判断，"
-            "需要同时观察综合位次、内地同行梯队和分项指标。"
-        )
-    if history:
-        overview = overview + history
-    action_text = (
-        f"基于上述结果，建议学校将{subject_name}学科作为排名提升重点支持对象，投入方向可聚焦四类："
-        "第一，围绕 CNCI、篇均被引和 Top 1%/Top 10%论文设立高影响力成果培育支持，对具有进入国际顶级会议、顶级期刊和高被引潜力的团队给予连续资助；"
-        "第二，支持学科建设稳定的国际合作平台和海外联合团队，提高国际合作论文质量和国际同行可见度，而不只是增加合作论文数量；"
-        "第三，面向 QS、THE 等含声誉评价的榜单，支持学科参与国际学术组织、重要会议、国际评审和高水平学术活动，增强学科在全球同行中的识别度；"
-        "第四，对已接近前200或处于国内同梯队竞争的关键榜单，建议学校配置专项资源开展对标提升，把投入优先落在最能影响排名指标的论文质量、国际合作和学术声誉环节。"
-    )
-    return [overview, scope_text, paper_text, action_text]
+    return report_editorial.concise_recommendations(SUBJECT_RUN_DIR)
 
 
 def compact_final_recommendation_section(document: Document) -> int:
@@ -4943,7 +4924,7 @@ def compact_final_recommendation_section(document: Document) -> int:
             paragraph_format.space_before = Pt(0)
             paragraph_format.space_after = Pt(2)
             paragraph_format.line_spacing_rule = WD_LINE_SPACING.MULTIPLE
-            paragraph_format.line_spacing = 1.15
+            paragraph_format.line_spacing = 1.5
             paragraph_format.first_line_indent = paragraph_format.first_line_indent or Pt(28)
             try:
                 paragraph_format.widow_control = False
@@ -5076,6 +5057,8 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
     table_geometry_changes = normalize_existing_table_geometry(document)
     table_cell_alignment_changes = normalize_table_cell_alignment(document)
     final_recommendation_compactions = compact_final_recommendation_section(document)
+    report_editorial.replace_conclusions(document, SUBJECT_RUN_DIR)
+    esi_section = report_editorial.insert_esi_before_conclusions(document, SUBJECT_RUN_DIR)
     section_page_geometry_changes = normalize_section_page_geometry(document)
     doc_content_width = content_width_emu(document)
     document.save(str(OUTPUT_DOCX))
@@ -5348,9 +5331,10 @@ def postprocess_final_document(rows: list[dict[str, str]], excluded_rows: list[d
         {
             "slot": "final_recommendation_section",
             "artifact_id": "",
-            "operation": "expand_final_recommendation_section",
+            "operation": "condense_final_recommendation_section",
             "status": "ok",
             "changed_paragraphs": final_recommendation_compactions,
+            "esi_section": esi_section,
         },
         {
             "slot": "ooxml_namespace_sanitize",
