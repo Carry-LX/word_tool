@@ -1,0 +1,13 @@
+{
+  "repository": "Carry-LX/word_tool",
+  "release_tag": "runtime-data-20261021",
+  "manifest_asset": "runtime-manifest.json",
+  "part_bytes": 536870912,
+  "compression_level": 6,
+  "include_windows_tools": true,
+  "local_runtime_path": "configs/runtime/local_runtime.json",
+  "download_directory": ".local/downloads",
+  "staging_directory": ".codex_tmp/github_migration",
+  "source_project_root": "E:/projects/water/word_tool",
+  "libreoffice_source": "E:/tools/LibreOffice"
+}

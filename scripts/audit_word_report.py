@@ -20,6 +20,9 @@ PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 
 def resolve_documents_render_script() -> Path:
+    portable = PROJECT_DIR / "tools/documents/render_docx.py"
+    if portable.is_file():
+        return portable
     candidates = sorted(
         (Path.home() / ".codex" / "plugins" / "cache" / "openai-primary-runtime" / "documents").glob(
             "*" + "/skills/documents/render_docx.py"
@@ -245,7 +248,8 @@ def render_environment() -> dict[str, str]:
         for part in env.get(path_key, "").split(";")
         if part and part.rstrip("\\").lower() != r"e:\tools\libreoffice\program"
     ]
-    env[path_key] = ";".join([wrapper_dir, *path_parts])
+    portable_bins = [PROJECT_DIR / ".local/bin", PROJECT_DIR / ".local/tools/poppler/bin"]
+    env[path_key] = ";".join([*(str(p) for p in portable_bins if p.is_dir()), wrapper_dir, *path_parts])
     env["Path"] = env[path_key]
     env["PATH"] = env[path_key]
     return env

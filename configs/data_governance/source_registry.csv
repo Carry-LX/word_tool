@@ -6,7 +6,8 @@ weights_four_rankings_2025,四大世界学科2025指标权重.xlsx,core,indicato
 weights_four_rankings_legacy,世界大学学科排名2025指标权重.xlsx,support,indicator_weight,validate_or_fallback,True,4,指标权重备份/旧版来源。
 rank_arwu_2023,2023年软科世界一流学科排名-20231030.xlsx,historical,ranking_detail,use,True,1,软科 2023 发布年度学科排名明细。
 rank_arwu_2024,2024年软科世界一流学科排名-20241111.xlsx,historical,ranking_detail,use,True,1,软科 2024 发布年度学科排名明细。
-rank_arwu_2025,2025年软科世界一流学科排名20251118.xlsx,current,ranking_detail,use,True,1,软科最新可用学科排名明细。
+rank_arwu_2025,2025年软科世界一流学科排名20251118.xlsx,historical,ranking_detail,use,True,1,软科 2025 发布年度学科排名明细。
+rank_arwu_2021_2026_history,2021-2026年软科世界一流学科排名（20260915已更新）.xlsx,current,ranking_detail_history,use,True,2,软科 2021-2026 学科排名总库，作为当前排名、历史趋势和分项指标的主数据源。
 rank_qs_2023,2023年QS世界学科排名.xlsx,historical,ranking_detail,use,True,1,QS 2023 学科排名明细。
 rank_qs_2024,2024年QS世界学科排名-20240412.xlsx,historical,ranking_detail,use,True,1,QS 2024 学科排名明细。
 rank_qs_2025,2025年QS世界大学学科排名20250313.xlsx,historical,ranking_detail,use,True,1,QS 2025 学科排名明细。
@@ -14,7 +15,7 @@ rank_qs_2026,2026年QS世界学科排名20260326.xlsx,current,ranking_detail,use
 rank_the_2022_2026_history,世界大学学科排名THE（2022-2026年）20260123.xlsx,core,ranking_detail_history,use,True,4,THE 2022-2026 学科排名总库，含同济、同济历史、排名方法。
 rank_the_2026,2026年THE世界学科排名20260123.xlsx,current,ranking_detail,use,True,1,THE 2026 学科排名明细。
 rank_usnews_2021,2021US News世界学科排名2020年发布.xlsx,historical,ranking_detail,use,True,1,US News 2021/2020发布口径历史数据。
-rank_usnews_2022,2022US News世界学科排名20211026.xlsx,historical,ranking_detail,use,True,2,US News 2022 学科排名历史数据。
+rank_usnews_2022,2022US News世界学科排名20211026.xlsx,historical,ranking_detail,use,True,1,US News 2022 学科排名历史数据。
 rank_usnews_2023,2023US News世界学科排名20221026.xlsx,historical,ranking_detail,use,True,1,US News 2023 学科排名历史数据。
 rank_usnews_2024_2025,2024-2025年US News世界学科排名明细数据-2024年6月27日.xlsx,historical,ranking_detail,use,True,1,US News 2024-2025 学科排名明细。
 rank_usnews_2025_2026,2025-2026年度US News世界学科排名20251124.xlsx,current,ranking_detail,use,True,1,US News 最新可用学科排名明细。

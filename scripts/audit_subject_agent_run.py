@@ -50,7 +50,20 @@ def image_status(path: Path) -> dict[str, Any]:
     return {"exists": True, "width": width, "height": height, "size_bytes": path.stat().st_size}
 
 
-def audit_artifact(result: dict[str, Any]) -> dict[str, Any]:
+def disallowed_ranking_sources(path: Path, disallowed_sources: set[str]) -> list[str]:
+    if not path.exists() or not disallowed_sources:
+        return []
+    try:
+        frame = pd.read_csv(path, dtype=str, encoding="utf-8-sig").fillna("")
+    except Exception:
+        return []
+    if "ranking_source" not in frame.columns:
+        return []
+    observed = {str(value).strip() for value in frame["ranking_source"].tolist() if str(value).strip()}
+    return sorted(observed & disallowed_sources)
+
+
+def audit_artifact(result: dict[str, Any], disallowed_sources: set[str]) -> dict[str, Any]:
     artifact_id = result["artifact_id"]
     artifact_dir = Path(result["output_dir"])
     is_chart = artifact_id.startswith("figure")
@@ -72,8 +85,15 @@ def audit_artifact(result: dict[str, Any]) -> dict[str, Any]:
         errors.append("primary data has zero/read error")
     if trace_rows is None or trace_rows == 0:
         errors.append("source_trace has zero/read error")
+    leaked_sources = sorted(
+        set(disallowed_ranking_sources(primary, disallowed_sources))
+        | set(disallowed_ranking_sources(source_trace, disallowed_sources))
+    )
+    if leaked_sources:
+        errors.append(f"contains sources rejected by runtime selection: {','.join(leaked_sources)}")
     img = image_status(image)
-    if not img["exists"] or img["width"] < 400 or img["height"] < 300:
+    min_height = 240 if artifact_id.startswith("table_") else 300
+    if not img["exists"] or img["width"] < 400 or img["height"] < min_height:
         errors.append("image missing or too small")
     return {
         "artifact_id": artifact_id,
@@ -83,6 +103,7 @@ def audit_artifact(result: dict[str, Any]) -> dict[str, Any]:
         "image_width": img["width"],
         "image_height": img["height"],
         "image_size_bytes": img["size_bytes"],
+        "disallowed_ranking_sources": ";".join(leaked_sources),
         "errors": "; ".join(errors),
     }
 
@@ -140,7 +161,17 @@ def build_audit(run_dir_override: Path | None = None) -> dict[str, Any]:
         raise RuntimeError(f"缺少 artifact generation summary：{summary_path}")
     generation_summary = json.loads(summary_path.read_text(encoding="utf-8"))
     generated_results = [row for row in generation_summary.get("results", []) if row.get("status") == "generated"]
-    audit_rows = [audit_artifact(row) for row in generated_results]
+    availability_path = run_dir / "ranking_availability.csv"
+    disallowed_sources: set[str] = set()
+    if availability_path.exists():
+        availability = pd.read_csv(availability_path, dtype=str, encoding="utf-8-sig").fillna("")
+        disallowed_sources = {
+            str(row.get("ranking_source", "")).strip()
+            for row in availability.to_dict("records")
+            if str(row.get("selection_mode", "")).strip() == "missing"
+            and str(row.get("ranking_source", "")).strip()
+        }
+    audit_rows = [audit_artifact(row, disallowed_sources) for row in generated_results]
     pass_count = sum(1 for row in audit_rows if row["status"] == "pass")
     fail_count = len(audit_rows) - pass_count
     audit_dir = run_dir / "audit"
@@ -152,6 +183,7 @@ def build_audit(run_dir_override: Path | None = None) -> dict[str, Any]:
         "artifact_count": len(audit_rows),
         "pass_count": pass_count,
         "fail_count": fail_count,
+        "runtime_rejected_sources": sorted(disallowed_sources),
         "visual_contact_sheet": str(contact_sheet_path),
         "results": audit_rows,
     }
@@ -159,7 +191,7 @@ def build_audit(run_dir_override: Path | None = None) -> dict[str, Any]:
     write_csv(
         audit_dir / "subject_artifact_audit.csv",
         audit_rows,
-        ["artifact_id", "status", "primary_rows", "source_trace_rows", "image_width", "image_height", "image_size_bytes", "errors"],
+        ["artifact_id", "status", "primary_rows", "source_trace_rows", "image_width", "image_height", "image_size_bytes", "disallowed_ranking_sources", "errors"],
     )
     lines = [
         "# Subject Artifact Audit",

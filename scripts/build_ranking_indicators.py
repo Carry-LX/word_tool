@@ -9,6 +9,7 @@ from typing import Any
 
 import pandas as pd
 
+import ranking_source_inputs
 import subject_bridge_utils
 
 
@@ -17,7 +18,16 @@ DATA_DIR = PROJECT_DIR / "data"
 PROCESSED_DIR = PROJECT_DIR / "processed"
 QA_DIR = PROCESSED_DIR / "qa" / "ranking_indicators"
 LOG_DIR = PROJECT_DIR / "logs"
-ARWU_RANKING_FILE = "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx"
+ARWU_RANKING_FILE = ranking_source_inputs.resolve_data_file_name(
+    DATA_DIR,
+    "arwu",
+    "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx",
+)
+ARWU_RANKING_SHEET = ranking_source_inputs.resolve_sheet_name(
+    DATA_DIR / ARWU_RANKING_FILE,
+    "arwu",
+    "2021-2025",
+)
 QS_USNEWS_RANKING_FILE = "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx"
 USNEWS_2026_RANKING_FILE = "2026年US News世界学科排名20260616.xlsx"
 THE_RANKING_FILE = "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
@@ -216,7 +226,7 @@ def build_records() -> pd.DataFrame:
         {
             "ranking_source": "软科",
             "file": data_file_name(ARWU_RANKING_FILE),
-            "sheet": "2021-2025",
+            "sheet": ARWU_RANKING_SHEET,
             "release_year_col": "发布年度",
             "ranking_year_col": "发布年度",
             "subject_col": "学科名称",

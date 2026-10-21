@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import agent_runtime
+
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -66,7 +68,7 @@ def now() -> str:
 
 
 def configuration() -> dict:
-    runtime = read_json(PROJECT_DIR / "configs/runtime/agent_runtime_profile.json")
+    runtime = agent_runtime.load_runtime_profile()
     web = runtime["web_demo"]
     return dict(read_json(PROJECT_DIR / web["config_path"]), host=web["host"], port=int(web["port"]),
                 python=runtime["recommended_python"], university=read_json(PROJECT_DIR / runtime["active_subject_request_path"])["request"]["target_university"])

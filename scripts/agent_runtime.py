@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -35,7 +36,19 @@ def resolve_project_path(value: str | Path | None, default: Path | None = None) 
             raise ValueError("Path value is empty and no default was provided.")
         return default
     path = Path(str(value))
-    return path if path.is_absolute() else PROJECT_DIR / path
+    if path.is_absolute():
+        if path.exists():
+            return path
+        # Historical manifests retain the old machine's absolute project path.
+        portable = str(value).replace("\\", "/")
+        marker = "/word_tool/"
+        if marker in portable:
+            suffix = portable.split(marker, 1)[1]
+            candidate = (PROJECT_DIR / suffix).resolve()
+            if candidate.is_relative_to(PROJECT_DIR.resolve()):
+                return candidate
+        return path
+    return PROJECT_DIR / path
 
 
 def deep_get(payload: dict[str, Any], dotted_key: str, default: Any = None) -> Any:
@@ -100,6 +113,14 @@ def load_runtime_profile(path: str | Path | None = None) -> dict[str, Any]:
     if not profile_path.exists():
         raise FileNotFoundError(f"Runtime profile not found: {profile_path}")
     profile = read_json(profile_path)
+    local_path = PROJECT_DIR / "configs/runtime/local_runtime.json"
+    if local_path.is_file():
+        local = read_json(local_path)
+        if local.get("recommended_python"):
+            profile["recommended_python"] = local["recommended_python"]
+    configured_python = resolve_project_path(profile.get("recommended_python"), Path(sys.executable))
+    if not configured_python.is_file():
+        profile["recommended_python"] = sys.executable
     profile["_profile_path"] = str(profile_path)
     return profile
 

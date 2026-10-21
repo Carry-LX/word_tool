@@ -1,6 +1,12 @@
+## 在另一台电脑运行
+
+代码、原始 Excel 和模板通过 GitHub 私有仓库迁移；中间数据、补充数据、示例报告和 Windows 渲染工具通过同仓库 Release 恢复。新电脑准备好 Python 3.12 x64、GitHub CLI 登录和 Microsoft Word 后，双击 `setup_new_computer.cmd`，完成后双击 `start_report_demo.cmd`。
+
+详细步骤、数据范围和临时文件清理机制见 [docs/MIGRATION.md](docs/MIGRATION.md)。初始化不需要安装 Codex。
+
 ## 接手入口
 
-如果由新的 AI 或开发者接手，请先读根目录的 `START_HERE_FOR_NEXT_AGENT.md`。它说明了当前项目目标、关键文件含义、完整流程、换学科步骤、QA 状态和容易误解的地方。
+如果由新的 AI 或开发者接手，请先读 `AI_HANDOFF/START_HERE.md`、`HANDOFF.md` 和 `DECISIONS.md`。根目录的 `START_HERE_FOR_NEXT_AGENT.md` 包含历史阶段，当前运行状态以新交接说明和实际配置为准。
 
 ## 2026-05-11 全局学科 alias 与可迁移性审计更新
 

@@ -47,6 +47,49 @@ slots:
           region: false
           indicator: false
       -
+        file: "同济大学学院+学科映射关系（20260603更新）.xlsx"
+        sheet: "Sheet1"
+        role: "tongji_subject_mapping"
+        headers:
+          - "编号"
+          - "学院"
+          - "学术学位点"
+          - "专业学位点"
+          - "本科专业"
+          - "一级学科学科代码"
+          - "层次级别"
+          - "第五轮评估结果"
+          - "是否双一流学科"
+          - "上海市高峰高原"
+          - "软科世界一流学科对应名称"
+          - "QS对应的学科名称"
+          - "U.S.NEWS学科排名对应名称"
+          - "THE对应领域"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "同济大学学院+学科映射关系（20260603更新）.xlsx"
+        sheet: "Sheet2"
+        role: "tongji_subject_mapping"
+        headers:
+          - ""
+          - "占比"
+          - "数量"
+        available_fields:
+          university: true
+          subject: true
+          rank: false
+          score: false
+          year: false
+          region: false
+          indicator: false
+      -
         file: "同济大学第五轮学科评估结果+双一流+高峰高原.xlsx"
         sheet: "Sheet1"
         role: "domestic_evaluation"
@@ -137,6 +180,103 @@ slots:
           region: true
           indicator: true
       -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "数据（2023-2026）"
+        role: "ranking_detail"
+        headers:
+          - "序号"
+          - "外文名称"
+          - "中文名称"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "总得分"
+          - "教学"
+          - "教学排名"
+          - "科研环境"
+          - "科研环境排名"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: true
+          year: true
+          region: true
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "同济"
+        role: "ranking_detail"
+        headers:
+          - "序号"
+          - "中文名称"
+          - "外文名称"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "总得分"
+          - "篇均被引次数"
+          - "商业收入"
+          - "国际化视野"
+          - "研究"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: true
+          year: true
+          region: true
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "同济历史"
+        role: "ranking_detail"
+        headers:
+          - "THE学科领域"
+          - "2019国际排名"
+          - "2020国际排名"
+          - "2021国际排名"
+          - "2022国际排名"
+          - "2023国际排名"
+          - "2024国际排名"
+          - "2025国际排名"
+          - "2026国际排名"
+          - "变化情况"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "排名方法"
+        role: "ranking_detail"
+        headers:
+          - "大类"
+          - "教学环境"
+          - "研究环境"
+          - "研究质量"
+          - "国际视野"
+          - "知识转化"
+          - "总计"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
         file: "2026年THE世界学科排名20260123.xlsx"
         sheet: "数据"
         role: "ranking_detail"
@@ -164,8 +304,8 @@ slots:
           region: true
           indicator: true
       -
-        file: "2025年软科世界一流学科排名20251118.xlsx"
-        sheet: "数据"
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "2021-2025"
         role: "ranking_detail"
         headers:
           - "序号"
@@ -176,12 +316,11 @@ slots:
           - "学科名称"
           - "国际排名"
           - "总得分"
+          - "世界一流教师"
+          - "世界一流成果"
           - "高水平研究成果/重要期刊论文数"
           - "科研影响力/论文标准化影响力"
           - "国际合作/国际合作论文比例"
-          - "世界一流成果"
-          - "世界一流教师"
-          - "辅助总得分"
         available_fields:
           university: true
           subject: true
@@ -190,6 +329,22 @@ slots:
           year: true
           region: true
           indicator: true
+      -
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "Sheet1"
+        role: "ranking_detail"
+        headers:
+          - ""
+          - "学科名称"
+          - "学科领域"
+        available_fields:
+          university: false
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: false
       -
         file: "2025-2026年度US News世界学科排名20251124.xlsx"
         sheet: "Sheet1"
@@ -309,6 +464,111 @@ slots:
           indicator: true
       -
         file: "四大世界学科2025指标权重.xlsx"
+        sheet: "QS"
+        role: "indicator_weight"
+        headers:
+          - "QS学科排名指标占比（%）"
+          - ""
+          - "2026QS学科排名指标更新"
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - "2026年"
+        available_fields:
+          university: false
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "四大世界学科2025指标权重（20260603更新）.xlsx"
+        sheet: "软科"
+        role: "indicator_weight"
+        headers:
+          - "学科领域"
+          - "学科名称"
+          - "世界一流教师"
+          - ""
+          - ""
+          - ""
+          - "世界一流成果"
+          - ""
+          - "高水平研究成果"
+          - "科研影响力"
+          - "国际合作"
+          - "权重"
+          - "世界一流教师"
+          - ""
+        available_fields:
+          university: false
+          subject: true
+          rank: false
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "四大世界学科2025指标权重（20260603更新）.xlsx"
+        sheet: "usnews"
+        role: "indicator_weight"
+        headers:
+          - "US News学科领域"
+          - "细分学科"
+          - "全球研究声誉"
+          - "区域研究声誉"
+          - "出版物"
+          - "图书"
+          - "会议"
+          - "标准化引用影响"
+          - "总引用次数"
+          - "被引用次数最多的 10% 的出版物数量"
+          - "被引用次数最多的 10% 的出版物占总出版物的百分比"
+          - "在各自领域中被引用次数最多的前 1% 的高被引论文数量"
+          - "被引用次数最多的前 1% 的论文占总出版物的百分比"
+          - "国际合作——相对于国家"
+        available_fields:
+          university: false
+          subject: true
+          rank: false
+          score: false
+          year: false
+          region: true
+          indicator: true
+      -
+        file: "四大世界学科2025指标权重（20260603更新）.xlsx"
+        sheet: "the"
+        role: "indicator_weight"
+        headers:
+          - ""
+          - "一级指标名称"
+          - "二级指标名称"
+          - ""
+          - "大学排名"
+          - "艺术与人文"
+          - "医学与健康"
+          - "工学"
+          - "计算机科学"
+          - "生命科学"
+          - "自然科学"
+          - "社会科学"
+          - "商业与经济学"
+          - "法学"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "四大世界学科2025指标权重（20260603更新）.xlsx"
         sheet: "QS"
         role: "indicator_weight"
         headers:
@@ -637,8 +897,8 @@ slots:
           region: true
           indicator: true
       -
-        file: "2025年软科世界一流学科排名20251118.xlsx"
-        sheet: "数据"
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "2021-2025"
         role: "ranking_detail"
         headers:
           - "序号"
@@ -649,12 +909,11 @@ slots:
           - "学科名称"
           - "国际排名"
           - "总得分"
+          - "世界一流教师"
+          - "世界一流成果"
           - "高水平研究成果/重要期刊论文数"
           - "科研影响力/论文标准化影响力"
           - "国际合作/国际合作论文比例"
-          - "世界一流成果"
-          - "世界一流教师"
-          - "辅助总得分"
         available_fields:
           university: true
           subject: true
@@ -663,6 +922,22 @@ slots:
           year: true
           region: true
           indicator: true
+      -
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "Sheet1"
+        role: "ranking_detail"
+        headers:
+          - ""
+          - "学科名称"
+          - "学科领域"
+        available_fields:
+          university: false
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: false
       -
         file: "2024年软科世界一流学科排名-20241111.xlsx"
         sheet: "所有高校"
@@ -823,20 +1098,6 @@ slots:
           region: true
           indicator: false
       -
-        file: "2022US News世界学科排名20211026.xlsx"
-        sheet: "Sheet3"
-        role: "ranking_detail"
-        headers:
-          []
-        available_fields:
-          university: false
-          subject: true
-          rank: true
-          score: false
-          year: false
-          region: false
-          indicator: false
-      -
         file: "2021US News世界学科排名2020年发布.xlsx"
         sheet: "Sheet1"
         role: "ranking_detail"
@@ -944,6 +1205,49 @@ slots:
           year: false
           region: false
           indicator: false
+      -
+        file: "同济大学学院+学科映射关系（20260603更新）.xlsx"
+        sheet: "Sheet1"
+        role: "tongji_subject_mapping"
+        headers:
+          - "编号"
+          - "学院"
+          - "学术学位点"
+          - "专业学位点"
+          - "本科专业"
+          - "一级学科学科代码"
+          - "层次级别"
+          - "第五轮评估结果"
+          - "是否双一流学科"
+          - "上海市高峰高原"
+          - "软科世界一流学科对应名称"
+          - "QS对应的学科名称"
+          - "U.S.NEWS学科排名对应名称"
+          - "THE对应领域"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "同济大学学院+学科映射关系（20260603更新）.xlsx"
+        sheet: "Sheet2"
+        role: "tongji_subject_mapping"
+        headers:
+          - ""
+          - "占比"
+          - "数量"
+        available_fields:
+          university: true
+          subject: true
+          rank: false
+          score: false
+          year: false
+          region: false
+          indicator: false
     join_keys:
       - "同济大学"
       - "学科中文/学科英文/榜单学科"
@@ -953,6 +1257,103 @@ slots:
       - "不同榜单年份口径不同，US News 文件名和排名年度需统一。"
   indicator_detail_comparison:
     primary_sources:
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "数据（2023-2026）"
+        role: "ranking_detail"
+        headers:
+          - "序号"
+          - "外文名称"
+          - "中文名称"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "总得分"
+          - "教学"
+          - "教学排名"
+          - "科研环境"
+          - "科研环境排名"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: true
+          year: true
+          region: true
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "同济"
+        role: "ranking_detail"
+        headers:
+          - "序号"
+          - "中文名称"
+          - "外文名称"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "总得分"
+          - "篇均被引次数"
+          - "商业收入"
+          - "国际化视野"
+          - "研究"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: true
+          year: true
+          region: true
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "同济历史"
+        role: "ranking_detail"
+        headers:
+          - "THE学科领域"
+          - "2019国际排名"
+          - "2020国际排名"
+          - "2021国际排名"
+          - "2022国际排名"
+          - "2023国际排名"
+          - "2024国际排名"
+          - "2025国际排名"
+          - "2026国际排名"
+          - "变化情况"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "排名方法"
+        role: "ranking_detail"
+        headers:
+          - "大类"
+          - "教学环境"
+          - "研究环境"
+          - "研究质量"
+          - "国际视野"
+          - "知识转化"
+          - "总计"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
       -
         file: "2026年THE世界学科排名20260123.xlsx"
         sheet: "数据"
@@ -1008,8 +1409,8 @@ slots:
           region: true
           indicator: true
       -
-        file: "2025年软科世界一流学科排名20251118.xlsx"
-        sheet: "数据"
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "2021-2025"
         role: "ranking_detail"
         headers:
           - "序号"
@@ -1020,12 +1421,11 @@ slots:
           - "学科名称"
           - "国际排名"
           - "总得分"
+          - "世界一流教师"
+          - "世界一流成果"
           - "高水平研究成果/重要期刊论文数"
           - "科研影响力/论文标准化影响力"
           - "国际合作/国际合作论文比例"
-          - "世界一流成果"
-          - "世界一流教师"
-          - "辅助总得分"
         available_fields:
           university: true
           subject: true
@@ -1034,6 +1434,22 @@ slots:
           year: true
           region: true
           indicator: true
+      -
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "Sheet1"
+        role: "ranking_detail"
+        headers:
+          - ""
+          - "学科名称"
+          - "学科领域"
+        available_fields:
+          university: false
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: false
       -
         file: "2025-2026年度US News世界学科排名20251124.xlsx"
         sheet: "Sheet1"
@@ -1265,6 +1681,111 @@ slots:
           region: false
           indicator: true
       -
+        file: "四大世界学科2025指标权重（20260603更新）.xlsx"
+        sheet: "软科"
+        role: "indicator_weight"
+        headers:
+          - "学科领域"
+          - "学科名称"
+          - "世界一流教师"
+          - ""
+          - ""
+          - ""
+          - "世界一流成果"
+          - ""
+          - "高水平研究成果"
+          - "科研影响力"
+          - "国际合作"
+          - "权重"
+          - "世界一流教师"
+          - ""
+        available_fields:
+          university: false
+          subject: true
+          rank: false
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "四大世界学科2025指标权重（20260603更新）.xlsx"
+        sheet: "usnews"
+        role: "indicator_weight"
+        headers:
+          - "US News学科领域"
+          - "细分学科"
+          - "全球研究声誉"
+          - "区域研究声誉"
+          - "出版物"
+          - "图书"
+          - "会议"
+          - "标准化引用影响"
+          - "总引用次数"
+          - "被引用次数最多的 10% 的出版物数量"
+          - "被引用次数最多的 10% 的出版物占总出版物的百分比"
+          - "在各自领域中被引用次数最多的前 1% 的高被引论文数量"
+          - "被引用次数最多的前 1% 的论文占总出版物的百分比"
+          - "国际合作——相对于国家"
+        available_fields:
+          university: false
+          subject: true
+          rank: false
+          score: false
+          year: false
+          region: true
+          indicator: true
+      -
+        file: "四大世界学科2025指标权重（20260603更新）.xlsx"
+        sheet: "the"
+        role: "indicator_weight"
+        headers:
+          - ""
+          - "一级指标名称"
+          - "二级指标名称"
+          - ""
+          - "大学排名"
+          - "艺术与人文"
+          - "医学与健康"
+          - "工学"
+          - "计算机科学"
+          - "生命科学"
+          - "自然科学"
+          - "社会科学"
+          - "商业与经济学"
+          - "法学"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "四大世界学科2025指标权重（20260603更新）.xlsx"
+        sheet: "QS"
+        role: "indicator_weight"
+        headers:
+          - "QS学科排名指标占比（%）"
+          - ""
+          - "2026QS学科排名指标更新"
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - ""
+          - "2026年"
+        available_fields:
+          university: false
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
         file: "教育部学科与四大国际学科排名映射关系.xlsx"
         sheet: "学科映射关系"
         role: "subject_mapping"
@@ -1356,6 +1877,103 @@ slots:
           region: false
           indicator: false
       -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "数据（2023-2026）"
+        role: "ranking_detail"
+        headers:
+          - "序号"
+          - "外文名称"
+          - "中文名称"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "总得分"
+          - "教学"
+          - "教学排名"
+          - "科研环境"
+          - "科研环境排名"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: true
+          year: true
+          region: true
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "同济"
+        role: "ranking_detail"
+        headers:
+          - "序号"
+          - "中文名称"
+          - "外文名称"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "总得分"
+          - "篇均被引次数"
+          - "商业收入"
+          - "国际化视野"
+          - "研究"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: true
+          year: true
+          region: true
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "同济历史"
+        role: "ranking_detail"
+        headers:
+          - "THE学科领域"
+          - "2019国际排名"
+          - "2020国际排名"
+          - "2021国际排名"
+          - "2022国际排名"
+          - "2023国际排名"
+          - "2024国际排名"
+          - "2025国际排名"
+          - "2026国际排名"
+          - "变化情况"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "排名方法"
+        role: "ranking_detail"
+        headers:
+          - "大类"
+          - "教学环境"
+          - "研究环境"
+          - "研究质量"
+          - "国际视野"
+          - "知识转化"
+          - "总计"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
         file: "2026年THE世界学科排名20260123.xlsx"
         sheet: "数据"
         role: "ranking_detail"
@@ -1410,8 +2028,8 @@ slots:
           region: true
           indicator: true
       -
-        file: "2025年软科世界一流学科排名20251118.xlsx"
-        sheet: "数据"
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "2021-2025"
         role: "ranking_detail"
         headers:
           - "序号"
@@ -1422,12 +2040,11 @@ slots:
           - "学科名称"
           - "国际排名"
           - "总得分"
+          - "世界一流教师"
+          - "世界一流成果"
           - "高水平研究成果/重要期刊论文数"
           - "科研影响力/论文标准化影响力"
           - "国际合作/国际合作论文比例"
-          - "世界一流成果"
-          - "世界一流教师"
-          - "辅助总得分"
         available_fields:
           university: true
           subject: true
@@ -1436,6 +2053,22 @@ slots:
           year: true
           region: true
           indicator: true
+      -
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "Sheet1"
+        role: "ranking_detail"
+        headers:
+          - ""
+          - "学科名称"
+          - "学科领域"
+        available_fields:
+          university: false
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: false
       -
         file: "2025-2026年度US News世界学科排名20251124.xlsx"
         sheet: "Sheet1"
@@ -1690,8 +2323,8 @@ slots:
           region: true
           indicator: true
       -
-        file: "2025年软科世界一流学科排名20251118.xlsx"
-        sheet: "数据"
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "2021-2025"
         role: "ranking_detail"
         headers:
           - "序号"
@@ -1702,12 +2335,11 @@ slots:
           - "学科名称"
           - "国际排名"
           - "总得分"
+          - "世界一流教师"
+          - "世界一流成果"
           - "高水平研究成果/重要期刊论文数"
           - "科研影响力/论文标准化影响力"
           - "国际合作/国际合作论文比例"
-          - "世界一流成果"
-          - "世界一流教师"
-          - "辅助总得分"
         available_fields:
           university: true
           subject: true
@@ -1715,6 +2347,119 @@ slots:
           score: true
           year: true
           region: true
+          indicator: true
+      -
+        file: "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx"
+        sheet: "Sheet1"
+        role: "ranking_detail"
+        headers:
+          - ""
+          - "学科名称"
+          - "学科领域"
+        available_fields:
+          university: false
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: false
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "数据（2023-2026）"
+        role: "ranking_detail"
+        headers:
+          - "序号"
+          - "外文名称"
+          - "中文名称"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "总得分"
+          - "教学"
+          - "教学排名"
+          - "科研环境"
+          - "科研环境排名"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: true
+          year: true
+          region: true
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "同济"
+        role: "ranking_detail"
+        headers:
+          - "序号"
+          - "中文名称"
+          - "外文名称"
+          - "发布年度"
+          - "排名年度"
+          - "国际排名"
+          - "所在地区"
+          - "学科英文"
+          - "学科中文"
+          - "总得分"
+          - "篇均被引次数"
+          - "商业收入"
+          - "国际化视野"
+          - "研究"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: true
+          year: true
+          region: true
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "同济历史"
+        role: "ranking_detail"
+        headers:
+          - "THE学科领域"
+          - "2019国际排名"
+          - "2020国际排名"
+          - "2021国际排名"
+          - "2022国际排名"
+          - "2023国际排名"
+          - "2024国际排名"
+          - "2025国际排名"
+          - "2026国际排名"
+          - "变化情况"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
+        sheet: "排名方法"
+        role: "ranking_detail"
+        headers:
+          - "大类"
+          - "教学环境"
+          - "研究环境"
+          - "研究质量"
+          - "国际视野"
+          - "知识转化"
+          - "总计"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
           indicator: true
       -
         file: "2026年THE世界学科排名20260123.xlsx"
@@ -1880,6 +2625,49 @@ slots:
           indicator: false
       -
         file: "同济大学学院+学科映射关系20260509.xlsx"
+        sheet: "Sheet2"
+        role: "tongji_subject_mapping"
+        headers:
+          - ""
+          - "占比"
+          - "数量"
+        available_fields:
+          university: true
+          subject: true
+          rank: false
+          score: false
+          year: false
+          region: false
+          indicator: false
+      -
+        file: "同济大学学院+学科映射关系（20260603更新）.xlsx"
+        sheet: "Sheet1"
+        role: "tongji_subject_mapping"
+        headers:
+          - "编号"
+          - "学院"
+          - "学术学位点"
+          - "专业学位点"
+          - "本科专业"
+          - "一级学科学科代码"
+          - "层次级别"
+          - "第五轮评估结果"
+          - "是否双一流学科"
+          - "上海市高峰高原"
+          - "软科世界一流学科对应名称"
+          - "QS对应的学科名称"
+          - "U.S.NEWS学科排名对应名称"
+          - "THE对应领域"
+        available_fields:
+          university: true
+          subject: true
+          rank: true
+          score: false
+          year: false
+          region: false
+          indicator: true
+      -
+        file: "同济大学学院+学科映射关系（20260603更新）.xlsx"
         sheet: "Sheet2"
         role: "tongji_subject_mapping"
         headers:

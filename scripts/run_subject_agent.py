@@ -906,9 +906,15 @@ def stored_source_selection(subject: dict[str, Any], source: str) -> dict[str, A
 def filter_to_selected_source_area(df: pd.DataFrame, subject: dict[str, Any], source: str) -> pd.DataFrame:
     if df.empty:
         return df
+    stored_selection = stored_source_selection(subject, source)
+    if stored_selection:
+        selected = clean_text(stored_selection.get("selected_ranking_subject_or_area"))
+        if not selected:
+            return df.iloc[0:0].copy()
+        return df[exact_subject_mask(df, [selected])].copy()
     mapping_candidates = mapping_table_aliases(subject, source)
     if mapping_candidates:
-        selection = stored_source_selection(subject, source) or select_source_area(df, subject, source)
+        selection = select_source_area(df, subject, source)
         selected = clean_text(selection.get("selected_ranking_subject_or_area"))
         if not selected:
             return df.iloc[0:0].copy()

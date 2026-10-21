@@ -42,3 +42,7 @@
 `scripts/check_demo_recording.py` 验证弹窗中的鼠标显示与帧标记；`scripts/check_demo_state_io.py` 验证并发读写；`scripts/check_demo_video.py` 解码核对成片帧数，检查操作帧保留、帧顺序、六个节点回看、原始视频灰边和固定页眉的像素稳定性。`scripts/finalize_demo_delivery.py` 完成这些检查后再打包，包内包含 `video_continuity_check.json`，并校验 ZIP 内容可完整读取。
 
 系统体检仍执行 `scripts/audit_agent_system_readiness.py`。本轮所有源文件保留本地未提交状态。
+
+## 30 秒快速演示
+
+`scripts/build_demo_video_30s.py` 从已通过连续性检查的完整录屏生成 30 秒版，配置集中在 `web_demo_profile.json` 的 `compact_video`。五段分别分配 3、8、5、10、4 秒，用于设置、生成、六个节点回看、Word 预览及下载、随机抽查。整个源时间轴连续变速，不删除中间片段；保留录制中的鼠标轨迹，并按真实点击事件的位置和时间加强圆环提示。输出在 `outputs/web_demo_delivery_30s/`，原版视频保留。脚本逐帧核对来源顺序、成片时长、尺寸及缩放灰边，验证记录与帧映射一起落盘。

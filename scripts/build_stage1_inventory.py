@@ -435,7 +435,7 @@ def build_slot_data_mapping(catalog: dict[str, Any]) -> dict[str, Any]:
                 "primary_sources": source("同济大学学院+学科映射关系")
                 + source("同济大学第五轮学科评估结果")
                 + source("教育部学科与四大国际学科排名映射关系"),
-                "secondary_sources": source("2026年QS") + source("2026年THE") + source("2025年软科") + source("2025-2026年度US News"),
+                "secondary_sources": source("2026年QS") + source("2026年THE") + source("2021-2026年软科") + source("2025-2026年度US News"),
                 "join_keys": ["一级学科名称/学科名称", "榜单学科名称", "学校名称"],
                 "confidence": 0.78,
                 "risks": ["总述需要综合判断，部分优势挑战需要依赖后续 slot 的统计结果。"],
@@ -452,7 +452,7 @@ def build_slot_data_mapping(catalog: dict[str, Any]) -> dict[str, Any]:
                 + source("2025年QS")
                 + source("2024年QS")
                 + source("2023年QS")
-                + source("2025年软科")
+                + source("2021-2026年软科")
                 + source("2024年软科")
                 + source("2023年软科")
                 + source("2025-2026年度US News")
@@ -469,7 +469,7 @@ def build_slot_data_mapping(catalog: dict[str, Any]) -> dict[str, Any]:
             "indicator_detail_comparison": {
                 "primary_sources": source("2026年THE")
                 + source("2026年QS")
-                + source("2025年软科")
+                + source("2021-2026年软科")
                 + source("2025-2026年度US News")
                 + source("世界大学学科排名THE（2022-2026年）"),
                 "supporting_sources": source("四大世界学科2025指标权重")
@@ -483,7 +483,7 @@ def build_slot_data_mapping(catalog: dict[str, Any]) -> dict[str, Any]:
                 + source("同济大学第五轮学科评估结果")
                 + source("2026年THE")
                 + source("2026年QS")
-                + source("2025年软科")
+                + source("2021-2026年软科")
                 + source("2025-2026年度US News"),
                 "supporting_sources": source("教育部学科与四大国际学科排名映射关系"),
                 "join_keys": ["一级学科", "学校名称", "中国内地/所在地区"],
@@ -502,7 +502,7 @@ def build_slot_data_mapping(catalog: dict[str, Any]) -> dict[str, Any]:
             },
             "paper_strength_analysis": {
                 "primary_sources": source("2025-2026年度US News")
-                + source("2025年软科")
+                + source("2021-2026年软科")
                 + source("2026年THE")
                 + source("世界大学学科排名THE（2022-2026年）"),
                 "join_keys": ["学校名称", "学科名称", "论文/引用/高被引/国际合作相关指标"],

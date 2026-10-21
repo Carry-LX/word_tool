@@ -6,6 +6,8 @@ import hashlib
 import random
 from pathlib import Path
 
+from agent_runtime import resolve_project_path
+
 from demo_runtime import PROJECT_DIR, configuration, read_json
 
 
@@ -25,7 +27,7 @@ def report_record(docx: Path, qa: dict, code: str, name: str, run_dir: Path | No
     if not docx.is_file() or qa.get("overall_status") not in {"pass", "pass_with_warnings"}:
         return None
     render = qa.get("render", qa)
-    render_dir = Path(render.get("render_dir") or qa.get("render_dir") or docx.parent / "qa/rendered_pages")
+    render_dir = resolve_project_path(render.get("render_dir") or qa.get("render_dir") or docx.parent / "qa/rendered_pages")
     pages = sorted(render_dir.glob("page-*.png"), key=lambda path: int(path.stem.split("-")[-1]))
     if not pages or render.get("blank_pages"):
         return None
@@ -56,7 +58,7 @@ def catalog() -> list[dict]:
     for manifest_name in config["catalog_manifests"]:
         manifest = read_json(PROJECT_DIR / manifest_name)
         for row in manifest.get("reports", []):
-            docx = Path(row.get("docx_path") or row.get("docx", ""))
+            docx = resolve_project_path(row.get("docx_path") or row.get("docx", ""))
             if not docx.is_file():
                 continue
             code = str(row.get("report_id") or row.get("code", ""))
@@ -70,7 +72,7 @@ def catalog() -> list[dict]:
             if not run:
                 summary = read_json(docx.parent / "subject_word_report_summary.json")
                 run = summary.get("run_dir")
-            record = report_record(docx, qa, code, name, Path(run) if run else None,
+            record = report_record(docx, qa, code, name, resolve_project_path(run) if run else None,
                                    report_type=row.get("report_type", "full_subject_report"))
             if record:
                 if record["page_count"] <= 2 and not record["sources"]:

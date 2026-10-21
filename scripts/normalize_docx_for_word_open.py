@@ -15,9 +15,11 @@ from typing import Any
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 REPORT_ROOT = PROJECT_DIR / "outputs" / "full_word_reports"
 OUTPUT_DIR = PROJECT_DIR / "outputs" / "word_openability_audit" / "normalization"
-SOFFICE_EXE = Path("E:/tools/codex-bin/soffice.exe")
+SOFFICE_EXE = PROJECT_DIR / ".local/bin/soffice.exe"
+if not SOFFICE_EXE.is_file():
+    SOFFICE_EXE = Path("E:/tools/codex-bin/soffice.exe")
 WORD_OPENABILITY_WORKER = PROJECT_DIR / "scripts" / "word_openability_worker.py"
-WORD_COM_PYTHON = Path("E:/conda_envs/graph-rag/python.exe")
+WORD_COM_PYTHON = Path(sys.executable)
 WORD_OPEN_TIMEOUT_SECONDS = 60
 
 # Explicit variables. Keep DOCX_PATH empty to normalize latest reports.

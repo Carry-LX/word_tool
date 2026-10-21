@@ -20,3 +20,16 @@ __pycache__/
 *.log
 scripts/_test_charts.py
 scripts/test_*.png
+
+# Machine-specific environments, credentials, and migration downloads
+/.venv/
+/.local/
+/.claude/
+/.vscode/
+.env
+.env.*
+!/configs/.env.example
+/configs/runtime/local_runtime.json
+/AI_HANDOFF/history/
+/AI_HANDOFF/snapshots/
+/AI_HANDOFF/state/

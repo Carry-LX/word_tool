@@ -14,6 +14,12 @@ COVERAGE_CSV = PROJECT_DIR / "outputs" / "subject_coverage_audit" / "tongji_49_a
 LINEAGE_REVIEW_JSON = PROJECT_DIR / "outputs" / "missing_data_lineage_review" / "missing_data_lineage_review_summary.json"
 SYSTEM_AUDIT_JSON = PROJECT_DIR / "outputs" / "agent_system_audit" / "latest" / "agent_system_readiness.json"
 OUTPUT_DIR = PROJECT_DIR / "outputs" / "release_audit" / "latest"
+SPARSE_PAGE_VISUAL_REVIEW_JSON = (
+    PROJECT_DIR
+    / "outputs"
+    / "final_subject_report_delivery_audit_20260928"
+    / "sparse_page_visual_review.json"
+)
 
 # Explicit variables. Keep empty to check all latest report directories.
 ONLY_CODES: list[str] = []
@@ -123,6 +129,15 @@ def split_sparse_pages(render: dict[str, Any]) -> tuple[list[str], list[str]]:
     return frontmatter_sparse, blocking_sparse
 
 
+def visually_reviewed_sparse_pages() -> set[tuple[str, str]]:
+    review = read_json(SPARSE_PAGE_VISUAL_REVIEW_JSON)
+    return {
+        (clean_text(row.get("code")).zfill(4), Path(clean_text(row.get("page"))).name)
+        for row in review.get("pages", [])
+        if clean_text(row.get("status")).lower() == "pass"
+    }
+
+
 def latest_report_dirs() -> tuple[dict[str, Path], dict[tuple[str, str], Path]]:
     latest_by_code: dict[str, Path] = {}
     latest_by_subject: dict[tuple[str, str], Path] = {}
@@ -167,6 +182,17 @@ def report_status(code: str, report_dir: Path, expected_subject_name: str = "") 
     if render.get("blank_pages"):
         blocking.append("blank_pages")
     frontmatter_sparse_pages, blocking_sparse_pages = split_sparse_pages(render)
+    reviewed_keys = visually_reviewed_sparse_pages()
+    visually_reviewed_pages = [
+        page
+        for page in blocking_sparse_pages
+        if (code, Path(page).name) in reviewed_keys
+    ]
+    blocking_sparse_pages = [
+        page
+        for page in blocking_sparse_pages
+        if (code, Path(page).name) not in reviewed_keys
+    ]
     if blocking_sparse_pages:
         blocking.append("sparse_pages")
     return {
@@ -182,6 +208,7 @@ def report_status(code: str, report_dir: Path, expected_subject_name: str = "") 
         "blank_pages": render.get("blank_pages") or [],
         "sparse_pages": render.get("sparse_pages") or [],
         "frontmatter_sparse_pages": frontmatter_sparse_pages,
+        "visually_reviewed_sparse_pages": visually_reviewed_pages,
         "blocking_sparse_pages": blocking_sparse_pages,
         "blocking_issues": blocking,
         "pass": not blocking,

@@ -4,6 +4,11 @@
   "runs_dir": "outputs/web_demo_runs",
   "delivery_dir": "outputs/web_demo_delivery_v2",
   "video_idle_speed": 15,
+  "compact_video": {
+    "output_dir": "outputs/web_demo_delivery_30s",
+    "seconds": 30,
+    "section_seconds": [3, 8, 5, 10, 4]
+  },
   "coverage_csv": "outputs/subject_coverage_audit/tongji_49_academic_degree_generation_coverage_after_supplement.csv",
   "catalog_manifests": ["outputs/release_audit/latest/release_quality_gate.json", "outputs/esi_integrated_reports_20261015/batch_manifest.json"],
   "default_sample_count": 3,

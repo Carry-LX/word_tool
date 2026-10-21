@@ -135,12 +135,22 @@ SOURCE_REGISTRY = [
     {
         "id": "rank_arwu_2025",
         "file": "2025年软科世界一流学科排名20251118.xlsx",
-        "tier": "current",
+        "tier": "historical",
         "role": "ranking_detail",
         "status": "use",
-        "purpose": "软科最新可用学科排名明细。",
+        "purpose": "软科 2025 发布年度学科排名明细。",
         "canonical_tables": ["fact_ranking", "fact_ranking_indicator"],
-        "notes": "对标高校整体排名、分项指标、论文代理指标的重要来源。",
+        "notes": "保留作 2025 单年校验；正式数据层优先使用 2021-2026 历史总库。",
+    },
+    {
+        "id": "rank_arwu_2021_2026_history",
+        "file": "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx",
+        "tier": "current",
+        "role": "ranking_detail_history",
+        "status": "use",
+        "purpose": "软科 2021-2026 学科排名总库，作为当前排名、历史趋势和分项指标的主数据源。",
+        "canonical_tables": ["fact_ranking", "fact_ranking_indicator"],
+        "notes": "2021-2025 行与上一版总库逐值一致，新增 2026 年 19650 行；运行时由 configs/runtime/ranking_source_inputs.json 选择。",
     },
     {
         "id": "rank_qs_2023",
@@ -640,6 +650,7 @@ def write_source_registry_csv(registry: dict[str, Any]) -> None:
         writer = csv.DictWriter(
             handle,
             fieldnames=["id", "file", "tier", "role", "status", "exists", "sheet_count", "purpose"],
+            lineterminator="\n",
         )
         writer.writeheader()
         for entry in registry["excel_sources"]:

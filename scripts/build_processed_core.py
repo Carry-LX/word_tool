@@ -9,6 +9,7 @@ from typing import Any
 
 import pandas as pd
 
+import ranking_source_inputs
 import subject_bridge_utils
 
 
@@ -23,7 +24,16 @@ TONGJI_SUBJECT_PROXY_SUPPLEMENT_CSV = PROJECT_DIR / "configs" / "runtime" / "ton
 MINISTRY_MAPPING_FILE = "教育部学科与四大国际学科排名映射关系.xlsx"
 TONGJI_MAPPING_FILE = "同济大学学院+学科映射关系（20260603更新）.xlsx"
 TONGJI_MAPPING_FALLBACK_FILE = "同济大学学院+学科映射关系20260509.xlsx"
-ARWU_RANKING_FILE = "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx"
+ARWU_RANKING_FILE = ranking_source_inputs.resolve_data_file_name(
+    DATA_DIR,
+    "arwu",
+    "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx",
+)
+ARWU_RANKING_SHEET = ranking_source_inputs.resolve_sheet_name(
+    DATA_DIR / ARWU_RANKING_FILE,
+    "arwu",
+    "2021-2025",
+)
 QS_USNEWS_RANKING_FILE = "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx"
 USNEWS_2026_RANKING_FILE = "2026年US News世界学科排名20260616.xlsx"
 THE_RANKING_FILE = "2023-2026年THE世界大学学科排名（20260603更新）.xlsx"
@@ -749,7 +759,7 @@ def append_arwu(records: list[dict[str, Any]], lookups: dict[tuple[str, str], li
     configs = [
         {
             "file": data_file_name(ARWU_RANKING_FILE),
-            "sheet": "2021-2025",
+            "sheet": ARWU_RANKING_SHEET,
             "release_year": "发布年度",
             "subject": "学科名称",
             "university_cn": "学校名称",
@@ -985,14 +995,18 @@ def write_sqlite(
     fact_ranking: pd.DataFrame,
     fact_ranking_subject_bridge: pd.DataFrame,
 ) -> None:
-    if SQLITE_PATH.exists():
-        SQLITE_PATH.unlink()
     with sqlite3.connect(SQLITE_PATH) as conn:
-        dim_subject.to_sql("dim_subject", conn, index=False)
-        dim_subject_alias.to_sql("dim_subject_alias", conn, index=False)
-        dim_subject_mapping_explain.to_sql("dim_subject_mapping_explain", conn, index=False)
-        fact_ranking.to_sql("fact_ranking", conn, index=False)
-        fact_ranking_subject_bridge.to_sql("fact_ranking_subject_bridge", conn, index=False)
+        # 只替换本脚本负责的核心表，保留 build_ranking_indicators.py 写入的
+        # fact_ranking_indicator 等下游表，避免“重建核心库后指标表消失”。
+        dim_subject.to_sql("dim_subject", conn, index=False, if_exists="replace")
+        dim_subject_alias.to_sql("dim_subject_alias", conn, index=False, if_exists="replace")
+        dim_subject_mapping_explain.to_sql(
+            "dim_subject_mapping_explain", conn, index=False, if_exists="replace"
+        )
+        fact_ranking.to_sql("fact_ranking", conn, index=False, if_exists="replace")
+        fact_ranking_subject_bridge.to_sql(
+            "fact_ranking_subject_bridge", conn, index=False, if_exists="replace"
+        )
         conn.execute("CREATE INDEX idx_fact_ranking_subject ON fact_ranking(subject_id)")
         conn.execute("CREATE INDEX idx_fact_ranking_subject_norm ON fact_ranking(ranking_source, ranking_subject_norm)")
         conn.execute("CREATE INDEX idx_fact_ranking_bridge_subject ON fact_ranking_subject_bridge(subject_id)")
@@ -1196,7 +1210,7 @@ def append_run_log(summary: dict[str, Any]) -> None:
         "### 输入",
         "",
         "- 学科映射：教育部学科与四大国际学科排名映射关系、同济大学学院+学科映射关系、研究生教育学科专业目录。",
-        "- 排名明细：软科2021-2025、QS2021-2026、US News2021-2027、THE 2023-2026总库。",
+        "- 排名明细：软科2021-2026、QS2021-2026、US News2021-2027、THE 2023-2026总库。",
         "",
         "### 输出",
         "",

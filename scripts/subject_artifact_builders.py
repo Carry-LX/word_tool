@@ -911,9 +911,15 @@ def source_area_candidates(subject: dict[str, Any], source: str) -> list[str]:
 def filter_to_selected_source_area(df: pd.DataFrame, subject: dict[str, Any], source: str) -> pd.DataFrame:
     if df.empty:
         return df
+    stored_selection = stored_source_selection(subject, source)
+    if stored_selection:
+        selected = clean_text(stored_selection.get("selected_ranking_subject_or_area"))
+        if not selected:
+            return df.iloc[0:0].copy()
+        return df[exact_subject_mask(df, [selected])].copy()
     mapping_candidates = mapping_table_aliases(subject, source)
     if mapping_candidates:
-        selection = stored_source_selection(subject, source) or select_source_area(df, subject, source)
+        selection = select_source_area(df, subject, source)
         selected = clean_text(selection.get("selected_ranking_subject_or_area"))
         if not selected:
             return df.iloc[0:0].copy()
@@ -1285,6 +1291,8 @@ def filter_indicators_for_subject(indicators: pd.DataFrame, subject: dict[str, A
     aliases = subject_alias_values(subject, source)
     df = indicators[indicators["ranking_source"] == source].copy()
     selected = filter_to_selected_source_area(df, subject, source)
+    if stored_source_selection(subject, source):
+        return selected
     if not selected.empty and len(selected) < len(df):
         return selected
     if aliases:
@@ -3529,6 +3537,22 @@ def normalize_external_history_subject_display(df: pd.DataFrame, subject: dict[s
 
 
 def english_alias_keys_for_subject(subject: dict[str, Any]) -> set[str]:
+    selected = clean_text(
+        stored_source_selection(subject, "软科").get("selected_ranking_subject_or_area")
+    )
+    if selected:
+        values: set[str] = set()
+        if re.search(r"[A-Za-z]", selected):
+            selected_key = normalize_ascii_key(selected)
+            if selected_key:
+                values.add(selected_key)
+        for value in public_supplements.arwu_public_aliases(subject):
+            key = normalize_ascii_key(value)
+            if key:
+                values.add(key)
+        if values:
+            return values
+
     subject_id = clean_text(subject.get("subject_id"))
     aliases = read_external_csv(PROCESSED_DIR / "dim_subject_alias.csv")
     values: set[str] = set()
@@ -3582,17 +3606,12 @@ def build_arwu_public_indicator_history_table(run_dir: Path, subject: dict[str, 
     local_indicators = read_indicators()
     local_df = pd.DataFrame()
     if not local_indicators.empty:
-        raw_aliases = {clean_text(value) for value in subject.get("alias_summary", {}).get("软科", []) if clean_text(value)}
-        norm_aliases = {normalize_text_key(value) for value in raw_aliases if normalize_text_key(value)}
         local_df = local_indicators[
             (local_indicators["ranking_source"] == "软科")
             & (local_indicators["is_tongji"].astype(str).str.lower().isin(["true", "1"]))
-            & (
-                local_indicators["ranking_subject_raw"].map(clean_text).isin(raw_aliases)
-                | local_indicators["ranking_subject_norm"].map(clean_text).isin(norm_aliases)
-            )
             & (local_indicators["metric_type"] == "score")
         ].copy()
+        local_df = filter_to_selected_source_area(local_df, subject, "软科")
         local_df["display_indicator_name"] = local_df["indicator_name"].map(lambda value: canonical_indicator_name("软科", value))
         local_df = local_df[
             local_df["display_indicator_name"].isin(

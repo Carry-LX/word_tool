@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-10T17:42:09",
+  "generated_at": "2026-09-26T15:24:55",
   "data_dir": "E:\\projects\\water\\word_tool\\data",
-  "excel_count": 25,
+  "excel_count": 37,
   "workbooks": [
     {
       "file": "1.研究生教育学科专业目录（2022年）.xlsx",
@@ -95,6 +95,534 @@
       ]
     },
     {
+      "file": "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\2021-2025年软科世界一流学科排名（20260603已更新）.xlsx",
+      "size_bytes": 6726281,
+      "sheets": [
+        {
+          "sheet": "2021-2025",
+          "max_row": 95951,
+          "max_column": 13,
+          "header_row": 1,
+          "headers": [
+            "序号",
+            "学校名称",
+            "所在地区",
+            "发布年度",
+            "学科领域",
+            "学科名称",
+            "国际排名",
+            "总得分",
+            "世界一流教师",
+            "世界一流成果",
+            "高水平研究成果/重要期刊论文数",
+            "科研影响力/论文标准化影响力",
+            "国际合作/国际合作论文比例"
+          ],
+          "sample_rows": [
+            [
+              "1",
+              "巴黎萨克雷大学",
+              "法国",
+              "2022",
+              "理学",
+              "数学",
+              "1",
+              "306.6",
+              "100",
+              "85.8",
+              "91.6",
+              "70.8",
+              "74.9"
+            ],
+            [
+              "2",
+              "普林斯顿大学",
+              "美国",
+              "2022",
+              "理学",
+              "数学",
+              "2",
+              "283.4",
+              "81.2",
+              "98.7",
+              "72.3",
+              "87.4",
+              "68.4"
+            ],
+            [
+              "3",
+              "索邦大学",
+              "法国",
+              "2022",
+              "理学",
+              "数学",
+              "3",
+              "254.5",
+              "26.1",
+              "100",
+              "100",
+              "68.1",
+              "74"
+            ],
+            [
+              "4",
+              "剑桥大学",
+              "英国",
+              "2022",
+              "理学",
+              "数学",
+              "4",
+              "244.4",
+              "60.3",
+              "85.8",
+              "65.6",
+              "84",
+              "79.1"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "软科"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": true,
+            "year": true,
+            "region": true,
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "Sheet1",
+          "max_row": 114,
+          "max_column": 3,
+          "header_row": 1,
+          "headers": [
+            "",
+            "学科名称",
+            "学科领域"
+          ],
+          "sample_rows": [
+            [
+              "",
+              "材料科学与工程",
+              "工学"
+            ],
+            [
+              "",
+              "船舶与海洋工程",
+              "工学"
+            ],
+            [
+              "",
+              "电力电子工程",
+              "工学"
+            ],
+            [
+              "",
+              "纺织科学与工程",
+              "工学"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "软科"
+          ],
+          "available_fields": {
+            "university": false,
+            "subject": true,
+            "rank": true,
+            "score": false,
+            "year": false,
+            "region": false,
+            "indicator": false
+          }
+        }
+      ]
+    },
+    {
+      "file": "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx",
+      "size_bytes": 2357997,
+      "sheets": [
+        {
+          "sheet": "QS（2021-2026）",
+          "max_row": 5699,
+          "max_column": 14,
+          "header_row": 1,
+          "headers": [
+            "序号",
+            "中文名称",
+            "英文名称",
+            "发布年度",
+            "国际排名",
+            "所在地区",
+            "学科英文",
+            "学科中文",
+            "总得分",
+            "H指数",
+            "篇均被引次数",
+            "学术声誉",
+            "雇主声誉",
+            "国际网络研究"
+          ],
+          "sample_rows": [
+            [
+              "1",
+              "复旦大学",
+              "Fudan University",
+              "2026",
+              "2",
+              "中国内地",
+              "Classics & Ancient History",
+              "古典文学与古代史",
+              "95.5",
+              "",
+              "",
+              "97",
+              "82.2",
+              ""
+            ],
+            [
+              "2",
+              "北京大学",
+              "Peking University",
+              "2026",
+              "3",
+              "中国内地",
+              "Classics & Ancient History",
+              "古典文学与古代史",
+              "91.9",
+              "",
+              "",
+              "93",
+              "81.7",
+              ""
+            ],
+            [
+              "3",
+              "中国农业大学",
+              "China Agricultural University",
+              "2026",
+              "5",
+              "中国内地",
+              "Agriculture & Forestry",
+              "农学与林学",
+              "84.2",
+              "96.5",
+              "91",
+              "86.8",
+              "67.8",
+              "58.9"
+            ],
+            [
+              "4",
+              "清华大学",
+              "Tsinghua University",
+              "2026",
+              "7",
+              "中国内地",
+              "Environmental Sciences",
+              "环境科学",
+              "90.4",
+              "100",
+              "90.8",
+              "89.9",
+              "83.3",
+              "62.7"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "QS"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": true,
+            "year": true,
+            "region": true,
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "USnews（2021-2025）",
+          "max_row": 14292,
+          "max_column": 24,
+          "header_row": 1,
+          "headers": [
+            "序号",
+            "中文名称",
+            "外文名称",
+            "总得分",
+            "发布年度",
+            "排名年度",
+            "国际排名",
+            "所在地区",
+            "学科英文",
+            "学科中文",
+            "全球学术声誉排名",
+            "地区学术声誉排名",
+            "出版物排名",
+            "图书排名",
+            "会议排名",
+            "标准化论文引用影响指数排名",
+            "总被引频次排名",
+            "被引用最多的10%的出版物数量排名"
+          ],
+          "sample_rows": [
+            [
+              "1",
+              "西北农林科技大学",
+              "Northwest A&F University - China",
+              "100.0",
+              "2025",
+              "2026",
+              "1",
+              "中国内地",
+              "Water Resources",
+              "水资源",
+              "",
+              "",
+              "3",
+              "",
+              "107",
+              "5",
+              "3",
+              "2"
+            ],
+            [
+              "2",
+              "江南大学",
+              "Jiangnan University",
+              "100.0",
+              "2025",
+              "2026",
+              "1",
+              "中国内地",
+              "Food Science and Technology",
+              "食品科学与技术",
+              "",
+              "",
+              "1",
+              "",
+              "47",
+              "47",
+              "1",
+              "1"
+            ],
+            [
+              "3",
+              "南京林业大学",
+              "Nanjing Forestry University",
+              "100.0",
+              "2025",
+              "2026",
+              "1",
+              "中国内地",
+              "Polymer Science",
+              "高分子科学",
+              "",
+              "",
+              "9",
+              "",
+              "140",
+              "7",
+              "4",
+              "2"
+            ],
+            [
+              "4",
+              "中国海洋大学",
+              "Ocean University of China",
+              "100.0",
+              "2025",
+              "2026",
+              "1",
+              "中国内地",
+              "Marine and Freshwater Biology",
+              "海洋与淡水生物学",
+              "",
+              "",
+              "1",
+              "",
+              "28",
+              "38",
+              "1",
+              "1"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "US News",
+            "QS"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": true,
+            "year": true,
+            "region": true,
+            "indicator": true
+          }
+        }
+      ]
+    },
+    {
+      "file": "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\2021-2026年软科世界一流学科排名（20260915已更新）.xlsx",
+      "size_bytes": 8163426,
+      "sheets": [
+        {
+          "sheet": "2021-2025",
+          "max_row": 115601,
+          "max_column": 13,
+          "header_row": 1,
+          "headers": [
+            "序号",
+            "学校名称",
+            "所在地区",
+            "发布年度",
+            "学科领域",
+            "学科名称",
+            "国际排名",
+            "总得分",
+            "世界一流教师",
+            "世界一流成果",
+            "高水平研究成果/重要期刊论文数",
+            "科研影响力/论文标准化影响力",
+            "国际合作/国际合作论文比例"
+          ],
+          "sample_rows": [
+            [
+              "1",
+              "巴黎萨克雷大学",
+              "法国",
+              "2022",
+              "理学",
+              "数学",
+              "1",
+              "306.6",
+              "100",
+              "85.8",
+              "91.6",
+              "70.8",
+              "74.9"
+            ],
+            [
+              "2",
+              "普林斯顿大学",
+              "美国",
+              "2022",
+              "理学",
+              "数学",
+              "2",
+              "283.4",
+              "81.2",
+              "98.7",
+              "72.3",
+              "87.4",
+              "68.4"
+            ],
+            [
+              "3",
+              "索邦大学",
+              "法国",
+              "2022",
+              "理学",
+              "数学",
+              "3",
+              "254.5",
+              "26.1",
+              "100",
+              "100",
+              "68.1",
+              "74"
+            ],
+            [
+              "4",
+              "剑桥大学",
+              "英国",
+              "2022",
+              "理学",
+              "数学",
+              "4",
+              "244.4",
+              "60.3",
+              "85.8",
+              "65.6",
+              "84",
+              "79.1"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "软科"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": true,
+            "year": true,
+            "region": true,
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "Sheet1",
+          "max_row": 114,
+          "max_column": 3,
+          "header_row": 1,
+          "headers": [
+            "",
+            "学科名称",
+            "学科领域"
+          ],
+          "sample_rows": [
+            [
+              "",
+              "材料科学与工程",
+              "工学"
+            ],
+            [
+              "",
+              "船舶与海洋工程",
+              "工学"
+            ],
+            [
+              "",
+              "电力电子工程",
+              "工学"
+            ],
+            [
+              "",
+              "纺织科学与工程",
+              "工学"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "软科"
+          ],
+          "available_fields": {
+            "university": false,
+            "subject": true,
+            "rank": true,
+            "score": false,
+            "year": false,
+            "region": false,
+            "indicator": false
+          }
+        }
+      ]
+    },
+    {
       "file": "2021US News世界学科排名2020年发布.xlsx",
       "path": "E:\\projects\\water\\word_tool\\data\\2021US News世界学科排名2020年发布.xlsx",
       "size_bytes": 837220,
@@ -183,9 +711,301 @@
       ]
     },
     {
+      "file": "2021年软科世界一流学科排名-20211119.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\2021年软科世界一流学科排名-20211119.xlsx",
+      "size_bytes": 1527783,
+      "sheets": [
+        {
+          "sheet": "arwu_gras_detail",
+          "max_row": 19101,
+          "max_column": 15,
+          "header_row": 1,
+          "headers": [
+            "create_time",
+            "Institution",
+            "Country_Region",
+            "World_Rank",
+            "Rank_order",
+            "Total_Score",
+            "",
+            "Subject",
+            "Field",
+            "Time",
+            "Q1",
+            "CNCI",
+            "IC",
+            "TOP",
+            "AWARD"
+          ],
+          "sample_rows": [
+            [
+              "20211119",
+              "巴黎萨克雷大学",
+              "法国",
+              "1",
+              "1",
+              "328.5",
+              "rs0101",
+              "数学",
+              "理学",
+              "2021",
+              "89.4",
+              "71",
+              "73.8",
+              "88.9",
+              "100"
+            ],
+            [
+              "20211119",
+              "普林斯顿大学",
+              "美国",
+              "2",
+              "2",
+              "311.2",
+              "rs0101",
+              "数学",
+              "理学",
+              "2021",
+              "72.8",
+              "88.1",
+              "65.8",
+              "100",
+              "81.2"
+            ],
+            [
+              "20211119",
+              "索邦大学",
+              "法国",
+              "3",
+              "3",
+              "269.1",
+              "rs0101",
+              "数学",
+              "理学",
+              "2021",
+              "100",
+              "70.4",
+              "72.9",
+              "93.2",
+              "26.1"
+            ],
+            [
+              "20211119",
+              "剑桥大学",
+              "英国",
+              "4",
+              "4",
+              "262.9",
+              "rs0101",
+              "数学",
+              "理学",
+              "2021",
+              "64.5",
+              "88.7",
+              "79.7",
+              "77.8",
+              "60.3"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "软科"
+          ],
+          "available_fields": {
+            "university": false,
+            "subject": true,
+            "rank": true,
+            "score": true,
+            "year": false,
+            "region": true,
+            "indicator": false
+          }
+        },
+        {
+          "sheet": "指标",
+          "max_row": 26,
+          "max_column": 4,
+          "header_row": 1,
+          "headers": [
+            "code",
+            "nameCn",
+            "weight",
+            "pubyear"
+          ],
+          "sample_rows": [
+            [
+              "1",
+              "重要期刊论文数",
+              "",
+              "2020"
+            ],
+            [
+              "2",
+              "论文标准化影响力",
+              "",
+              "2020"
+            ],
+            [
+              "3",
+              "国际合作论文比例",
+              "",
+              "2020"
+            ],
+            [
+              "4",
+              "顶尖期刊论文数",
+              "",
+              "2020"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "软科"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": false,
+            "year": true,
+            "region": false,
+            "indicator": true
+          }
+        }
+      ]
+    },
+    {
+      "file": "2022THE学科领域排名.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\2022THE学科领域排名.xlsx",
+      "size_bytes": 1010416,
+      "sheets": [
+        {
+          "sheet": "Sheet1",
+          "max_row": 8897,
+          "max_column": 18,
+          "header_row": 1,
+          "headers": [
+            "create_time",
+            "subject",
+            "worldrank",
+            "页面排序",
+            "university",
+            "university_zh",
+            "location",
+            "pubyear",
+            "overall",
+            "teaching",
+            "research",
+            "citations",
+            "industry_income",
+            "international_outlook",
+            "no_of_fte_students",
+            "no_of_students_per_staff",
+            "international_students",
+            "female_male_ratio"
+          ],
+          "sample_rows": [
+            [
+              "20211119",
+              "arts & humanities",
+              "1",
+              "1",
+              "stanford university",
+              "斯坦福大学",
+              "united states",
+              "2022",
+              "92.7",
+              "96.9",
+              "92.9",
+              "94.4",
+              "96",
+              "66.2",
+              "16,319",
+              "7.3",
+              "23%",
+              "46 : 54"
+            ],
+            [
+              "20211119",
+              "arts & humanities",
+              "2",
+              "2",
+              "massachusetts institute of technology",
+              "麻省理工学院",
+              "united states",
+              "2022",
+              "89.1",
+              "88.7",
+              "88.6",
+              "98.3",
+              "61.3",
+              "85.2",
+              "11,459",
+              "8.4",
+              "33%",
+              "40 : 60"
+            ],
+            [
+              "20211119",
+              "arts & humanities",
+              "3",
+              "3",
+              "university of cambridge",
+              "剑桥大学",
+              "united kingdom",
+              "2022",
+              "88.3",
+              "91.7",
+              "96.6",
+              "69.5",
+              "58.5",
+              "76.4",
+              "19,681",
+              "11.1",
+              "39%",
+              "47 : 53"
+            ],
+            [
+              "20211119",
+              "arts & humanities",
+              "4",
+              "4",
+              "university of oxford",
+              "牛津大学",
+              "united kingdom",
+              "2022",
+              "86.4",
+              "88.9",
+              "95.2",
+              "74.2",
+              "33.5",
+              "72.2",
+              "20,835",
+              "10.7",
+              "42%",
+              "47 : 53"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "THE"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": false,
+            "year": true,
+            "region": true,
+            "indicator": false
+          }
+        }
+      ]
+    },
+    {
       "file": "2022US News世界学科排名20211026.xlsx",
       "path": "E:\\projects\\water\\word_tool\\data\\2022US News世界学科排名20211026.xlsx",
-      "size_bytes": 1551787,
+      "size_bytes": 1530976,
       "sheets": [
         {
           "sheet": "Sheet2",
@@ -308,26 +1128,657 @@
             "region": true,
             "indicator": false
           }
-        },
+        }
+      ]
+    },
+    {
+      "file": "2022年QS学科排名202203.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\2022年QS学科排名202203.xlsx",
+      "size_bytes": 2336206,
+      "sheets": [
         {
-          "sheet": "Sheet3",
-          "max_row": 1,
-          "max_column": 1,
-          "header_row": null,
-          "headers": [],
-          "sample_rows": [],
+          "sheet": "Sheet1",
+          "max_row": 17759,
+          "max_column": 24,
+          "header_row": 1,
+          "headers": [
+            "id",
+            "SUBJECT",
+            "FIELD",
+            "UNIVERSITY",
+            "",
+            "",
+            "LOCATION",
+            "",
+            "Time",
+            "RANK",
+            "Page_Rank",
+            "OVERALL_SCORE",
+            "",
+            "ACADEMIC_REPUTATION",
+            "",
+            "EMPLOYER_REPUTATION",
+            "",
+            "CITATIONS_PER_PAPER"
+          ],
+          "sample_rows": [
+            [
+              "nid",
+              "subject_name",
+              "subject_field",
+              "uni",
+              "uni_url",
+              "region",
+              "location",
+              "agency",
+              "pubyear",
+              "overall_rank",
+              "overall_rank_dis",
+              "overall",
+              "stars",
+              "学术声誉",
+              "学术声誉_rank",
+              "雇主声誉",
+              "雇主声誉_rank",
+              "论文篇均引用率"
+            ],
+            [
+              "2160749",
+              "化学",
+              "自然科学",
+              "佐治亚州立大学",
+              "https://www.qschina.cn/universities/georgia-state-university",
+              "north america",
+              "united states",
+              "qs",
+              "2022",
+              "610",
+              "601-630",
+              "",
+              "",
+              "35.3",
+              "228",
+              "53.6",
+              "232",
+              "66.4"
+            ],
+            [
+              "2170646",
+              "数学",
+              "自然科学",
+              "佐治亚州立大学",
+              "https://www.qschina.cn/universities/georgia-state-university",
+              "north america",
+              "united states",
+              "qs",
+              "2022",
+              "459",
+              "451-500",
+              "",
+              "",
+              "47.2",
+              "205",
+              "60.5",
+              "203",
+              "65.9"
+            ],
+            [
+              "2173916",
+              "all",
+              "艺术与人文",
+              "佐治亚州立大学",
+              "https://www.qschina.cn/universities/georgia-state-university",
+              "north america",
+              "united states",
+              "qs",
+              "2022",
+              "379",
+              "=378",
+              "61.4",
+              "",
+              "61.6",
+              "421",
+              "59",
+              "348",
+              "81.3"
+            ]
+          ],
           "role": "ranking_detail",
           "ranking_sources": [
-            "US News"
+            "QS"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": true,
+            "year": false,
+            "region": true,
+            "indicator": false
+          }
+        }
+      ]
+    },
+    {
+      "file": "2022年软科世界一流学科排名-20220720.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\2022年软科世界一流学科排名-20220720.xlsx",
+      "size_bytes": 1988103,
+      "sheets": [
+        {
+          "sheet": "Sheet1",
+          "max_row": 19101,
+          "max_column": 23,
+          "header_row": 1,
+          "headers": [
+            "",
+            "",
+            "",
+            "Institution",
+            "",
+            "",
+            "",
+            "Country_Region",
+            "Rank_order",
+            "Total_Score",
+            "",
+            "Subject",
+            "Field",
+            "World_Rank",
+            "Time",
+            "",
+            "",
+            "Q1"
+          ],
+          "sample_rows": [
+            [
+              "",
+              "https://www.shanghairanking.cn/institution/paris-saclay-university",
+              "https://www.shanghairanking.cn/_uni/logo/98e838fa6.png",
+              "巴黎萨克雷大学",
+              "0",
+              "0",
+              "0",
+              "法国",
+              "1",
+              "306.6",
+              "rs0101",
+              "数学",
+              "理学",
+              "1",
+              "2022",
+              "arwu",
+              "",
+              "91.6"
+            ],
+            [
+              "",
+              "https://www.shanghairanking.cn/institution/princeton-university",
+              "https://www.shanghairanking.cn/_uni/logo/b1dad5288.png",
+              "普林斯顿大学",
+              "0",
+              "0",
+              "0",
+              "美国",
+              "2",
+              "283.4",
+              "rs0101",
+              "数学",
+              "理学",
+              "2",
+              "2022",
+              "arwu",
+              "",
+              "72.3"
+            ],
+            [
+              "",
+              "https://www.shanghairanking.cn/institution/sorbonne-university",
+              "https://www.shanghairanking.cn/_uni/logo/f900e4997.png",
+              "索邦大学",
+              "0",
+              "0",
+              "0",
+              "法国",
+              "3",
+              "254.5",
+              "rs0101",
+              "数学",
+              "理学",
+              "3",
+              "2022",
+              "arwu",
+              "",
+              "100"
+            ],
+            [
+              "",
+              "https://www.shanghairanking.cn/institution/university-of-cambridge",
+              "https://www.shanghairanking.cn/_uni/logo/8d9861b69.png",
+              "剑桥大学",
+              "0",
+              "0",
+              "0",
+              "英国",
+              "4",
+              "244.4",
+              "rs0101",
+              "数学",
+              "理学",
+              "4",
+              "2022",
+              "arwu",
+              "",
+              "65.6"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "软科"
           ],
           "available_fields": {
             "university": false,
             "subject": true,
             "rank": true,
+            "score": true,
+            "year": false,
+            "region": true,
+            "indicator": false
+          }
+        }
+      ]
+    },
+    {
+      "file": "2023-2026年THE世界大学学科排名（20260603更新）.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\2023-2026年THE世界大学学科排名（20260603更新）.xlsx",
+      "size_bytes": 7058837,
+      "sheets": [
+        {
+          "sheet": "数据（2023-2026）",
+          "max_row": 42461,
+          "max_column": 28,
+          "header_row": 1,
+          "headers": [
+            "序号",
+            "外文名称",
+            "中文名称",
+            "所在地区",
+            "学科英文",
+            "学科中文",
+            "发布年度",
+            "排名年度",
+            "国际排名",
+            "总得分",
+            "教学",
+            "教学排名",
+            "科研环境",
+            "科研环境排名",
+            "科研质量",
+            "科研质量排名",
+            "商业收入",
+            "商业收入排名"
+          ],
+          "sample_rows": [
+            [
+              "10877",
+              "Massachusetts Institute of Technology",
+              "麻省理工学院",
+              "美国",
+              "Arts and Humanities",
+              "艺术与人文",
+              "2026",
+              "2026",
+              "1",
+              "92.7",
+              "91.3",
+              "7",
+              "92.9",
+              "5",
+              "96.8",
+              "2",
+              "89.2",
+              "56"
+            ],
+            [
+              "10878",
+              "Stanford University",
+              "斯坦福大学",
+              "美国",
+              "Arts and Humanities",
+              "艺术与人文",
+              "2026",
+              "2026",
+              "2",
+              "91.5",
+              "94.7",
+              "1",
+              "91.7",
+              "6",
+              "95.7",
+              "3",
+              "69.4",
+              "198"
+            ],
+            [
+              "10879",
+              "University of Cambridge",
+              "剑桥大学",
+              "英国",
+              "Arts and Humanities",
+              "艺术与人文",
+              "2026",
+              "2026",
+              "3",
+              "91.3",
+              "94.2",
+              "2",
+              "98.1",
+              "1",
+              "74.1",
+              "169",
+              "88.0",
+              "59"
+            ],
+            [
+              "10880",
+              "University of Oxford",
+              "牛津大学",
+              "英国",
+              "Arts and Humanities",
+              "艺术与人文",
+              "2026",
+              "2026",
+              "4",
+              "90.9",
+              "93.8",
+              "3",
+              "97.9",
+              "2",
+              "77.4",
+              "116",
+              "68.9",
+              "212"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "THE"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": true,
+            "year": true,
+            "region": true,
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "同济",
+          "max_row": 11,
+          "max_column": 18,
+          "header_row": 1,
+          "headers": [
+            "序号",
+            "中文名称",
+            "外文名称",
+            "发布年度",
+            "排名年度",
+            "国际排名",
+            "所在地区",
+            "学科英文",
+            "学科中文",
+            "总得分",
+            "篇均被引次数",
+            "商业收入",
+            "国际化视野",
+            "研究",
+            "教学",
+            "科研环境",
+            "科研质量",
+            ""
+          ],
+          "sample_rows": [
+            [
+              "531",
+              "同济大学",
+              "Tongji University",
+              "2026",
+              "2026",
+              "49",
+              "中国内地",
+              "Engineering",
+              "工程学",
+              "73.2",
+              "",
+              "98.5",
+              "48.8",
+              "",
+              "64.5",
+              "73.4",
+              "81.3",
+              "49"
+            ],
+            [
+              "608",
+              "同济大学",
+              "Tongji University",
+              "2026",
+              "2026",
+              "55",
+              "中国内地",
+              "Law",
+              "法学",
+              "57.1",
+              "",
+              "98.6",
+              "85.6",
+              "",
+              "35.4",
+              "43.5",
+              "84.7",
+              "55"
+            ],
+            [
+              "1018",
+              "同济大学",
+              "Tongji University",
+              "2026",
+              "2026",
+              "92",
+              "中国内地",
+              "Arts and Humanities",
+              "艺术与人文",
+              "53.3",
+              "",
+              "96.2",
+              "85.6",
+              "",
+              "51.1",
+              "42.4",
+              "61.1",
+              "92"
+            ],
+            [
+              "1298",
+              "同济大学",
+              "Tongji University",
+              "2026",
+              "2026",
+              "101–125",
+              "中国内地",
+              "Business and Economics",
+              "商业与经济学",
+              "52.2–55.9",
+              "",
+              "100.0",
+              "87.5",
+              "",
+              "32.3",
+              "36.7",
+              "80.3",
+              "101–125"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "THE"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": true,
+            "year": true,
+            "region": true,
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "同济历史",
+          "max_row": 12,
+          "max_column": 10,
+          "header_row": 1,
+          "headers": [
+            "THE学科领域",
+            "2019国际排名",
+            "2020国际排名",
+            "2021国际排名",
+            "2022国际排名",
+            "2023国际排名",
+            "2024国际排名",
+            "2025国际排名",
+            "2026国际排名",
+            "变化情况"
+          ],
+          "sample_rows": [
+            [
+              "计算机科学",
+              "301-400",
+              "401-500",
+              "401-500",
+              "401-500",
+              "401–500",
+              "251-300",
+              "201-250",
+              "176–200",
+              "上升"
+            ],
+            [
+              "工程学",
+              "98",
+              "101-125",
+              "89",
+              "74",
+              "65",
+              "56",
+              "51",
+              "49",
+              "上升"
+            ],
+            [
+              "医学与健康",
+              "251-300",
+              "201-250",
+              "251-300",
+              "251-300",
+              "201–250",
+              "201-250",
+              "176",
+              "151–175",
+              "上升"
+            ],
+            [
+              "生命科学",
+              "401-500",
+              "401-500",
+              "301-400",
+              "301-400",
+              "401–500",
+              "251-300",
+              "176-200",
+              "201–250",
+              "下降"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "THE"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
             "score": false,
             "year": false,
             "region": false,
-            "indicator": false
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "排名方法",
+          "max_row": 12,
+          "max_column": 7,
+          "header_row": 1,
+          "headers": [
+            "大类",
+            "教学环境",
+            "研究环境",
+            "研究质量",
+            "国际视野",
+            "知识转化",
+            "总计"
+          ],
+          "sample_rows": [
+            [
+              "计算机科学",
+              "0.28",
+              "0.29",
+              "0.275",
+              "0.075",
+              "0.08",
+              "1"
+            ],
+            [
+              "工程学",
+              "0.28",
+              "0.29",
+              "0.275",
+              "0.075",
+              "0.08",
+              "1"
+            ],
+            [
+              "医学与健康",
+              "0.268",
+              "0.265",
+              "0.352",
+              "0.075",
+              "0.04",
+              "1"
+            ],
+            [
+              "生命科学",
+              "0.268",
+              "0.265",
+              "0.352",
+              "0.075",
+              "0.04",
+              "1"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "THE"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": false,
+            "year": false,
+            "region": false,
+            "indicator": true
           }
         }
       ]
@@ -1530,6 +2981,255 @@
             "score": true,
             "year": true,
             "region": true,
+            "indicator": true
+          }
+        }
+      ]
+    },
+    {
+      "file": "2026年US News世界学科排名20260616.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\2026年US News世界学科排名20260616.xlsx",
+      "size_bytes": 3583041,
+      "sheets": [
+        {
+          "sheet": "数据",
+          "max_row": 24051,
+          "max_column": 24,
+          "header_row": 1,
+          "headers": [
+            "序号",
+            "单位",
+            "中文名称",
+            "外文名称",
+            "总得分",
+            "发布年度",
+            "排名年度",
+            "国际排名",
+            "所在地区",
+            "学科英文",
+            "学科中文",
+            "全球学术声誉排名",
+            "地区学术声誉排名",
+            "出版物排名",
+            "图书排名",
+            "标准化论文引用影响指数排名",
+            "总被引频次排名",
+            "被引用最多的10%的出版物数量排名"
+          ],
+          "sample_rows": [
+            [
+              "1",
+              "中国农业大学",
+              "中国农业大学",
+              "China Agricultural University",
+              "100.0",
+              "2026",
+              "2027",
+              "1",
+              "中国内地",
+              "Agricultural Sciences",
+              "农业科学",
+              "8",
+              "5",
+              "1",
+              "",
+              "61",
+              "2",
+              "3"
+            ],
+            [
+              "2",
+              "清华大学",
+              "清华大学",
+              "Tsinghua University",
+              "100.0",
+              "2026",
+              "2027",
+              "1",
+              "中国内地",
+              "Artificial Intelligence",
+              "人工智能",
+              "",
+              "",
+              "2",
+              "",
+              "13",
+              "1",
+              "1"
+            ],
+            [
+              "3",
+              "牛津大学",
+              "牛津大学",
+              "University of Oxford",
+              "100.0",
+              "2026",
+              "2027",
+              "1",
+              "英国",
+              "Arts and Humanities",
+              "艺术与人文",
+              "1",
+              "6",
+              "1",
+              "1",
+              "235",
+              "1",
+              "1"
+            ],
+            [
+              "4",
+              "哈佛大学",
+              "哈佛大学",
+              "Harvard University",
+              "100.0",
+              "2026",
+              "2027",
+              "1",
+              "美国",
+              "Biology and Biochemistry",
+              "生物学与生物化学",
+              "1",
+              "1",
+              "1",
+              "",
+              "16",
+              "1",
+              "1"
+            ]
+          ],
+          "role": "ranking_detail",
+          "ranking_sources": [
+            "US News"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": true,
+            "year": true,
+            "region": true,
+            "indicator": true
+          }
+        }
+      ]
+    },
+    {
+      "file": "37所一流高校学科论文数据（web of science）20260511.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\37所一流高校学科论文数据（web of science）20260511.xlsx",
+      "size_bytes": 434255,
+      "sheets": [
+        {
+          "sheet": "37所一流高校学科论文数据web of science",
+          "max_row": 3512,
+          "max_column": 17,
+          "header_row": 1,
+          "headers": [
+            "中文名称",
+            "教育部一级学科",
+            "英文名称",
+            "总论文（Web of Science Documents）",
+            "总被引（Times Cited）",
+            "篇均被引（Citation Impact）",
+            "有被引的论文占比（% Docs Cited）",
+            "CNCI（Category Normalized Citation Impact）",
+            "前1%论文数 （Documents in Top 1%）",
+            "前1%论文占比（% Documents in Top 1%）",
+            "前10%论文数（Documents in Top 10%）",
+            "前10%论文占比（% Documents in Top 10%）",
+            "ESI高被引论文数（Highly Cited Papers）",
+            "ESI高被引论文占比（% Highly Cited Papers）",
+            "国际合作论文数量（International Documents）",
+            "国际合作论文占比（% International Documents）",
+            "国际合作论文CNCI（Collab-CNCI）"
+          ],
+          "sample_rows": [
+            [
+              "上海交通大学",
+              "0805 Materials Science and Engineering",
+              "Shanghai Jiao Tong University",
+              "15073",
+              "292786",
+              "19.424533935",
+              "87.13",
+              "1.7727815896",
+              "410",
+              "2.72",
+              "2992",
+              "19.85",
+              "285",
+              "1.89",
+              "3744",
+              "24.84",
+              "1.6971074902"
+            ],
+            [
+              "上海交通大学",
+              "0703 Chemistry",
+              "Shanghai Jiao Tong University",
+              "15121",
+              "287310",
+              "19.000727465",
+              "87.28",
+              "1.7586690232",
+              "428",
+              "2.83",
+              "3052",
+              "20.18",
+              "362",
+              "2.39",
+              "3383",
+              "22.37",
+              "1.685607559"
+            ],
+            [
+              "上海交通大学",
+              "1002 Clinical Medicine",
+              "Shanghai Jiao Tong University",
+              "26851",
+              "262685",
+              "9.7830620833",
+              "72.37",
+              "2.2158607352",
+              "740",
+              "2.76",
+              "4046",
+              "15.07",
+              "380",
+              "1.42",
+              "5776",
+              "21.51",
+              "1.8169824066"
+            ],
+            [
+              "上海交通大学",
+              "1001 Basic Medicine",
+              "Shanghai Jiao Tong University",
+              "16158",
+              "211114",
+              "13.065602178",
+              "80.94",
+              "1.6507241862",
+              "444",
+              "2.75",
+              "2618",
+              "16.2",
+              "230",
+              "1.42",
+              "3398",
+              "21.03",
+              "1.6249869724"
+            ]
+          ],
+          "role": "subject_mapping",
+          "ranking_sources": [],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": false,
+            "score": false,
+            "year": false,
+            "region": false,
             "indicator": true
           }
         }
@@ -2775,6 +4475,149 @@
       ]
     },
     {
+      "file": "同济大学学院+学科映射关系（20260603更新）.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\同济大学学院+学科映射关系（20260603更新）.xlsx",
+      "size_bytes": 24901,
+      "sheets": [
+        {
+          "sheet": "Sheet1",
+          "max_row": 98,
+          "max_column": 15,
+          "header_row": 1,
+          "headers": [
+            "编号",
+            "学院",
+            "学术学位点",
+            "专业学位点",
+            "本科专业",
+            "一级学科学科代码",
+            "层次级别",
+            "第五轮评估结果",
+            "是否双一流学科",
+            "上海市高峰高原",
+            "软科世界一流学科对应名称",
+            "QS对应的学科名称",
+            "U.S.NEWS学科排名对应名称",
+            "THE对应领域",
+            "weh of science论文学科代码"
+          ],
+          "sample_rows": [
+            [
+              "1",
+              "机械与机器人学院",
+              "机械工程",
+              "机械",
+              "机械设计制造及其自动化",
+              "0802",
+              "博士一级",
+              "B+",
+              "",
+              "未来学科（自主智能机器人）",
+              "机械工程",
+              "机械工程",
+              "机械工程",
+              "工学",
+              "0802 Mechanical Engineering"
+            ],
+            [
+              "",
+              "",
+              "动力工程及工程热物理",
+              "能源动力",
+              "智能制造工程",
+              "0807",
+              "博士一级",
+              "B",
+              "",
+              "",
+              "能源科学与工程",
+              "无",
+              "能源和燃料",
+              "工学",
+              "0807 Power Engineering and Engineering Thermophysics"
+            ],
+            [
+              "",
+              "",
+              "",
+              "",
+              "能源与动力工程",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "role": "tongji_subject_mapping",
+          "ranking_sources": [
+            "US News",
+            "QS",
+            "软科",
+            "THE"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": false,
+            "year": false,
+            "region": false,
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "Sheet2",
+          "max_row": 12,
+          "max_column": 3,
+          "header_row": 1,
+          "headers": [
+            "",
+            "占比",
+            "数量"
+          ],
+          "sample_rows": [
+            [
+              "哲学",
+              "2.04081632653061",
+              "1"
+            ],
+            [
+              "经济学",
+              "2.04081632653061",
+              "1"
+            ],
+            [
+              "法学",
+              "6.12244897959184",
+              "3"
+            ],
+            [
+              "教育学",
+              "2.04081632653061",
+              "1"
+            ]
+          ],
+          "role": "tongji_subject_mapping",
+          "ranking_sources": [],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": false,
+            "score": false,
+            "year": false,
+            "region": false,
+            "indicator": false
+          }
+        }
+      ]
+    },
+    {
       "file": "同济大学学院十五五学科建设目标-指标X7学科国际排名.xlsx",
       "path": "E:\\projects\\water\\word_tool\\data\\同济大学学院十五五学科建设目标-指标X7学科国际排名.xlsx",
       "size_bytes": 11513,
@@ -3152,6 +4995,437 @@
             "自然科学",
             "社会科学",
             "商业和经济学",
+            "法学",
+            "教育学",
+            "心理学"
+          ],
+          "sample_rows": [
+            [
+              "Pillar",
+              "一级指标名称",
+              "二级指标名称",
+              "Indicator",
+              "Overall",
+              "Arts and Humanities",
+              "Medical and Health",
+              "Engineering",
+              "Computer Science",
+              "Life Sciences",
+              "Physical Sciences",
+              "Social Sciences",
+              "Business and Economics",
+              "Law",
+              "Education Studies",
+              "Psychology"
+            ],
+            [
+              "Teaching",
+              "教学",
+              "",
+              "",
+              "0.29500000000000004",
+              "0.373",
+              "0.268",
+              "0.28",
+              "0.28",
+              "0.268",
+              "0.268",
+              "0.319",
+              "0.304",
+              "0.322",
+              "0.322",
+              "0.268"
+            ],
+            [
+              "",
+              "",
+              "教学声誉",
+              "Teaching reputation",
+              "0.15",
+              "0.253",
+              "0.179",
+              "0.195",
+              "0.195",
+              "0.179",
+              "0.179",
+              "0.211",
+              "0.211",
+              "0.21",
+              "0.2",
+              "0.179"
+            ],
+            [
+              "",
+              "",
+              "师生比",
+              "Student:staff ratio",
+              "0.045",
+              "0.039",
+              "0.028",
+              "0.03",
+              "0.03",
+              "0.028",
+              "0.028",
+              "0.033",
+              "0.033",
+              "0.045",
+              "0.045",
+              "0.028"
+            ]
+          ],
+          "role": "indicator_weight",
+          "ranking_sources": [
+            "THE"
+          ],
+          "available_fields": {
+            "university": true,
+            "subject": true,
+            "rank": true,
+            "score": false,
+            "year": false,
+            "region": false,
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "QS",
+          "max_row": 62,
+          "max_column": 11,
+          "header_row": 1,
+          "headers": [
+            "QS学科排名指标占比（%）",
+            "",
+            "2026QS学科排名指标更新",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "2026年"
+          ],
+          "sample_rows": [
+            [
+              "大类",
+              "英文学科/英文排名网站",
+              "英文学科/指标解释中",
+              "中文学科",
+              "学术声誉",
+              "雇主声誉",
+              "篇均被引",
+              "H指数",
+              "IRN",
+              "合计",
+              "同济学科"
+            ],
+            [
+              "艺术与人文",
+              "Arts & Humanities",
+              "Arts & Humanities",
+              "艺术与人文领域",
+              "0.6",
+              "0.2",
+              "0.075",
+              "0.075",
+              "0.05",
+              "1",
+              ""
+            ],
+            [
+              "",
+              "Archaeology",
+              "Archaeology",
+              "考古学",
+              "0.7",
+              "0.1",
+              "0.1",
+              "0.1",
+              "",
+              "0.9999999999999999",
+              ""
+            ],
+            [
+              "",
+              "Architecture / Built Environment",
+              "Architecture",
+              "建筑学",
+              "0.7",
+              "0.1",
+              "0.1",
+              "0.1",
+              "",
+              "0.9999999999999999",
+              "同济"
+            ]
+          ],
+          "role": "indicator_weight",
+          "ranking_sources": [
+            "QS"
+          ],
+          "available_fields": {
+            "university": false,
+            "subject": true,
+            "rank": true,
+            "score": false,
+            "year": false,
+            "region": false,
+            "indicator": true
+          }
+        }
+      ]
+    },
+    {
+      "file": "四大世界学科2025指标权重（20260603更新）.xlsx",
+      "path": "E:\\projects\\water\\word_tool\\data\\四大世界学科2025指标权重（20260603更新）.xlsx",
+      "size_bytes": 51823,
+      "sheets": [
+        {
+          "sheet": "软科",
+          "max_row": 59,
+          "max_column": 21,
+          "header_row": 1,
+          "headers": [
+            "学科领域",
+            "学科名称",
+            "世界一流教师",
+            "",
+            "",
+            "",
+            "世界一流成果",
+            "",
+            "高水平研究成果",
+            "科研影响力",
+            "国际合作",
+            "权重",
+            "世界一流教师",
+            "",
+            "",
+            "",
+            "世界一流成果",
+            ""
+          ],
+          "sample_rows": [
+            [
+              "",
+              "",
+              "获权威奖项教师",
+              "高被引科学家",
+              "国际期刊主编",
+              "国际学术组织负责人",
+              "顶尖期刊论文",
+              "国际权威奖项",
+              "重要期刊论文",
+              "论文标准化影响力",
+              "国际合作论文比例",
+              "合计",
+              "获权威奖项教师",
+              "高被引科学家",
+              "国际期刊主编",
+              "国际学术组织负责人",
+              "顶尖期刊论文",
+              "国际权威奖项"
+            ],
+            [
+              "理学",
+              "数学",
+              "40",
+              "0",
+              "60",
+              "20",
+              "100",
+              "100",
+              "100",
+              "50",
+              "20",
+              "490",
+              "0.08163265306122448",
+              "0",
+              "0.12244897959183673",
+              "0.04081632653061224",
+              "0.20408163265306123",
+              "0.20408163265306123"
+            ],
+            [
+              "理学",
+              "物理学",
+              "60",
+              "60",
+              "60",
+              "20",
+              "100",
+              "100",
+              "100",
+              "50",
+              "20",
+              "570",
+              "0.10526315789473684",
+              "0.10526315789473684",
+              "0.10526315789473684",
+              "0.03508771929824561",
+              "0.17543859649122806",
+              "0.17543859649122806"
+            ],
+            [
+              "理学",
+              "化学",
+              "60",
+              "60",
+              "60",
+              "10",
+              "100",
+              "100",
+              "100",
+              "50",
+              "20",
+              "560",
+              "0.10714285714285714",
+              "0.10714285714285714",
+              "0.10714285714285714",
+              "0.017857142857142856",
+              "0.17857142857142858",
+              "0.17857142857142858"
+            ]
+          ],
+          "role": "indicator_weight",
+          "ranking_sources": [
+            "软科"
+          ],
+          "available_fields": {
+            "university": false,
+            "subject": true,
+            "rank": false,
+            "score": false,
+            "year": false,
+            "region": false,
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "usnews",
+          "max_row": 42,
+          "max_column": 15,
+          "header_row": 1,
+          "headers": [
+            "US News学科领域",
+            "细分学科",
+            "全球研究声誉",
+            "区域研究声誉",
+            "出版物",
+            "图书",
+            "会议",
+            "标准化引用影响",
+            "总引用次数",
+            "被引用次数最多的 10% 的出版物数量",
+            "被引用次数最多的 10% 的出版物占总出版物的百分比",
+            "在各自领域中被引用次数最多的前 1% 的高被引论文数量",
+            "被引用次数最多的前 1% 的论文占总出版物的百分比",
+            "国际合作——相对于国家",
+            "国际合作"
+          ],
+          "sample_rows": [
+            [
+              "计算机科学与工程",
+              "计算机科学",
+              "12.5",
+              "12.5",
+              "10",
+              "不适用",
+              "7.5",
+              "7.5",
+              "12.5",
+              "12.5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5"
+            ],
+            [
+              "",
+              "工程学",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ],
+            [
+              "软科学",
+              "商业与经济",
+              "12.5",
+              "12.5",
+              "17.5",
+              "不适用",
+              "不适用",
+              "7.5",
+              "12.5",
+              "12.5",
+              "5",
+              "5",
+              "5",
+              "5",
+              "5"
+            ],
+            [
+              "",
+              "数学",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "role": "indicator_weight",
+          "ranking_sources": [
+            "US News"
+          ],
+          "available_fields": {
+            "university": false,
+            "subject": true,
+            "rank": false,
+            "score": false,
+            "year": false,
+            "region": true,
+            "indicator": true
+          }
+        },
+        {
+          "sheet": "the",
+          "max_row": 25,
+          "max_column": 16,
+          "header_row": 1,
+          "headers": [
+            "",
+            "一级指标名称",
+            "二级指标名称",
+            "",
+            "大学排名",
+            "艺术与人文",
+            "医学与健康",
+            "工学",
+            "计算机科学",
+            "生命科学",
+            "自然科学",
+            "社会科学",
+            "商业与经济学",
             "法学",
             "教育学",
             "心理学"

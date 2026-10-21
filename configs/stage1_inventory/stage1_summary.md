@@ -16,8 +16,8 @@
 
 ## 核验结果
 
-- Excel 文件数：25
-- Excel sheet 数：37
+- Excel 文件数：37
+- Excel sheet 数：59
 - 目标模板非空段落数：25
 - 目标模板标黄段落数：2
 - 参考报告表格数：8
@@ -27,11 +27,11 @@
 
 ## 数据角色统计
 
-- subject_mapping: 3
-- ranking_detail: 18
-- indicator_weight: 8
+- subject_mapping: 4
+- ranking_detail: 33
+- indicator_weight: 12
 - domestic_evaluation: 5
-- tongji_subject_mapping: 3
+- tongji_subject_mapping: 5
 
 ## 需要人工确认的点
 

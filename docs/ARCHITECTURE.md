@@ -59,6 +59,7 @@ If a future delivery explicitly needs one report per coverage row, set `REPORT_B
 - `data/` is raw source input and should not be overwritten.
 - `processed/` is generated structured data. SQLite is the preferred query interface.
 - `configs/runtime/` contains request, source, proxy, and mapping policy.
+- `configs/runtime/ranking_source_inputs.json` selects the preferred version and compatible sheet for consolidated ranking sources such as ARWU.
 - `outputs/subject_agent_runs/` contains per-subject artifact runs.
 - `outputs/full_word_reports/` contains final Word outputs and QA render artifacts.
 

@@ -396,15 +396,15 @@
     {
       "id": "rank_arwu_2025",
       "file": "2025年软科世界一流学科排名20251118.xlsx",
-      "tier": "current",
+      "tier": "historical",
       "role": "ranking_detail",
       "status": "use",
-      "purpose": "软科最新可用学科排名明细。",
+      "purpose": "软科 2025 发布年度学科排名明细。",
       "canonical_tables": [
         "fact_ranking",
         "fact_ranking_indicator"
       ],
-      "notes": "对标高校整体排名、分项指标、论文代理指标的重要来源。",
+      "notes": "保留作 2025 单年校验；正式数据层优先使用 2021-2026 历史总库。",
       "exists": true,
       "sheet_count": 1,
       "sheets": [
@@ -425,6 +425,52 @@
             "科研影响力/论文标准化影响力",
             "国际合作/国际合作论文比例",
             "世界一流成果"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rank_arwu_2021_2026_history",
+      "file": "2021-2026年软科世界一流学科排名（20260915已更新）.xlsx",
+      "tier": "current",
+      "role": "ranking_detail_history",
+      "status": "use",
+      "purpose": "软科 2021-2026 学科排名总库，作为当前排名、历史趋势和分项指标的主数据源。",
+      "canonical_tables": [
+        "fact_ranking",
+        "fact_ranking_indicator"
+      ],
+      "notes": "2021-2025 行与上一版总库逐值一致，新增 2026 年 19650 行；运行时由 configs/runtime/ranking_source_inputs.json 选择。",
+      "exists": true,
+      "sheet_count": 2,
+      "sheets": [
+        {
+          "sheet": "2021-2025",
+          "rows": 115601,
+          "columns": 13,
+          "headers": [
+            "序号",
+            "学校名称",
+            "所在地区",
+            "发布年度",
+            "学科领域",
+            "学科名称",
+            "国际排名",
+            "总得分",
+            "世界一流教师",
+            "世界一流成果",
+            "高水平研究成果/重要期刊论文数",
+            "科研影响力/论文标准化影响力"
+          ]
+        },
+        {
+          "sheet": "Sheet1",
+          "rows": 114,
+          "columns": 3,
+          "headers": [
+            "",
+            "学科名称",
+            "学科领域"
           ]
         }
       ]
@@ -735,7 +781,7 @@
       ],
       "notes": "含较完整论文和声誉指标。",
       "exists": true,
-      "sheet_count": 2,
+      "sheet_count": 1,
       "sheets": [
         {
           "sheet": "Sheet2",
@@ -755,12 +801,6 @@
             "conferences",
             "normalizedcitationimpact"
           ]
-        },
-        {
-          "sheet": "Sheet3",
-          "rows": 1,
-          "columns": 1,
-          "headers": []
         }
       ]
     },
@@ -1118,5 +1158,17 @@
       "exists": true
     }
   ],
-  "unregistered_excel_files": []
+  "unregistered_excel_files": [
+    "2021-2025年软科世界一流学科排名（20260603已更新）.xlsx",
+    "2021-2026年中国内地QS&US世界学科排名数据（20260603更新）.xlsx",
+    "2021年软科世界一流学科排名-20211119.xlsx",
+    "2022THE学科领域排名.xlsx",
+    "2022年QS学科排名202203.xlsx",
+    "2022年软科世界一流学科排名-20220720.xlsx",
+    "2023-2026年THE世界大学学科排名（20260603更新）.xlsx",
+    "2026年US News世界学科排名20260616.xlsx",
+    "37所一流高校学科论文数据（web of science）20260511.xlsx",
+    "同济大学学院+学科映射关系（20260603更新）.xlsx",
+    "四大世界学科2025指标权重（20260603更新）.xlsx"
+  ]
 }
