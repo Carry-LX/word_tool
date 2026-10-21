@@ -10,7 +10,7 @@
 4. 双击根目录 `setup_new_computer.cmd`。它创建 `.venv`、安装依赖、恢复数据并检查 Word、数据库和历史报告。Python 包安装关闭 pip 缓存；压缩分包核验并读取后自动删除。
 5. 初始化通过后，双击 `start_report_demo.cmd`，在浏览器访问 `http://127.0.0.1:8766`。
 
-Python 未安装到约定路径时，初始化器使用 Windows 的 `py -3.12` 启动器。若启动器不可用，先用自己的 Python 3.12 创建 `.venv`，再双击初始化文件。可选录屏依赖位于 `requirements-recording.txt`，普通报告生成不安装它们。
+Python 未安装到约定路径时，初始化器使用 Windows 的 `py -3.12` 启动器。若启动器不可用，先用自己的 Python 3.12 创建 `.venv`，再双击初始化文件。可选录屏依赖位于 `requirements-recording.txt`，录屏还需按 `docs/LOCAL_REPORT_DEMO.md` 配置浏览器和 FFmpeg；普通报告生成不安装录屏依赖。
 
 ## 数据与空间
 
@@ -24,7 +24,7 @@ Windows 渲染工具恢复到项目 `.local/`：LibreOffice、兼容包装器和
 
 ## 配置与路径
 
-运行配置仍集中在 `configs/runtime/agent_runtime_profile.json` 和 `current_subject_request.json`。初始化程序只写被 Git 忽略的 `configs/runtime/local_runtime.json`，记录新电脑 Python 路径。历史报告中的旧项目绝对路径在文件不存在时解析到当前 checkout，不改写原始证据文件。推荐保留项目目录名 `word_tool`。
+运行配置仍集中在 `configs/runtime/agent_runtime_profile.json` 和 `current_subject_request.json`。初始化程序只写被 Git 忽略的 `configs/runtime/local_runtime.json`，记录新电脑 Python 和 ASCII 临时目录路径。临时目录优先使用项目 `.local/tmp`；项目路径含中文时，按 E 盘、D 盘、公共用户目录的顺序选择可写的 ASCII 路径，并设置渲染进程 TEMP/TMP，避免中文 Windows 用户名影响转换。历史报告中的旧项目绝对路径在文件不存在时解析到当前 checkout，不改写原始证据文件。推荐保留项目目录名 `word_tool`。
 
 演示默认关闭叙述 API，不需要 API Key。全局批量入口仍按 runtime profile 中的 DeepSeek 开关执行；需要使用时，在新电脑单独配置环境变量，或明确关闭该开关。
 

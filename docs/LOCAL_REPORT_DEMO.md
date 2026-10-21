@@ -4,7 +4,7 @@
 
 ## 启动
 
-双击项目根目录的 `start_report_demo.cmd`。它使用 `E:/conda_envs/graph-rag/python.exe` 启动本机服务，并打开 `http://127.0.0.1:8766`。关闭启动终端会结束服务；已经启动的独立报告任务会继续执行，其结果保存在任务目录中。再次启动服务可恢复显示。
+双击项目根目录的 `start_report_demo.cmd`。它优先使用项目 `.venv/Scripts/python.exe`，本机兼容入口为 `E:/conda_envs/graph-rag/python.exe`，启动后打开 `http://127.0.0.1:8766`。新电脑先按 `docs/MIGRATION.md` 运行初始化。关闭启动终端会结束服务；已经启动的独立报告任务会继续执行，其结果保存在任务目录中。再次启动服务可恢复显示。
 
 主机、端口与子配置路径在 `configs/runtime/agent_runtime_profile.json` 的 `web_demo` 段设置。学科默认值、报告索引、抽查规则、Word 更新与运行输出在 `configs/runtime/web_demo_profile.json` 设置。脚本使用显式配置，无需命令行参数。
 

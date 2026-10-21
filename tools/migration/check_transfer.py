@@ -17,6 +17,7 @@ from common import ROOT
 
 def check_roundtrip():
     payloads = {"processed/example.csv": "学科,数值\n环境科学与工程,123\n".encode("utf-8"),
+                "processed/测试目录/学科数据.csv": "学科,年度\n化学,2026\n".encode("utf-8"),
                 "processed/large.bin": bytes(range(256)) * 1000}
     output = io.BytesIO()
     with tarfile.open(mode="w:gz", fileobj=output) as archive:

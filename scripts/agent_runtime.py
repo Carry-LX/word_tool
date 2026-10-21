@@ -4,6 +4,7 @@ import json
 import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -118,6 +119,13 @@ def load_runtime_profile(path: str | Path | None = None) -> dict[str, Any]:
         local = read_json(local_path)
         if local.get("recommended_python"):
             profile["recommended_python"] = local["recommended_python"]
+        if local.get("temporary_directory"):
+            temporary = resolve_project_path(local["temporary_directory"])
+            if not str(temporary).isascii():
+                raise ValueError("LibreOffice temporary_directory must use an ASCII path.")
+            temporary.mkdir(parents=True, exist_ok=True)
+            os.environ["TEMP"] = os.environ["TMP"] = str(temporary)
+            tempfile.tempdir = str(temporary)
     configured_python = resolve_project_path(profile.get("recommended_python"), Path(sys.executable))
     if not configured_python.is_file():
         profile["recommended_python"] = sys.executable
