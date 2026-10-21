@@ -21,7 +21,14 @@ def gh(*args: str) -> str:
 
 
 def release_metadata() -> dict:
-    return json.loads(gh("api", f"repos/{PROFILE['repository']}/releases/tags/{PROFILE['release_tag']}"))
+    # GitHub's by-tag endpoint omits drafts whose tag has not been published.
+    pages = json.loads(gh("api", f"repos/{PROFILE['repository']}/releases", "--paginate", "--slurp"))
+    matches = [release for page in pages for release in page if release["tag_name"] == PROFILE["release_tag"]]
+    if not matches:
+        raise LookupError(f"Release not found: {PROFILE['release_tag']}")
+    if len(matches) != 1:
+        raise RuntimeError("Multiple releases have the configured tag; inspect before proceeding.")
+    return matches[0]
 
 
 def digest_file(path: Path) -> str:

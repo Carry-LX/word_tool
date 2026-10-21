@@ -11,7 +11,7 @@ import subprocess
 import tarfile
 from pathlib import Path
 
-from common import ROOT, PROFILE, gh, save_json, upload_verified
+from common import ROOT, PROFILE, gh, release_metadata, save_json, upload_verified
 
 # Explicit settings. Keep False until the local code commit has been reviewed.
 PUBLISH = False
@@ -145,6 +145,12 @@ def publish(groups: dict) -> None:
     if list(STAGING.glob("*.part*")):
         raise RuntimeError("A previous local part exists; inspect before retrying.")
     notes = ROOT / "docs/MIGRATION_RELEASE.md"
+    try:
+        release_metadata()
+    except LookupError:
+        pass
+    else:
+        raise RuntimeError("A release already exists for this tag; inspect it before retrying publication.")
     gh("release", "create", PROFILE["release_tag"], "--repo", PROFILE["repository"], "--target", commit,
        "--draft", "--title", "Windows runtime data 2026-10-21", "--notes-file", str(notes))
     manifest = {"version": 1, "repository": PROFILE["repository"], "tag": PROFILE["release_tag"],
