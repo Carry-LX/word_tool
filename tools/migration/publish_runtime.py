@@ -54,9 +54,11 @@ def report_inputs() -> list[Path]:
                 directories.add(run_path)
     files = set()
     for directory in directories:
+        # tree_files rejects symlink files and does not follow symlink directories.
+        # Resolve each source directory once rather than every one of 20k files.
+        if not directory.resolve().is_relative_to(ROOT.resolve()):
+            raise ValueError(f"Runtime source escapes project: {directory}")
         for file in tree_files(directory):
-            if not file.resolve().is_relative_to(ROOT.resolve()):
-                raise ValueError(f"Runtime source escapes project: {file}")
             files.add(file)
     return sorted(files)
 
