@@ -1,6 +1,6 @@
 # word_tool 当前交接说明
 
-人工核查日期：2026-10-19。初始化人：当前 Codex Agent。后续更新请同时记录日期和证据文件。
+最近人工核查日期：2026-10-21；本目录初始化于 2026-10-19。后续更新请同时记录日期和证据文件。
 
 ## 项目目标与当前阶段
 
@@ -48,7 +48,7 @@
 
 软科综合排名、同济历史指标和同行指标复用运行时选中的唯一口径。直接映射没有数据时，按映射置信度和披露策略决定处理，不自行用名称相近学科替换。
 
-## Git 与原有工作
+## 交接初始化时的 Git 状态（2026-10-19）
 
 初始化前分支为 `codex/agent-overall-optimization`，最新提交 `2bec57d`，提交说明为“备份报告演示界面、ESI精简建议与连续录屏优化”。存在多项未提交业务修改和新增文件，本次全部保留。当前状态以 `state/git_state.json` 和实际 `git status` 为准。
 
@@ -60,12 +60,18 @@
 
 新增 `tools/migration/`、初始化入口、依赖清单和 `docs/MIGRATION.md`。运行数据计划包含 processed 64 文件（4,916,755,587 bytes）、external_data 213 文件（438,853,973 bytes）、当前演示及索引报告素材 20,896 文件（1,033,428,796 bytes）、Windows 工具 19,601 文件（1,683,187,934 bytes）。代码和原始 data 进 Git，运行数据在 `runtime-data-20261021` Release 分包。实际清单见本机 `outputs/github_migration/package_plan.json`。
 
-运行入口优先项目 `.venv`；本机覆盖记录到被忽略的 `configs/runtime/local_runtime.json`。历史索引旧绝对路径缺失时映射到当前项目，渲染优先项目标准脚本副本和 `.local/` 工具。不改写历史数据文件。
+运行入口优先项目 `.venv`；本机 Python 与 ASCII 临时目录覆盖记录到被忽略的 `configs/runtime/local_runtime.json`。历史索引旧绝对路径缺失时映射到当前项目，渲染优先项目标准脚本副本和 `.local/` 工具。不改写历史数据文件。
 
-已核查：Python 源码语法、分包恢复中文 roundtrip、SHA-256 拦截、保护已有改动、目录穿越拒绝、临时分包清理、页面接口、46 学科选项和 46 历史报告索引。系统体检 P0/P1 为 0。预检只核对 Word COM 注册与 Python 导入，完整 Word 自动化由真实生成任务检验。当前准备提交前确认；最终上传、校验和清理结果须以 `outputs/github_migration/` 的回执和 GitHub 实际 Release 为准。
+用户已确认本地备份提交，并授权继续上传、清理及提交校验和交接记录。代码和原有业务修改已在 `codex/github-migration` 本地备份，并推送远端 `main`。运行包 40,774 文件，未压缩 8,072,226,290 字节，六个分包共 1,933,116,219 字节；清单逐项保存 SHA-256。
+
+已核查：Python 源码语法、中文内容及目录/文件名跨分包恢复、SHA-256 拦截、保护已有改动、目录穿越拒绝、临时分包清理、页面接口、46 学科选项和 46 历史报告索引。系统体检 P0/P1 为 0。Word 预检核对 COM 注册与 Python 导入。
+
+远端 processed 分包已完整流式回读，64 文件逐文件 SHA-256 一致；Windows 工具已从附件完整恢复到独立中文目录，19,601 文件逐文件 SHA-256 一致，并使用恢复后的工具实际将中文报告转换为 PDF 和页面 PNG，中文输出目录可用。约 1.57 GiB 工具测试副本已删除。上传分包均在远端核验后删除本地副本，最终临时目录清理见本机 `outputs/github_migration/cleanup_receipt.json`。
+
+发布入口为 `https://github.com/Carry-LX/word_tool/releases/tag/runtime-data-20261021`。Release 保留 `runtime-manifest.json` 和 `migration-checks.json`；本机详细证据在 `outputs/github_migration/`。`docs/MIGRATION_CHECKS.md` 保存人工核验结论，`docs/MIGRATION.md` 保存新电脑步骤。打包时提交与最终配套代码提交分别记录在 manifest 的 packaging_commit 和 code_commit。
 
 ## 下一位 AI 的第一步
 
-目前用户明确要求的交接初始化由本次完成；没有授权新的业务改造任务。先读取本目录和最新聊天，再根据用户下一项要求继续。若继续演示工作，先看已有 GIF/MP4 与检查结果；若修改跨学科、数据治理或可维护性逻辑，按项目规则运行 `scripts/audit_agent_system_readiness.py` 并检查 P0/P1，再生成 Word。
+当前用户授权的 GitHub 迁移工作已交付。先读取本目录、迁移文档和用户下一项要求；新电脑按初始化入口恢复运行环境与数据。若继续演示工作，先看本机已有 GIF/MP4 与检查结果；若修改跨学科、数据治理或可维护性逻辑，按项目规则运行 `scripts/audit_agent_system_readiness.py` 并检查 P0/P1，再生成 Word。
 
 涉及界面或录屏时，按文档执行相应 dashboard、state I/O、recording、video 检查，避免重新运行真实任务造成重复。提交前先向用户总结文件和变更并取得确认；只做本地备份，不主动 push。

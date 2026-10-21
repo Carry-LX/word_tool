@@ -17,6 +17,8 @@
 
 用户已授权创建 GitHub 私有仓库、上传当前代码和运行数据，并要求完成传输后删除临时压缩包。仓库为 `Carry-LX/word_tool`；迁移实现与新电脑步骤见 `docs/MIGRATION.md`。GitHub 迁移分支为 `codex/github-migration`。聊天、快照和自动状态仍保留本机，已设为 Git 忽略；人工交接说明随代码迁移。
 
+迁移交付：远端 `main` 保存代码及原始资料，`runtime-data-20261021` Release 保存六个运行分包和清单。核查记录见 `docs/MIGRATION_CHECKS.md`；本机细项回执见 `outputs/github_migration/`。新电脑先运行 `setup_new_computer.cmd`，初始化后运行 `start_report_demo.cmd`，无需安装 Codex。
+
 ## 后续怎样保持可用
 
 双击 `refresh.cmd`，可在 Codex 无法打开时重新采集本地聊天、文档快照、文件目录和 Git 状态。Python 路径在 CMD 顶部显式设置；筛选设置在 `tools/refresh_handoff.py` 顶部。没有第三方依赖，不调用模型，不联网。
